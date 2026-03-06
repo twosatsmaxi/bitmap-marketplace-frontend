@@ -3,6 +3,11 @@
 {"created_at":"2026-03-06T09:24:00Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-0we.1","issue_id":"bitmap-marketplace-frontend-0we.2","type":"blocks"}
 {"created_at":"2026-03-06T09:24:00Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-0we","issue_id":"bitmap-marketplace-frontend-0we.3","type":"parent-child"}
 {"created_at":"2026-03-06T09:24:00Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-0we.1","issue_id":"bitmap-marketplace-frontend-0we.3","type":"blocks"}
+{"created_at":"2026-03-06T10:33:04Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-dw0","issue_id":"bitmap-marketplace-frontend-af2","type":"parent"}
+{"created_at":"2026-03-06T10:33:10Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-x3o","issue_id":"bitmap-marketplace-frontend-af2","type":"blocks"}
+{"created_at":"2026-03-06T10:33:04Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-dw0","issue_id":"bitmap-marketplace-frontend-kpt","type":"parent"}
+{"created_at":"2026-03-06T10:33:04Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-dw0","issue_id":"bitmap-marketplace-frontend-x3o","type":"parent"}
+{"created_at":"2026-03-06T10:33:10Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-kpt","issue_id":"bitmap-marketplace-frontend-x3o","type":"blocks"}
 {"created_at":"2026-03-06T10:07:02Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-zvy","issue_id":"bitmap-marketplace-frontend-zvy.1","type":"parent-child"}
 {"created_at":"2026-03-06T10:07:02Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-zvy","issue_id":"bitmap-marketplace-frontend-zvy.2","type":"parent-child"}
 {"created_at":"2026-03-06T10:07:02Z","created_by":"twosat","depends_on_id":"bitmap-marketplace-frontend-zvy","issue_id":"bitmap-marketplace-frontend-zvy.3","type":"parent-child"}
