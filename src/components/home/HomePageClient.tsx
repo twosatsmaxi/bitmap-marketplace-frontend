@@ -184,9 +184,6 @@ export default function HomePageClient({
               ))}
             </div>
           </div>
-          <div className="mt-3 border-t border-[rgba(120,72,18,0.45)] pt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-            Preview data only. Live market data is not enabled yet.
-          </div>
         </section>
 
         <section className="home-panel overflow-hidden">
