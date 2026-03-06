@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type {
   HomeMarketRow,
-  HomeMarketTab,
   HomeRecentSale,
   HomeTimeframe,
 } from "@/lib/types";
@@ -15,27 +14,13 @@ interface HomePageClientProps {
   recentSales: HomeRecentSale[];
 }
 
-const tabs: { id: HomeMarketTab; label: string }[] = [
-  { id: "top", label: "Top" },
-  { id: "standard", label: "Standard" },
-  { id: "blocktributes", label: "Blocktributes" },
-];
-
-const timeframes: HomeTimeframe[] = ["24h", "7d"];
 
 export default function HomePageClient({
   rows,
   recentSales,
 }: HomePageClientProps) {
-  const [activeTab, setActiveTab] = useState<HomeMarketTab>("top");
   const [timeframe, setTimeframe] = useState<HomeTimeframe>("24h");
   const [currency, setCurrency] = useState<"BTC" | "USD">("BTC");
-
-  const filteredRows = rows.filter((row) => {
-    if (activeTab === "top") return true;
-    if (activeTab === "standard") return row.kind === "standard";
-    return row.kind === "blocktribute";
-  });
   const pixelPattern = useMemo(
     () => [
       { x: 0, y: 0, w: 3, h: 3, o: 0.2 },
@@ -145,48 +130,7 @@ export default function HomePageClient({
           </div>
         </section>
 
-        <section className="home-panel px-3 py-3 md:px-4">
-          <PanelPixels pixels={panelPixels} />
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "rounded-md px-4 py-2 font-mono text-sm font-bold uppercase tracking-[0.14em] transition-colors",
-                    activeTab === tab.id
-                      ? "bg-primary text-black"
-                      : "bg-zinc-950 text-text-secondary hover:bg-primary/10 hover:text-primary"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 self-start rounded-md border border-primary/20 bg-zinc-950/80 p-1">
-              {timeframes.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setTimeframe(option)}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors",
-                    timeframe === option
-                      ? "bg-primary text-black"
-                      : "text-text-secondary hover:text-primary"
-                  )}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="home-panel overflow-hidden">
+<section className="home-panel overflow-hidden">
           <PanelPixels pixels={panelPixels} />
           <div className="overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0">
@@ -202,7 +146,7 @@ export default function HomePageClient({
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row, index) => (
+                {rows.map((row, index) => (
                   <tr
                     key={row.id}
                     className="group transition-colors hover:bg-primary/[0.03]"
