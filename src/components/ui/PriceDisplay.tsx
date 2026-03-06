@@ -14,22 +14,22 @@ export default function PriceDisplay({
   size = "md",
 }: PriceDisplayProps) {
   if (price === undefined) {
-    return <div className={cn("text-text-secondary", className)}>Not for sale</div>;
+    return <div className={cn("text-text-secondary text-xs font-mono uppercase tracking-widest", className)}>Not for sale</div>;
   }
 
   const sizes = {
-    sm: "text-sm",
-    md: "text-base font-semibold",
-    lg: "text-2xl font-bold",
+    sm: "text-xs",
+    md: "text-sm",
+    lg: "text-xl",
   };
 
   return (
     <div className={cn("flex flex-col", className)}>
-      {label && <span className="text-xs text-text-secondary mb-1">{label}</span>}
+      {label && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-text-secondary mb-1">{label}</span>}
       <div className="flex items-center gap-1.5">
         <svg
-          width="16"
-          height="16"
+          width="14"
+          height="14"
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -40,7 +40,7 @@ export default function PriceDisplay({
             fill="currentColor"
           />
         </svg>
-        <span className={cn("font-mono text-text-primary", sizes[size])}>
+        <span className={cn("font-mono font-bold tracking-tight text-text-primary", sizes[size])}>
           {formatBTC(price)}
         </span>
       </div>

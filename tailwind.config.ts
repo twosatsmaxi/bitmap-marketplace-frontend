@@ -9,13 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#0A0A0A",
-        surface: "#111111",
-        border: "#1F1F1F",
-        primary: "#F7931A",
-        "text-primary": "#F5F5F5",
-        "text-secondary": "#8A8A8A",
-        success: "#22C55E",
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        "surface-2": "var(--color-surface-2)",
+        "surface-3": "#27272a",
+        border: "var(--color-border)",
+        primary: "var(--color-primary)",
+        "primary-muted": "rgba(247, 147, 26, 0.15)",
+        "text-primary": "var(--color-text)",
+        "text-secondary": "var(--color-text2)",
+        success: "var(--color-success)",
+        danger: "#ef4444",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
@@ -23,41 +27,40 @@ const config: Config = {
         mono: ["var(--font-jetbrains-mono)", "monospace"],
       },
       borderRadius: {
-        DEFAULT: "2px",
-        sm: "2px",
-        md: "2px",
-        lg: "2px",
-        xl: "2px",
-        "2xl": "2px",
+        DEFAULT: "0px",
+        sm: "0px",
+        md: "0px",
+        lg: "0px",
+        xl: "0px",
+        "2xl": "0px",
       },
       keyframes: {
         fadeUp: {
-          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        slideUp: {
-          "0%": { transform: "translateY(100%)" },
-          "100%": { transform: "translateY(0)" },
+        pulseGlow: {
+          "0%, 100%": { boxShadow: "0 0 0 rgba(247, 147, 26, 0)", borderColor: "var(--color-border)" },
+          "50%": { boxShadow: "0 0 15px rgba(247, 147, 26, 0.3)", borderColor: "var(--color-primary)" },
         },
       },
       animation: {
         fadeUp: "fadeUp 0.3s ease-out forwards",
-        shimmer: "shimmer 2s linear infinite",
-        slideUp: "slideUp 0.2s ease-out forwards",
+        pulseGlow: "pulseGlow 2.5s ease-in-out infinite",
+      },
+      boxShadow: {
+        card: "0 8px 30px rgba(0, 0, 0, 0.5)",
+        glow: "0 0 15px rgba(247, 147, 26, 0.15)",
       },
       height: {
-        nav: "56px",
-        "stats-bar": "36px",
+        nav: "var(--nav-height)",
+        "stats-bar": "var(--stats-height)",
       },
       width: {
-        sidebar: "264px",
+        sidebar: "var(--sidebar-width)",
       },
       spacing: {
-        "nav-total": "92px",
+        "nav-total": "var(--header-total)",
       },
     },
   },

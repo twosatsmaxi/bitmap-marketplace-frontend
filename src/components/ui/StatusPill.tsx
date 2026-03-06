@@ -7,15 +7,15 @@ const STATUS_CONFIG: Record<
 > = {
   listed: {
     label: "Buy Now",
-    colors: "bg-[#14532D] text-[#22C55E] border-[#166534]",
+    colors: "bg-primary-muted text-primary border-primary/30",
   },
   has_offer: {
     label: "Has Offer",
-    colors: "bg-[#1F1F1F] text-[#F5F5F5] border-[#333333]",
+    colors: "bg-surface-3 text-text-primary border-border",
   },
   unlisted: {
     label: "Unlisted",
-    colors: "bg-transparent text-[#8A8A8A] border-transparent",
+    colors: "bg-transparent text-text-secondary border-transparent",
   },
 };
 
@@ -32,7 +32,7 @@ export default function StatusPill({
   return (
     <span
       className={cn(
-        "px-2 py-1 rounded text-xs font-semibold border",
+        "px-2 py-1 pixel-cut-sm text-[9px] uppercase font-mono tracking-[0.2em] font-bold border",
         config.colors,
         className
       )}

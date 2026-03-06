@@ -2,11 +2,11 @@ import { cn } from "@/lib/utils";
 import type { RarityTier } from "@/lib/types";
 
 const RARITY_COLORS: Record<RarityTier, string> = {
-  common: "bg-[#1F1F1F] text-[#8A8A8A] border-[#333333]",
-  uncommon: "bg-[#1E3A8A] text-[#60A5FA] border-[#2563EB]",
-  rare: "bg-[#4C1D95] text-[#A78BFA] border-[#7C3AED]",
-  epic: "bg-[#78350F] text-[#F59E0B] border-[#D97706]",
-  legendary: "bg-[#7A2E0D] text-[#F7931A] border-[#F59E0B]",
+  common: "bg-surface-3 text-text-secondary border-border",
+  uncommon: "bg-[#0A1A14] text-success border-[#163829]",
+  rare: "bg-[#091424] text-[#60A5FA] border-[#182E4D]",
+  epic: "bg-[#1F1508] text-primary border-[#5C3E14]",
+  legendary: "bg-primary/10 text-primary border-primary/50 shadow-glow",
 };
 
 export default function RarityBadge({
@@ -19,7 +19,7 @@ export default function RarityBadge({
   return (
     <span
       className={cn(
-        "px-2 py-0.5 rounded text-xs font-medium border uppercase tracking-wider",
+        "px-2 py-0.5 pixel-cut-sm text-[10px] font-mono font-bold uppercase tracking-[0.16em] border",
         RARITY_COLORS[rarity],
         className
       )}
