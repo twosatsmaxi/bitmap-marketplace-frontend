@@ -231,9 +231,10 @@ body::before {
   .home-pixel {
     position: absolute;
     display: block;
-    background: linear-gradient(180deg, rgba(255, 213, 79, 0.95), rgba(247, 147, 26, 0.9));
+    background: linear-gradient(180deg, rgba(255, 196, 42, 0.28), rgba(247, 147, 26, 0.18));
+    outline: 1px solid rgba(247, 147, 26, 0.1);
     box-shadow:
-      0 0 18px rgba(247, 147, 26, 0.12),
-      inset 0 1px 0 rgba(255, 245, 200, 0.18);
+      0 0 12px rgba(247, 147, 26, 0.06),
+      inset 0 1px 0 rgba(255, 215, 120, 0.08);
   }
 }
