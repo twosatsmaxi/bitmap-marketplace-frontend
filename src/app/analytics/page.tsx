@@ -1,66 +1,11 @@
-import { getAnalyticsData } from "@/lib/api";
-import StatCard from "@/components/analytics/StatCard";
-import FloorChart from "@/components/analytics/FloorChart";
-import VolumeChart from "@/components/analytics/VolumeChart";
-import HolderDistribution from "@/components/analytics/HolderDistribution";
-import RarityDonut from "@/components/analytics/RarityDonut";
-import { formatSats, formatNumber, formatPercent } from "@/lib/utils";
+import ComingSoonPage from "@/components/layout/ComingSoonPage";
 
-export const revalidate = 60;
-
-export default async function AnalyticsPage() {
-  const data = await getAnalyticsData();
-
+export default function AnalyticsPage() {
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
-        <div className="mb-8">
-          <p className="home-eyebrow mb-3">Analytics</p>
-          <h1 className="mb-4 font-mono text-3xl font-black uppercase tracking-[-0.03em] text-primary md:text-5xl">
-            Collection Analytics
-          </h1>
-          <p className="max-w-2xl font-mono text-sm tracking-wide text-zinc-400">
-            Macro insights, floor dynamics, and ownership distribution for the Bitmap ecosystem.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Floor Price" value={formatSats(data.stats.floorPrice)} trend={data.stats.change24h} />
-          <StatCard label="24h Volume" value={formatSats(data.stats.totalVolume)} />
-          <StatCard label="Listed" value={`${formatNumber(data.stats.listedCount)} (${((data.stats.listedCount / data.stats.totalSupply) * 100).toFixed(1)}%)`} />
-          <StatCard label="Holders" value={formatNumber(data.stats.holders)} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
-            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Floor Price History</h2>
-            <div className="flex-1 min-h-0">
-              <FloorChart data={data.priceHistory} />
-            </div>
-          </div>
-          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
-            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Volume History</h2>
-            <div className="flex-1 min-h-0">
-              <VolumeChart data={data.volumeHistory} />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
-            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Holder Distribution</h2>
-            <div className="flex-1 min-h-0">
-              <HolderDistribution data={data.holderDistribution} />
-            </div>
-          </div>
-          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
-            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Pattern Rarity Breakdown</h2>
-            <div className="flex-1 min-h-0">
-              <RarityDonut data={data.rarityBreakdown} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ComingSoonPage
+      eyebrow="MVP rollout"
+      title="Analytics coming soon"
+      description="Deeper collection analytics are staged for a post-launch release. The MVP launch will focus on the Bitmap Marketplace homepage only."
+    />
   );
 }

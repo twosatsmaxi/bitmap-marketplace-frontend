@@ -196,28 +196,28 @@ body::before {
     color: #b2b2bb;
   }
 
-  .home-live-pill {
+  .home-preview-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    border: 1px solid rgba(247, 147, 26, 0.28);
     border-radius: 999px;
-    background: rgba(16, 185, 129, 0.08);
+    background: rgba(247, 147, 26, 0.1);
     padding: 0.35rem 0.7rem;
     font-family: var(--font-jetbrains-mono), monospace;
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: #6ee7b7;
+    color: #f3b15a;
   }
 
-  .home-live-dot {
+  .home-preview-dot {
     width: 0.45rem;
     height: 0.45rem;
     border-radius: 999px;
-    background: #10b981;
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+    background: #f7931a;
+    box-shadow: 0 0 12px rgba(247, 147, 26, 0.7);
   }
 
   .home-orb {

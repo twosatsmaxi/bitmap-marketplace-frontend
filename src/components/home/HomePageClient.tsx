@@ -123,22 +123,13 @@ export default function HomePageClient({
           <div className="home-orb home-orb-a" />
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-[44rem]">
-              <div className="mb-3 flex flex-wrap items-center gap-3">
-                <span className="home-live-pill">
-                  <span className="home-live-dot" />
-                  Live
-                </span>
-                <span className="home-chip">bitmap</span>
-                <span className="home-chip">blocktributes</span>
-              </div>
-              <p className="home-eyebrow">Ordinal market board</p>
               <h1 className="mt-2 max-w-2xl text-4xl font-black uppercase tracking-[-0.03em] text-primary md:text-[4.25rem] md:leading-none">
                 Bitmap Marketplace
               </h1>
               <p className="mt-3 max-w-2xl font-mono text-sm leading-6 text-zinc-400 md:text-[15px]">
-                Floors, volume, sales, and listing pressure across Bitmap,
-                Patoshi, Billionaire, Bitmap Punk, Sub 100k, and the rest of
-                the Bitmap market.
+                Preview floors, volume, sales, and listing pressure across
+                Bitmap and top blocktribute groups. Live market data will be
+                enabled soon.
               </p>
             </div>
 
@@ -192,6 +183,9 @@ export default function HomePageClient({
                 </button>
               ))}
             </div>
+          </div>
+          <div className="mt-3 border-t border-[rgba(120,72,18,0.45)] pt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+            Preview data only. Live market data is not enabled yet.
           </div>
         </section>
 
@@ -249,17 +243,13 @@ export default function HomePageClient({
           <PanelPixels pixels={panelPixels} />
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="home-eyebrow">Recent Sales</p>
               <h2 className="mt-2 font-mono text-xl font-bold uppercase text-primary">
-                Market tape
+                Recent Sales
               </h2>
             </div>
-            <Link
-              href="/activity"
-              className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-text-secondary transition-colors hover:text-primary"
-            >
-              View activity
-            </Link>
+            <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              Preview data
+            </span>
           </div>
 
           <div className="overflow-hidden rounded-md border border-[rgba(120,72,18,0.55)] bg-black/35">
