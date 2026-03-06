@@ -107,7 +107,7 @@ export default function HomePageClient({
           <PanelPixels pixels={panelPixels} />
           <div className="home-orb home-orb-a" />
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-[44rem]">
+            <div className="w-full max-w-[44rem]">
               <h1 className="mt-2 max-w-2xl text-4xl font-black uppercase tracking-[-0.03em] text-primary md:text-[4.25rem] md:leading-none">
                 Bitmap Marketplace
               </h1>
@@ -121,7 +121,7 @@ export default function HomePageClient({
             <div className="flex flex-col items-start gap-4 lg:min-w-[220px] lg:items-end">
               <CurrencyToggle value={currency} onChange={setCurrency} />
               <Link
-                href="/browse"
+                href="/"
                 className="home-button inline-flex items-center justify-center"
               >
                 See all
@@ -155,13 +155,13 @@ export default function HomePageClient({
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
                 <tr className="text-left">
-                  <HeaderCell>#</HeaderCell>
+                  <HeaderCell className="w-10">#</HeaderCell>
                   <HeaderCell>Trait / Category</HeaderCell>
                   <HeaderCell>Floor</HeaderCell>
-                  <HeaderCell>Volume</HeaderCell>
-                  <HeaderCell>Sales</HeaderCell>
-                  <HeaderCell>Listed</HeaderCell>
-                  <HeaderCell>Last {timeframe}</HeaderCell>
+                  <HeaderCell className="hidden md:table-cell">Volume</HeaderCell>
+                  <HeaderCell className="hidden md:table-cell">Sales</HeaderCell>
+                  <HeaderCell className="hidden lg:table-cell">Listed</HeaderCell>
+                  <HeaderCell className="hidden lg:table-cell">Last {timeframe}</HeaderCell>
                 </tr>
               </thead>
               <tbody>
@@ -170,12 +170,12 @@ export default function HomePageClient({
                     key={row.id}
                     className="group transition-colors hover:bg-primary/[0.03]"
                   >
-                    <BodyCell className="w-14 border-t border-[rgba(247,147,26,0.16)] text-text-secondary group-hover:border-[rgba(247,147,26,0.22)]">
+                    <BodyCell className="w-10 border-t border-[rgba(247,147,26,0.16)] text-text-secondary group-hover:border-[rgba(247,147,26,0.22)]">
                       {index + 1}
                     </BodyCell>
-                    <BodyCell className="min-w-[220px] border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
-                      <div className="flex flex-col gap-1">
-                        <div className="font-mono text-base font-bold uppercase text-primary">
+                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="font-mono text-sm font-bold uppercase text-primary md:text-base">
                           {row.name}
                         </div>
                         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
@@ -186,10 +186,10 @@ export default function HomePageClient({
                     <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono font-bold text-primary group-hover:border-[rgba(247,147,26,0.22)]">
                       {formatValue(row.floor, currency)}
                     </BodyCell>
-                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)]">{formatValue(row.volume[timeframe], currency)}</BodyCell>
-                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)]">{formatNumber(row.sales[timeframe])}</BodyCell>
-                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">{row.listedPercent.toFixed(1)}%</BodyCell>
-                    <BodyCell className="w-[170px] border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
+                    <BodyCell className="hidden border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)] md:table-cell">{formatValue(row.volume[timeframe], currency)}</BodyCell>
+                    <BodyCell className="hidden border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)] md:table-cell">{formatNumber(row.sales[timeframe])}</BodyCell>
+                    <BodyCell className="hidden border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)] lg:table-cell">{row.listedPercent.toFixed(1)}%</BodyCell>
+                    <BodyCell className="hidden w-[170px] border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)] lg:table-cell">
                       <Sparkline points={row.trendPoints} />
                     </BodyCell>
                   </tr>
@@ -249,9 +249,15 @@ export default function HomePageClient({
   );
 }
 
-function HeaderCell({ children }: { children: React.ReactNode }) {
+function HeaderCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <th className="border-b border-[rgba(120,72,18,0.55)] px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">
+    <th className={cn("border-b border-[rgba(120,72,18,0.55)] px-3 py-3 text-left font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500 md:px-5 md:py-4", className)}>
       {children}
     </th>
   );
@@ -265,7 +271,7 @@ function BodyCell({
   className?: string;
 }) {
   return (
-    <td className={cn("px-5 py-5 text-sm text-zinc-400", className)}>
+    <td className={cn("px-3 py-3 text-sm text-zinc-400 md:px-5 md:py-4", className)}>
       {children}
     </td>
   );
