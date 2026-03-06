@@ -19,7 +19,7 @@ export default function HomePageClient({
   rows,
   recentSales,
 }: HomePageClientProps) {
-  const [timeframe, setTimeframe] = useState<HomeTimeframe>("24h");
+  const [timeframe, setTimeframe] = useState<HomeTimeframe>("1d");
   const [currency, setCurrency] = useState<"BTC" | "USD">("BTC");
   const pixelPattern = useMemo(
     () => [
@@ -132,6 +132,25 @@ export default function HomePageClient({
 
 <section className="home-panel overflow-hidden">
           <PanelPixels pixels={panelPixels} />
+          <div className="flex items-center justify-end border-b border-[rgba(120,72,18,0.45)] px-4 py-2">
+            <div className="flex items-center gap-1 bg-black/40 p-1">
+              {(["12h", "1d", "7d", "30d"] as const).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  className={cn(
+                    "px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.14em] transition-colors",
+                    timeframe === tf
+                      ? "bg-[rgba(247,147,26,0.15)] text-primary"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  )}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0">
               <thead>

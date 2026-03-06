@@ -76,7 +76,7 @@ export interface AnalyticsData {
 }
 
 export type HomeMarketTab = "top" | "standard" | "blocktributes";
-export type HomeTimeframe = "24h" | "7d";
+export type HomeTimeframe = "12h" | "1d" | "7d" | "30d";
 export type HomeMarketKind = "standard" | "blocktribute";
 
 export interface HomeMarketRow {
