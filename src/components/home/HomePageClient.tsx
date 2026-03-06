@@ -66,6 +66,37 @@ export default function HomePageClient({
     ],
     []
   );
+  const panelPixels = useMemo(
+    () => [
+      { x: 2, y: 1, delay: "0.2s", duration: "3.6s" },
+      { x: 4, y: 2, delay: "1.1s", duration: "4.2s" },
+      { x: 6, y: 3, delay: "0.6s", duration: "4.6s" },
+      { x: 8, y: 1, delay: "1.7s", duration: "3.9s" },
+      { x: 11, y: 2, delay: "0.8s", duration: "4.1s" },
+      { x: 13, y: 4, delay: "2.2s", duration: "4.8s" },
+      { x: 15, y: 4, delay: "1.3s", duration: "3.7s" },
+      { x: 19, y: 1, delay: "1s", duration: "4.5s" },
+      { x: 22, y: 2, delay: "2.1s", duration: "3.8s" },
+      { x: 24, y: 3, delay: "1.6s", duration: "4.4s" },
+      { x: 27, y: 1, delay: "0.4s", duration: "4.9s" },
+      { x: 29, y: 2, delay: "2.4s", duration: "3.6s" },
+      { x: 33, y: 4, delay: "1.9s", duration: "4.2s" },
+      { x: 36, y: 2, delay: "0.9s", duration: "4.7s" },
+      { x: 5, y: 8, delay: "1.2s", duration: "4.3s" },
+      { x: 7, y: 9, delay: "2.7s", duration: "3.8s" },
+      { x: 10, y: 10, delay: "0.7s", duration: "4s" },
+      { x: 12, y: 7, delay: "1.8s", duration: "4.6s" },
+      { x: 16, y: 8, delay: "2.3s", duration: "3.9s" },
+      { x: 18, y: 10, delay: "1.4s", duration: "4.5s" },
+      { x: 21, y: 10, delay: "2.6s", duration: "4.1s" },
+      { x: 24, y: 8, delay: "0.5s", duration: "3.7s" },
+      { x: 27, y: 8, delay: "2.9s", duration: "4.8s" },
+      { x: 31, y: 10, delay: "0.6s", duration: "4.2s" },
+      { x: 35, y: 9, delay: "1.5s", duration: "3.9s" },
+      { x: 37, y: 7, delay: "2.8s", duration: "4.4s" },
+    ],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-bg">
@@ -88,6 +119,7 @@ export default function HomePageClient({
           </div>
         </div>
         <section className="home-panel relative overflow-hidden px-5 py-6 md:px-8 md:py-8">
+          <PanelPixels pixels={panelPixels} />
           <div className="home-orb home-orb-a" />
           <div className="home-orb home-orb-b" />
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -124,6 +156,7 @@ export default function HomePageClient({
         </section>
 
         <section className="home-panel px-3 py-3 md:px-4">
+          <PanelPixels pixels={panelPixels} />
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
               {tabs.map((tab) => (
@@ -164,6 +197,7 @@ export default function HomePageClient({
         </section>
 
         <section className="home-panel overflow-hidden">
+          <PanelPixels pixels={panelPixels} />
           <div className="overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
@@ -213,6 +247,7 @@ export default function HomePageClient({
         </section>
 
         <section className="home-panel px-5 py-5 md:px-6">
+          <PanelPixels pixels={panelPixels} />
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="home-eyebrow">Recent Sales</p>
@@ -302,6 +337,29 @@ function CurrencyToggle({
         >
           {option}
         </button>
+      ))}
+    </div>
+  );
+}
+
+function PanelPixels({
+  pixels,
+}: {
+  pixels: { x: number; y: number; delay: string; duration: string }[];
+}) {
+  return (
+    <div className="panel-pixel-grid" aria-hidden="true">
+      {pixels.map((pixel, index) => (
+        <span
+          key={index}
+          className="panel-pixel"
+          style={{
+            left: `calc(${pixel.x} * var(--home-grid-size))`,
+            top: `calc(${pixel.y} * var(--home-grid-size))`,
+            animationDelay: pixel.delay,
+            animationDuration: pixel.duration,
+          }}
+        />
       ))}
     </div>
   );

@@ -16,6 +16,7 @@
   --header-total: 104px;
   --sidebar-width: 280px;
   --color-bg-alt: #11111a;
+  --home-grid-size: 44px;
 }
 
 * {
@@ -77,6 +78,17 @@ body::before {
 }
 
 @layer utilities {
+  @keyframes bitmap-square-blink {
+    0%, 100% {
+      opacity: 0.18;
+      filter: brightness(0.9);
+    }
+    50% {
+      opacity: 0.9;
+      filter: brightness(1.8);
+    }
+  }
+
   .pixel-cut {
     clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   }
@@ -123,16 +135,25 @@ body::before {
     position: relative;
     border: 1px solid rgba(247, 147, 26, 0.16);
     border-radius: 16px;
-    background:
-      linear-gradient(180deg, rgba(247, 147, 26, 0.03), rgba(255, 255, 255, 0.01)),
-      linear-gradient(90deg, rgba(255, 187, 0, 0.04) 1px, transparent 1px),
-      linear-gradient(rgba(255, 187, 0, 0.03) 1px, transparent 1px),
+    background: linear-gradient(180deg, rgba(247, 147, 26, 0.03), rgba(255, 255, 255, 0.01)),
       rgba(9, 9, 11, 0.94);
-    background-size: auto, 32px 32px, 32px 32px, auto;
     box-shadow:
       0 16px 40px rgba(0, 0, 0, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.02);
     backdrop-filter: blur(10px);
+  }
+
+  .home-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(90deg, transparent 0 12%, rgba(255, 196, 42, 0.08) 12% 19%, transparent 19% 35%, rgba(247, 147, 26, 0.07) 35% 48%, transparent 48% 68%, rgba(255, 196, 42, 0.06) 68% 76%, transparent 76% 100%),
+      linear-gradient(180deg, transparent 0 18%, rgba(255, 196, 42, 0.05) 18% 31%, transparent 31% 56%, rgba(247, 147, 26, 0.05) 56% 73%, transparent 73% 100%);
+    mix-blend-mode: screen;
+    opacity: 0.3;
   }
 
   .home-button {
@@ -236,5 +257,34 @@ body::before {
     box-shadow:
       0 0 12px rgba(247, 147, 26, 0.06),
       inset 0 1px 0 rgba(255, 215, 120, 0.08);
+  }
+
+  .panel-pixel-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: inherit;
+    background-image:
+      linear-gradient(rgba(255, 187, 0, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 187, 0, 0.08) 1px, transparent 1px);
+    background-size: var(--home-grid-size) var(--home-grid-size);
+    background-position: 0 0, 0 0;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.16));
+  }
+
+  .panel-pixel {
+    position: absolute;
+    width: calc(var(--home-grid-size) - 2px);
+    height: calc(var(--home-grid-size) - 2px);
+    margin-left: 1px;
+    margin-top: 1px;
+    background: rgba(255, 196, 42, 0.22);
+    outline: 1px solid rgba(247, 147, 26, 0.08);
+    box-shadow:
+      0 0 16px rgba(255, 196, 42, 0.14);
+    animation-name: bitmap-square-blink;
+    animation-timing-function: steps(2, end);
+    animation-iteration-count: infinite;
   }
 }
