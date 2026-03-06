@@ -34,7 +34,7 @@ export default async function BitmapDetailPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="mb-6">
           <Link
-            href="/browse"
+            href="/"
             className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />

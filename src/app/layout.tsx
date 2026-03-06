@@ -42,7 +42,7 @@ export default async function RootLayout({
       <body className="bg-bg text-text-primary min-h-screen">
         <Navbar />
         <StatsBar stats={stats} />
-        <main className="pt-[92px]">{children}</main>
+        <main className="pt-[var(--header-total)]">{children}</main>
       </body>
     </html>
   );

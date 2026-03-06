@@ -1,7 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search, Terminal } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
     <nav className="fixed left-0 right-0 top-0 z-50 flex h-nav items-center border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.92)] px-4 backdrop-blur-md md:px-6">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-6 md:gap-8">
@@ -18,9 +24,9 @@ export default function Navbar() {
             </span>
           </div>
         </Link>
-        
+
         <div className="ml-1 hidden items-center gap-2 md:flex">
-          <NavLink href="/">Market</NavLink>
+          <NavLink href="/" active={pathname === "/"}>Market</NavLink>
           <SoonNav label="Trade" />
           <SoonNav label="Activity" />
           <SoonNav label="Analytics" />
@@ -47,11 +53,24 @@ export default function Navbar() {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
-      className="border border-transparent px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:border-[rgba(120,72,18,0.55)] hover:bg-[rgba(247,147,26,0.06)] hover:text-primary"
+      className={cn(
+        "border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors",
+        active
+          ? "border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.08)] text-primary"
+          : "border-transparent text-zinc-500 hover:border-[rgba(120,72,18,0.55)] hover:bg-[rgba(247,147,26,0.06)] hover:text-primary"
+      )}
     >
       {children}
     </Link>

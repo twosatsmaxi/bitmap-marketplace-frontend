@@ -10,8 +10,8 @@ export default function StatsBar({ stats }: { stats: CollectionStats }) {
       <div className="mx-auto flex h-full w-full max-w-7xl items-center whitespace-nowrap font-mono text-xs tracking-wide">
         <div className="flex h-full items-center border-r border-[rgba(120,72,18,0.45)] bg-[rgba(247,147,26,0.06)] px-4 text-[10px] uppercase tracking-[0.2em] text-zinc-500 md:px-6">
           <span className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></span>
-            Live
+            <span className="h-1.5 w-1.5 bg-primary opacity-60"></span>
+            Preview
           </span>
         </div>
         

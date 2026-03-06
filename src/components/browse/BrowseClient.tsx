@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import type { Bitmap, BrowseFilters, BrowseSort } from "@/lib/types";
 import FilterSidebar from "./FilterSidebar";
 import BitmapCard from "./BitmapCard";
-import { Terminal, LayoutGrid, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface BrowseClientProps {
   initialBitmaps: Bitmap[];
@@ -24,7 +24,6 @@ export default function BrowseClient({ initialBitmaps, total }: BrowseClientProp
     direction: "asc"
   });
 
-  // Client-side filtering for demo/mock purposes
   const filteredBitmaps = useMemo(() => {
     return initialBitmaps.filter(b => {
       if (filters.search && !String(b.blockNumber).includes(filters.search)) return false;
@@ -48,41 +47,37 @@ export default function BrowseClient({ initialBitmaps, total }: BrowseClientProp
   return (
     <div className="flex max-w-[1600px] mx-auto">
       <FilterSidebar filters={filters} setFilters={setFilters} />
-      
+
       <div className="flex-1 p-4 md:p-6 min-h-[calc(100vh-var(--header-total))]">
-        <section className="panel-frame pixel-cut p-6 mb-8 relative overflow-hidden">
-          <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
-            <LayoutGrid className="w-64 h-64 -mt-16 -mr-16" />
-          </div>
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10">
+        <section className="home-panel relative overflow-hidden px-5 py-5 md:px-7 md:py-6 mb-6">
+          <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="font-mono text-[10px] tracking-[0.3em] uppercase text-primary mb-2 flex items-center gap-2">
-                <Terminal className="w-3 h-3" />
-                Index Directory
-              </p>
-              <h1 className="font-heading text-3xl md:text-4xl font-bold text-text-primary leading-tight tracking-tight">
+              <p className="home-eyebrow mb-2">Index Directory</p>
+              <h1 className="font-mono text-3xl font-black uppercase tracking-[-0.03em] text-primary md:text-4xl">
                 Explore the Protocol
               </h1>
-              <p className="text-text-secondary text-sm mt-2 max-w-md">
+              <p className="mt-2 max-w-md font-mono text-sm leading-6 text-zinc-400">
                 Discover and acquire on-chain spatial assets anchored directly to Bitcoin blocks.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2 md:gap-3 min-w-[300px]">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 md:min-w-[300px]">
               <Metric value={total} label="Total Assets" />
-              <Metric value={filteredBitmaps.length} label="Query Results" />
-              <Metric value={filters.status.length} label="Active Filters" />
+              <Metric value={filteredBitmaps.length} label="Results" />
+              <Metric value={filters.status.length} label="Filters" />
             </div>
           </div>
         </section>
 
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/50">
-          <div className="text-xs font-mono text-text-secondary uppercase tracking-widest flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-primary/50 block"></span>
-            Showing <span className="text-text-primary font-bold">{filteredBitmaps.length}</span> results
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-[rgba(120,72,18,0.45)]">
+          <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+            <span className="h-1.5 w-1.5 bg-primary/50"></span>
+            Showing{" "}
+            <span className="font-bold text-zinc-300">{filteredBitmaps.length}</span>{" "}
+            results
           </div>
-          
-          <select 
-            className="bg-surface border border-border px-3 py-1.5 text-xs font-mono uppercase tracking-wide focus:outline-none focus:border-primary cursor-pointer pixel-cut-sm hover:border-text-secondary transition-colors text-text-primary"
+
+          <select
+            className="border border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-zinc-300 transition-colors focus:border-primary focus:outline-none hover:border-primary/45 cursor-pointer"
             value={`${sort.field}-${sort.direction}`}
             onChange={(e) => {
               const [field, direction] = e.target.value.split("-") as [BrowseSort["field"], BrowseSort["direction"]];
@@ -104,17 +99,19 @@ export default function BrowseClient({ initialBitmaps, total }: BrowseClientProp
             ))}
           </div>
         ) : (
-          <div className="panel-frame pixel-cut flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 bg-surface-2 border border-border flex items-center justify-center mb-4 pixel-cut">
-              <Search className="w-6 h-6 text-text-secondary" />
+          <div className="home-panel flex flex-col items-center justify-center py-24 text-center px-5">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-black/45">
+              <Search className="h-6 w-6 text-zinc-500" />
             </div>
-            <h3 className="text-lg font-heading font-bold mb-2">No parcels found</h3>
-            <p className="text-text-secondary text-sm max-w-sm">
+            <h3 className="font-mono text-lg font-bold uppercase tracking-[-0.02em] text-primary mb-2">
+              No parcels found
+            </h3>
+            <p className="font-mono text-sm text-zinc-400 max-w-sm">
               Adjust your search query or clear filters to view more assets.
             </p>
-            <button 
+            <button
               onClick={() => setFilters({ search: "", status: [], types: [], rarities: [] })}
-              className="mt-6 text-primary border-b border-primary/30 hover:border-primary font-mono text-xs transition-colors uppercase tracking-widest pb-0.5"
+              className="mt-6 font-mono text-xs uppercase tracking-[0.18em] text-primary border-b border-primary/30 hover:border-primary transition-colors pb-0.5"
             >
               Reset Query
             </button>
@@ -127,10 +124,9 @@ export default function BrowseClient({ initialBitmaps, total }: BrowseClientProp
 
 function Metric({ value, label }: { value: number; label: string }) {
   return (
-    <div className="bg-surface-2 border border-border px-4 py-3 flex flex-col justify-center pixel-cut-sm relative overflow-hidden group">
-      <div className="absolute inset-0 bg-primary/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-      <div className="font-mono text-lg md:text-xl font-bold text-text-primary tracking-tight relative z-10">{value.toLocaleString()}</div>
-      <div className="font-mono text-[9px] uppercase text-text-secondary tracking-[0.2em] mt-0.5 relative z-10">{label}</div>
+    <div className="border border-[rgba(120,72,18,0.55)] bg-black/45 px-4 py-3 flex flex-col justify-center">
+      <div className="font-mono text-lg font-bold text-primary tracking-tight">{value.toLocaleString()}</div>
+      <div className="font-mono text-[9px] uppercase text-zinc-500 tracking-[0.2em] mt-0.5">{label}</div>
     </div>
   );
 }
