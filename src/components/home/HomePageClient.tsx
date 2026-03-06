@@ -38,18 +38,34 @@ export default function HomePageClient({
   });
   const pixelPattern = useMemo(
     () => [
-      { x: 2, y: 1, w: 1, h: 1, o: 0.18 },
-      { x: 8, y: 3, w: 2, h: 1, o: 0.2 },
-      { x: 16, y: 2, w: 1, h: 2, o: 0.15 },
-      { x: 22, y: 5, w: 2, h: 2, o: 0.22 },
-      { x: 28, y: 1, w: 1, h: 1, o: 0.18 },
-      { x: 33, y: 4, w: 3, h: 1, o: 0.14 },
-      { x: 5, y: 9, w: 2, h: 2, o: 0.16 },
-      { x: 13, y: 11, w: 1, h: 1, o: 0.25 },
-      { x: 19, y: 8, w: 2, h: 1, o: 0.18 },
-      { x: 26, y: 10, w: 1, h: 2, o: 0.14 },
-      { x: 31, y: 12, w: 2, h: 2, o: 0.17 },
-      { x: 36, y: 8, w: 1, h: 1, o: 0.24 },
+      { x: 1, y: 1, w: 1, h: 1, o: 0.1 },
+      { x: 4, y: 0, w: 2, h: 1, o: 0.12 },
+      { x: 8, y: 2, w: 1, h: 2, o: 0.11 },
+      { x: 12, y: 1, w: 2, h: 2, o: 0.14 },
+      { x: 17, y: 3, w: 1, h: 1, o: 0.12 },
+      { x: 20, y: 1, w: 3, h: 1, o: 0.1 },
+      { x: 25, y: 2, w: 1, h: 2, o: 0.13 },
+      { x: 29, y: 0, w: 2, h: 1, o: 0.11 },
+      { x: 34, y: 3, w: 1, h: 1, o: 0.15 },
+      { x: 38, y: 1, w: 2, h: 2, o: 0.1 },
+      { x: 2, y: 6, w: 2, h: 2, o: 0.13 },
+      { x: 7, y: 8, w: 1, h: 1, o: 0.16 },
+      { x: 10, y: 7, w: 3, h: 1, o: 0.1 },
+      { x: 15, y: 9, w: 1, h: 2, o: 0.14 },
+      { x: 19, y: 6, w: 2, h: 1, o: 0.12 },
+      { x: 23, y: 8, w: 2, h: 2, o: 0.15 },
+      { x: 28, y: 7, w: 1, h: 1, o: 0.13 },
+      { x: 32, y: 9, w: 3, h: 1, o: 0.11 },
+      { x: 37, y: 6, w: 2, h: 2, o: 0.14 },
+      { x: 5, y: 13, w: 1, h: 1, o: 0.15 },
+      { x: 9, y: 12, w: 2, h: 1, o: 0.11 },
+      { x: 14, y: 14, w: 2, h: 2, o: 0.12 },
+      { x: 18, y: 12, w: 1, h: 1, o: 0.16 },
+      { x: 22, y: 15, w: 3, h: 1, o: 0.1 },
+      { x: 27, y: 13, w: 1, h: 2, o: 0.13 },
+      { x: 31, y: 14, w: 2, h: 2, o: 0.12 },
+      { x: 36, y: 12, w: 1, h: 1, o: 0.16 },
+      { x: 39, y: 15, w: 2, h: 1, o: 0.11 },
     ],
     []
   );
@@ -57,17 +73,17 @@ export default function HomePageClient({
   return (
     <div className="min-h-screen bg-bg">
       <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-12 pt-6 md:px-6 md:pb-16 md:pt-8">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-70">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-100">
           <div className="home-pixel-grid">
             {pixelPattern.map((pixel, index) => (
               <span
                 key={index}
                 className="home-pixel"
                 style={{
-                  left: `${pixel.x * 2.5}%`,
-                  top: `${pixel.y * 6}%`,
-                  width: `${pixel.w * 22}px`,
-                  height: `${pixel.h * 22}px`,
+                  left: `${pixel.x * 2.45}%`,
+                  top: `${pixel.y * 5.8}%`,
+                  width: `${pixel.w * 28}px`,
+                  height: `${pixel.h * 28}px`,
                   opacity: pixel.o,
                 }}
               />
