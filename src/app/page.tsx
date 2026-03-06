@@ -1,14 +1,8 @@
-import { getBitmaps } from "@/lib/api";
-import BrowseClient from "@/components/browse/BrowseClient";
+import HomePageClient from "@/components/home/HomePageClient";
+import { HOME_MARKET_ROWS, HOME_RECENT_SALES } from "@/lib/mock-data";
 
-export const revalidate = 60; // Revalidate every minute
-
-export default async function BrowsePage() {
-  const { bitmaps, total } = await getBitmaps();
-
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-bg">
-      <BrowseClient initialBitmaps={bitmaps} total={total} />
-    </div>
+    <HomePageClient rows={HOME_MARKET_ROWS} recentSales={HOME_RECENT_SALES} />
   );
 }

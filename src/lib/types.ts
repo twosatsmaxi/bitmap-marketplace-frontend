@@ -74,3 +74,26 @@ export interface AnalyticsData {
   holderDistribution: HolderBucket[];
   rarityBreakdown: { name: string; value: number; color: string }[];
 }
+
+export type HomeMarketTab = "top" | "standard" | "blocktributes";
+export type HomeTimeframe = "24h" | "7d";
+export type HomeMarketKind = "standard" | "blocktribute";
+
+export interface HomeMarketRow {
+  id: string;
+  name: string;
+  kind: HomeMarketKind;
+  floor: number;
+  volume: Record<HomeTimeframe, number>;
+  sales: Record<HomeTimeframe, number>;
+  listedPercent: number;
+  trendPoints: number[];
+}
+
+export interface HomeRecentSale {
+  id: string;
+  bitmapId: string;
+  traitName: string;
+  price: number;
+  soldAt: string;
+}

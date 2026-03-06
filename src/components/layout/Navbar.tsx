@@ -18,6 +18,9 @@ export default function Navbar() {
         
         <div className="hidden md:flex items-center gap-6 ml-2 font-mono text-xs uppercase tracking-widest">
           <Link href="/" className="text-text-secondary hover:text-primary transition-colors">
+            Market
+          </Link>
+          <Link href="/browse" className="text-text-secondary hover:text-primary transition-colors">
             Browse
           </Link>
           <Link href="/activity" className="text-text-secondary hover:text-primary transition-colors">
