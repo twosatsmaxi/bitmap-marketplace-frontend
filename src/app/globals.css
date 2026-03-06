@@ -43,9 +43,9 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at top center, rgba(247, 147, 26, 0.12), transparent 34%),
-    radial-gradient(circle at 20% 20%, rgba(255, 193, 7, 0.06), transparent 26%);
-  opacity: 0.9;
+    radial-gradient(circle at top center, rgba(247, 147, 26, 0.08), transparent 32%),
+    radial-gradient(circle at 20% 20%, rgba(255, 193, 7, 0.04), transparent 24%);
+  opacity: 0.7;
 }
 
 /* Custom scrollbar */
@@ -133,14 +133,15 @@ body::before {
 
   .home-panel {
     position: relative;
-    border: 1px solid rgba(247, 147, 26, 0.16);
+    border: 1px solid rgba(126, 73, 18, 0.56);
     border-radius: 16px;
-    background: linear-gradient(180deg, rgba(247, 147, 26, 0.03), rgba(255, 255, 255, 0.01)),
-      rgba(9, 9, 11, 0.94);
+    background:
+      linear-gradient(180deg, rgba(247, 147, 26, 0.025), rgba(255, 255, 255, 0.005)),
+      rgba(7, 7, 9, 0.96);
     box-shadow:
-      0 16px 40px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(10px);
+      0 12px 30px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.015);
+    backdrop-filter: blur(6px);
   }
 
   .home-panel::after {
@@ -150,17 +151,17 @@ body::before {
     pointer-events: none;
     border-radius: inherit;
     background:
-      linear-gradient(90deg, transparent 0 12%, rgba(255, 196, 42, 0.08) 12% 19%, transparent 19% 35%, rgba(247, 147, 26, 0.07) 35% 48%, transparent 48% 68%, rgba(255, 196, 42, 0.06) 68% 76%, transparent 76% 100%),
-      linear-gradient(180deg, transparent 0 18%, rgba(255, 196, 42, 0.05) 18% 31%, transparent 31% 56%, rgba(247, 147, 26, 0.05) 56% 73%, transparent 73% 100%);
+      linear-gradient(90deg, transparent 0 14%, rgba(255, 196, 42, 0.05) 14% 21%, transparent 21% 38%, rgba(247, 147, 26, 0.05) 38% 50%, transparent 50% 70%, rgba(255, 196, 42, 0.04) 70% 78%, transparent 78% 100%),
+      linear-gradient(180deg, transparent 0 20%, rgba(255, 196, 42, 0.035) 20% 32%, transparent 32% 58%, rgba(247, 147, 26, 0.035) 58% 74%, transparent 74% 100%);
     mix-blend-mode: screen;
-    opacity: 0.3;
+    opacity: 0.18;
   }
 
   .home-button {
     border: 1px solid rgba(247, 147, 26, 0.45);
     border-radius: 10px;
     background: rgba(247, 147, 26, 0.18);
-    color: #f5efe6;
+    color: #f3b15a;
     padding: 0.75rem 1rem;
     font-family: var(--font-jetbrains-mono), monospace;
     font-size: 0.75rem;
@@ -171,7 +172,7 @@ body::before {
   }
 
   .home-button:hover {
-    background: rgba(247, 147, 26, 0.2);
+    background: rgba(247, 147, 26, 0.24);
     border-color: rgba(247, 147, 26, 0.7);
   }
 
@@ -180,7 +181,7 @@ body::before {
     font-size: 0.65rem;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: var(--color-primary);
+    color: #b87326;
   }
 
   .home-chip {
@@ -223,7 +224,7 @@ body::before {
     position: absolute;
     border-radius: 999px;
     filter: blur(60px);
-    opacity: 0.35;
+    opacity: 0.2;
     pointer-events: none;
   }
 
@@ -232,15 +233,7 @@ body::before {
     right: 12%;
     width: 12rem;
     height: 12rem;
-    background: rgba(247, 147, 26, 0.14);
-  }
-
-  .home-orb-b {
-    bottom: -5rem;
-    left: -2rem;
-    width: 10rem;
-    height: 10rem;
-    background: rgba(255, 187, 0, 0.05);
+    background: rgba(247, 147, 26, 0.1);
   }
 
   .home-pixel-grid {
@@ -252,11 +245,8 @@ body::before {
   .home-pixel {
     position: absolute;
     display: block;
-    background: linear-gradient(180deg, rgba(255, 196, 42, 0.28), rgba(247, 147, 26, 0.18));
-    outline: 1px solid rgba(247, 147, 26, 0.1);
-    box-shadow:
-      0 0 12px rgba(247, 147, 26, 0.06),
-      inset 0 1px 0 rgba(255, 215, 120, 0.08);
+    background: rgba(247, 147, 26, 0.12);
+    outline: 1px solid rgba(126, 73, 18, 0.24);
   }
 
   .panel-pixel-grid {
@@ -266,8 +256,8 @@ body::before {
     overflow: hidden;
     border-radius: inherit;
     background-image:
-      linear-gradient(rgba(255, 187, 0, 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 187, 0, 0.08) 1px, transparent 1px);
+      linear-gradient(rgba(126, 73, 18, 0.2) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(126, 73, 18, 0.2) 1px, transparent 1px);
     background-size: var(--home-grid-size) var(--home-grid-size);
     background-position: 0 0, 0 0;
     mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.16));
@@ -279,10 +269,10 @@ body::before {
     height: calc(var(--home-grid-size) - 2px);
     margin-left: 1px;
     margin-top: 1px;
-    background: rgba(255, 196, 42, 0.22);
-    outline: 1px solid rgba(247, 147, 26, 0.08);
+    background: rgba(255, 196, 42, 0.2);
+    outline: 1px solid rgba(193, 117, 25, 0.1);
     box-shadow:
-      0 0 16px rgba(255, 196, 42, 0.14);
+      0 0 12px rgba(255, 196, 42, 0.1);
     animation-name: bitmap-square-blink;
     animation-timing-function: steps(2, end);
     animation-iteration-count: infinite;

@@ -100,8 +100,8 @@ export default function HomePageClient({
 
   return (
     <div className="min-h-screen bg-bg">
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-12 pt-6 md:px-6 md:pb-16 md:pt-8">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-100">
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-12 pt-6 md:px-6 md:gap-7 md:pb-16 md:pt-8">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-90">
           <div className="home-pixel-grid">
             {pixelPattern.map((pixel, index) => (
               <span
@@ -118,13 +118,12 @@ export default function HomePageClient({
             ))}
           </div>
         </div>
-        <section className="home-panel relative overflow-hidden px-5 py-6 md:px-8 md:py-8">
+        <section className="home-panel relative overflow-hidden px-5 py-5 md:px-7 md:py-6">
           <PanelPixels pixels={panelPixels} />
           <div className="home-orb home-orb-a" />
-          <div className="home-orb home-orb-b" />
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="max-w-[44rem]">
+              <div className="mb-3 flex flex-wrap items-center gap-3">
                 <span className="home-live-pill">
                   <span className="home-live-dot" />
                   Live
@@ -133,10 +132,10 @@ export default function HomePageClient({
                 <span className="home-chip">blocktributes</span>
               </div>
               <p className="home-eyebrow">Ordinal market board</p>
-              <h1 className="mt-3 max-w-xl text-4xl font-black uppercase tracking-tight text-primary md:text-6xl">
+              <h1 className="mt-2 max-w-2xl text-4xl font-black uppercase tracking-[-0.03em] text-primary md:text-[4.25rem] md:leading-none">
                 Bitmap Marketplace
               </h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-text-secondary md:text-base">
+              <p className="mt-3 max-w-2xl font-mono text-sm leading-6 text-zinc-400 md:text-[15px]">
                 Floors, volume, sales, and listing pressure across Bitmap,
                 Patoshi, Billionaire, Bitmap Punk, Sub 100k, and the rest of
                 the Bitmap market.
@@ -215,28 +214,28 @@ export default function HomePageClient({
                 {filteredRows.map((row, index) => (
                   <tr
                     key={row.id}
-                    className="group transition-colors hover:bg-primary/[0.04]"
+                    className="group transition-colors hover:bg-primary/[0.03]"
                   >
-                    <BodyCell className="w-14 border-t border-primary/10 text-text-secondary group-hover:border-primary/20">
+                    <BodyCell className="w-14 border-t border-[rgba(247,147,26,0.16)] text-text-secondary group-hover:border-[rgba(247,147,26,0.22)]">
                       {index + 1}
                     </BodyCell>
-                    <BodyCell className="min-w-[220px] border-t border-primary/10 group-hover:border-primary/20">
+                    <BodyCell className="min-w-[220px] border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
                       <div className="flex flex-col gap-1">
                         <div className="font-mono text-base font-bold uppercase text-primary">
                           {row.name}
                         </div>
-                        <div className="text-xs uppercase tracking-[0.18em] text-text-secondary">
+                        <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                           {row.kind}
                         </div>
                       </div>
                     </BodyCell>
-                    <BodyCell className="border-t border-primary/10 font-mono font-bold text-primary group-hover:border-primary/20">
+                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono font-bold text-primary group-hover:border-[rgba(247,147,26,0.22)]">
                       {formatValue(row.floor, currency)}
                     </BodyCell>
-                    <BodyCell className="border-t border-primary/10 font-mono group-hover:border-primary/20">{formatValue(row.volume[timeframe], currency)}</BodyCell>
-                    <BodyCell className="border-t border-primary/10 font-mono group-hover:border-primary/20">{formatNumber(row.sales[timeframe])}</BodyCell>
-                    <BodyCell className="border-t border-primary/10 group-hover:border-primary/20">{row.listedPercent.toFixed(1)}%</BodyCell>
-                    <BodyCell className="w-[170px] border-t border-primary/10 group-hover:border-primary/20">
+                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)]">{formatValue(row.volume[timeframe], currency)}</BodyCell>
+                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] font-mono group-hover:border-[rgba(247,147,26,0.22)]">{formatNumber(row.sales[timeframe])}</BodyCell>
+                    <BodyCell className="border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">{row.listedPercent.toFixed(1)}%</BodyCell>
+                    <BodyCell className="w-[170px] border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
                       <Sparkline points={row.trendPoints} />
                     </BodyCell>
                   </tr>
@@ -251,36 +250,44 @@ export default function HomePageClient({
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="home-eyebrow">Recent Sales</p>
-              <h2 className="mt-2 text-xl font-semibold text-text-primary">
-                Fresh fills across the market.
+              <h2 className="mt-2 font-mono text-xl font-bold uppercase text-primary">
+                Market tape
               </h2>
             </div>
             <Link
               href="/activity"
-              className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+              className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-text-secondary transition-colors hover:text-primary"
             >
               View activity
             </Link>
           </div>
 
-          <div className="grid gap-3">
-            {recentSales.map((sale) => (
+          <div className="overflow-hidden rounded-md border border-[rgba(120,72,18,0.55)] bg-black/35">
+            <div className="grid grid-cols-[1.6fr,1fr,0.8fr] border-b border-[rgba(120,72,18,0.55)] px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+              <div>Bitmap</div>
+              <div>Price</div>
+              <div className="text-right">Time</div>
+            </div>
+            {recentSales.map((sale, index) => (
               <div
                 key={sale.id}
-                className="flex flex-col gap-2 rounded-md border border-primary/10 bg-black/40 px-4 py-4 transition-colors hover:border-primary/25 hover:bg-primary/[0.03] md:flex-row md:items-center md:justify-between"
+                className={cn(
+                  "grid grid-cols-[1.6fr,1fr,0.8fr] items-center px-4 py-3 transition-colors hover:bg-primary/[0.03]",
+                  index > 0 && "border-t border-[rgba(120,72,18,0.45)]"
+                )}
               >
-                <div className="space-y-1">
-                  <div className="font-mono text-sm font-bold uppercase text-primary">
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-sm font-bold uppercase text-primary">
                     {sale.bitmapId}
                   </div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-text-secondary">
+                  <div className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                     {sale.traitName}
                   </div>
                 </div>
                 <div className="font-mono text-sm font-bold text-primary">
                   {formatValue(sale.price, currency)}
                 </div>
-                <div className="text-xs uppercase tracking-[0.18em] text-text-secondary">
+                <div className="text-right font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                   {timeAgo(sale.soldAt)}
                 </div>
               </div>
@@ -294,7 +301,7 @@ export default function HomePageClient({
 
 function HeaderCell({ children }: { children: React.ReactNode }) {
   return (
-    <th className="border-b border-primary/15 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.22em] text-text-secondary">
+    <th className="border-b border-[rgba(120,72,18,0.55)] px-5 py-4 text-left font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">
       {children}
     </th>
   );
@@ -308,7 +315,7 @@ function BodyCell({
   className?: string;
 }) {
   return (
-    <td className={cn("px-5 py-4 text-sm text-zinc-400", className)}>
+    <td className={cn("px-5 py-5 text-sm text-zinc-400", className)}>
       {children}
     </td>
   );
@@ -329,10 +336,10 @@ function CurrencyToggle({
           type="button"
           onClick={() => onChange(option)}
           className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors",
+            "rounded-md px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.2em] transition-colors",
             value === option
               ? "bg-primary text-black"
-              : "font-mono text-text-secondary hover:text-primary"
+              : "text-text-secondary hover:text-primary"
           )}
         >
           {option}
