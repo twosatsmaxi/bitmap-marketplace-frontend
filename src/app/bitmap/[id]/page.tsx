@@ -34,18 +34,18 @@ export default async function BitmapDetailPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="mb-6">
           <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors font-mono uppercase tracking-wide"
+            href="/browse"
+            className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Browse
+            Back to Market
           </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
           {/* Left Column: Canvas and Chart */}
           <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="panel-frame pixel-cut bg-bg w-full aspect-square relative flex items-center justify-center p-4">
+            <div className="home-panel relative flex aspect-square w-full items-center justify-center bg-black p-4">
               <BitmapCanvas
                 blockNumber={bitmap.blockNumber}
                 bitmapType={bitmap.bitmapType}
@@ -55,8 +55,8 @@ export default async function BitmapDetailPage({ params }: PageProps) {
               />
             </div>
             
-            <div className="panel-frame pixel-cut p-5">
-              <h2 className="font-heading font-bold text-xl mb-6">Price History</h2>
+            <div className="home-panel px-5 py-5">
+              <h2 className="mb-6 font-mono text-xl font-bold uppercase text-primary">Price History</h2>
               <PriceHistoryChart data={priceHistory} />
             </div>
           </div>

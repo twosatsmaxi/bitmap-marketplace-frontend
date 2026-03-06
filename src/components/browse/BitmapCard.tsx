@@ -10,15 +10,15 @@ export default function BitmapCard({ bitmap }: { bitmap: Bitmap }) {
   return (
     <Link 
       href={`/bitmap/${bitmap.id}`}
-      className="group flex flex-col panel-frame pixel-cut overflow-hidden hover:border-primary transition-all duration-300 animate-fadeUp hover:-translate-y-1 hover:shadow-glow bg-surface"
+      className="group home-panel flex flex-col overflow-hidden transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.02]"
     >
-      <div className="relative aspect-square border-b border-border/50 bg-[#000000]">
+      <div className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-black">
         <BitmapCanvas
           blockNumber={bitmap.blockNumber}
           bitmapType={bitmap.bitmapType}
           className="w-full h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-60 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-50 pointer-events-none" />
         <div className="absolute top-3 left-3 flex gap-2">
           <StatusPill status={bitmap.listingStatus} />
         </div>
@@ -27,13 +27,13 @@ export default function BitmapCard({ bitmap }: { bitmap: Bitmap }) {
         </div>
       </div>
       
-      <div className="p-4 flex flex-col gap-3 bg-surface/80">
+      <div className="flex flex-col gap-3 bg-black/45 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-heading font-bold text-lg text-text-primary group-hover:text-primary transition-colors tracking-tight">
+            <h3 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-primary">
               {formatNumber(bitmap.blockNumber)}
             </h3>
-            <span className="text-[10px] text-text-secondary capitalize font-mono uppercase tracking-[0.2em]">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500 capitalize">
               {bitmap.bitmapType}
             </span>
           </div>

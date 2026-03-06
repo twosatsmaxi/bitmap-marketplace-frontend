@@ -12,28 +12,28 @@ export default function MetadataPanel({ bitmap }: { bitmap: Bitmap }) {
   ];
 
   return (
-    <div className="panel-frame pixel-cut p-5">
-      <h2 className="font-heading font-bold text-xl mb-4 border-b border-border pb-2">Properties</h2>
+    <div className="home-panel px-5 py-5">
+      <h2 className="mb-4 border-b border-[rgba(120,72,18,0.55)] pb-2 font-mono text-xl font-bold uppercase text-primary">Properties</h2>
       
       <div className="flex flex-col gap-3">
         {properties.map((prop, idx) => (
-          <div key={idx} className="flex justify-between items-center text-sm">
-            <span className="text-text-secondary font-mono tracking-wide">{prop.label}</span>
-            <span className="text-text-primary font-mono">{prop.value}</span>
+          <div key={idx} className="flex items-center justify-between text-sm">
+            <span className="font-mono tracking-wide text-zinc-500">{prop.label}</span>
+            <span className="font-mono text-zinc-300">{prop.value}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-border">
-        <h3 className="font-semibold text-sm mb-3 uppercase tracking-wide text-text-secondary">Traits</h3>
+      <div className="mt-6 border-t border-[rgba(120,72,18,0.55)] pt-4">
+        <h3 className="mb-3 font-mono text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Traits</h3>
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-surface-2 p-3 border border-border flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] uppercase text-text-secondary tracking-[0.16em] mb-1">Pattern</span>
-            <span className="font-medium text-sm capitalize">{bitmap.bitmapType}</span>
+          <div className="flex flex-col items-center justify-center border border-[rgba(120,72,18,0.55)] bg-black/45 p-3 text-center">
+            <span className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">Pattern</span>
+            <span className="font-mono text-sm font-bold uppercase text-primary capitalize">{bitmap.bitmapType}</span>
           </div>
-          <div className="bg-surface-2 p-3 border border-border flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] uppercase text-text-secondary tracking-[0.16em] mb-1">Rarity</span>
-            <span className="font-medium text-sm capitalize">{bitmap.rarity}</span>
+          <div className="flex flex-col items-center justify-center border border-[rgba(120,72,18,0.55)] bg-black/45 p-3 text-center">
+            <span className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">Rarity</span>
+            <span className="font-mono text-sm font-bold uppercase text-primary capitalize">{bitmap.rarity}</span>
           </div>
         </div>
       </div>

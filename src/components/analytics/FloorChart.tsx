@@ -50,13 +50,13 @@ export default function FloorChart({ data }: { data: PriceDataPoint[] }) {
         />
         <Tooltip 
           content={({ active, payload, label }) => {
-            if (active && payload && payload.length) {
-              return (
-                <div className="bg-bg border border-border p-3 panel-frame pixel-cut">
-                  <p className="text-[10px] text-text-secondary mb-1">{label}</p>
-                  <p className="text-primary font-mono font-medium">
-                    {formatNumber(payload[0].value as number)} sats
-                  </p>
+              if (active && payload && payload.length) {
+                return (
+                  <div className="border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.96)] p-3">
+                    <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">{label}</p>
+                    <p className="text-primary font-mono font-medium">
+                      {formatNumber(payload[0].value as number)} sats
+                    </p>
                 </div>
               );
             }

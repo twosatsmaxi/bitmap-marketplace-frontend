@@ -15,10 +15,11 @@ export default async function AnalyticsPage() {
     <div className="min-h-screen bg-bg">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
         <div className="mb-8">
-          <h1 className="font-heading font-bold text-3xl md:text-4xl text-text-primary mb-4">
+          <p className="home-eyebrow mb-3">Analytics</p>
+          <h1 className="mb-4 font-mono text-3xl font-black uppercase tracking-[-0.03em] text-primary md:text-5xl">
             Collection Analytics
           </h1>
-          <p className="text-text-secondary font-mono tracking-wide max-w-2xl text-sm">
+          <p className="max-w-2xl font-mono text-sm tracking-wide text-zinc-400">
             Macro insights, floor dynamics, and ownership distribution for the Bitmap ecosystem.
           </p>
         </div>
@@ -31,14 +32,14 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="panel-frame pixel-cut p-5 flex flex-col h-[400px]">
-            <h2 className="font-heading font-bold text-lg mb-4">Floor Price History</h2>
+          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
+            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Floor Price History</h2>
             <div className="flex-1 min-h-0">
               <FloorChart data={data.priceHistory} />
             </div>
           </div>
-          <div className="panel-frame pixel-cut p-5 flex flex-col h-[400px]">
-            <h2 className="font-heading font-bold text-lg mb-4">Volume History</h2>
+          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
+            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Volume History</h2>
             <div className="flex-1 min-h-0">
               <VolumeChart data={data.volumeHistory} />
             </div>
@@ -46,14 +47,14 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="panel-frame pixel-cut p-5 flex flex-col h-[400px]">
-            <h2 className="font-heading font-bold text-lg mb-4">Holder Distribution</h2>
+          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
+            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Holder Distribution</h2>
             <div className="flex-1 min-h-0">
               <HolderDistribution data={data.holderDistribution} />
             </div>
           </div>
-          <div className="panel-frame pixel-cut p-5 flex flex-col h-[400px]">
-            <h2 className="font-heading font-bold text-lg mb-4">Pattern Rarity Breakdown</h2>
+          <div className="home-panel flex h-[400px] flex-col px-5 py-5">
+            <h2 className="mb-4 font-mono text-lg font-bold uppercase text-primary">Pattern Rarity Breakdown</h2>
             <div className="flex-1 min-h-0">
               <RarityDonut data={data.rarityBreakdown} />
             </div>

@@ -8,12 +8,12 @@ interface StatCardProps {
 
 export default function StatCard({ label, value, trend }: StatCardProps) {
   return (
-    <div className="panel-frame pixel-cut p-4 bg-surface/50 flex flex-col gap-2">
-      <span className="text-[10px] uppercase tracking-[0.16em] text-text-secondary">
+    <div className="home-panel flex flex-col gap-2 px-4 py-4">
+      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </span>
       <div className="flex items-end gap-3">
-        <span className="font-mono text-xl md:text-2xl font-bold text-text-primary">
+        <span className="font-mono text-xl font-bold text-primary md:text-2xl">
           {value}
         </span>
         {trend !== undefined && (

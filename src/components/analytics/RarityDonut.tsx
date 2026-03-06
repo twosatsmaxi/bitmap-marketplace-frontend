@@ -38,8 +38,8 @@ export default function RarityDonut({ data }: { data: RarityData[] }) {
             if (active && payload && payload.length) {
               const data = payload[0].payload;
               return (
-                <div className="bg-bg border border-border p-3 panel-frame pixel-cut">
-                  <p className="text-[10px] uppercase text-text-secondary mb-1">{data.name}</p>
+                <div className="border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.96)] p-3">
+                  <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">{data.name}</p>
                   <p className="font-mono font-medium" style={{ color: data.color }}>
                     {data.value}%
                   </p>
@@ -53,7 +53,7 @@ export default function RarityDonut({ data }: { data: RarityData[] }) {
           verticalAlign="bottom" 
           height={36}
           iconType="square"
-          formatter={(value) => <span className="text-sm text-text-secondary capitalize">{value}</span>}
+          formatter={(value) => <span className="font-mono text-sm capitalize text-zinc-500">{value}</span>}
         />
       </PieChart>
     </ResponsiveContainer>

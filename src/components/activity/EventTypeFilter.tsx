@@ -26,10 +26,10 @@ export default function EventTypeFilter({ currentType }: EventTypeFilterProps) {
             key={type.id}
             href={`/activity${type.id === "all" ? "" : `?type=${type.id}`}`}
             className={cn(
-              "px-4 py-1.5 text-xs font-semibold uppercase tracking-wide border transition-all pixel-cut",
+              "rounded-md border px-4 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors",
               isActive
-                ? "bg-primary text-bg border-primary shadow-glow"
-                : "bg-surface-2 text-text-secondary border-border hover:border-primary/50 hover:text-text-primary"
+                ? "border-primary bg-primary text-black"
+                : "border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] text-zinc-500 hover:border-primary/45 hover:text-primary"
             )}
           >
             {type.label}
