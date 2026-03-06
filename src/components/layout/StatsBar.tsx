@@ -6,28 +6,28 @@ import { formatSats, formatNumber, formatPercent } from "@/lib/utils";
 
 export default function StatsBar({ stats }: { stats: CollectionStats }) {
   return (
-    <div className="fixed top-nav left-0 right-0 h-stats-bar bg-surface border-b border-border z-40 flex items-center overflow-x-auto hide-scrollbar">
-      <div className="flex items-center h-full w-full max-w-7xl mx-auto text-xs whitespace-nowrap font-mono tracking-wide">
-        <div className="px-4 md:px-6 flex items-center h-full border-r border-border/50 bg-surface-2 text-[10px] uppercase text-text-secondary tracking-[0.2em]">
+    <div className="fixed left-0 right-0 top-nav z-40 flex h-stats-bar items-center overflow-x-auto border-b border-[rgba(120,72,18,0.55)] bg-[rgba(9,9,11,0.9)] hide-scrollbar">
+      <div className="mx-auto flex h-full w-full max-w-7xl items-center whitespace-nowrap font-mono text-xs tracking-wide">
+        <div className="flex h-full items-center border-r border-[rgba(120,72,18,0.45)] bg-[rgba(247,147,26,0.06)] px-4 text-[10px] uppercase tracking-[0.2em] text-zinc-500 md:px-6">
           <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
-            Syncing
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></span>
+            Live
           </span>
         </div>
         
-        <div className="flex items-center gap-6 md:gap-8 px-4 md:px-6">
+        <div className="flex items-center gap-6 px-4 md:gap-8 md:px-6">
           <StatItem label="Floor">
             <span className="text-primary font-bold">
               <CountUp end={stats.floorPrice} formatFn={formatSats} />
             </span>
           </StatItem>
           <StatItem label="24h Vol">
-            <span className="text-text-primary">
+            <span className="text-zinc-300">
               <CountUp end={stats.totalVolume} formatFn={formatSats} />
             </span>
           </StatItem>
           <StatItem label="24h Avg">
-            <span className="text-text-primary">
+            <span className="text-zinc-300">
               <CountUp end={stats.avgPrice24h} formatFn={formatSats} />
             </span>
           </StatItem>
@@ -36,17 +36,17 @@ export default function StatsBar({ stats }: { stats: CollectionStats }) {
               <CountUp end={stats.change24h} formatFn={formatPercent} />
             </span>
           </StatItem>
-          <div className="w-px h-4 bg-border/50 mx-2" />
+          <div className="mx-2 h-4 w-px bg-[rgba(120,72,18,0.45)]" />
           <StatItem label="Listed">
-            <span className="text-text-primary">
+            <span className="text-zinc-300">
               <CountUp end={stats.listedCount} formatFn={formatNumber} />
-              <span className="text-text-secondary ml-1.5 text-[10px]">
+              <span className="ml-1.5 text-[10px] text-zinc-500">
                 ({((stats.listedCount / stats.totalSupply) * 100).toFixed(1)}%)
               </span>
             </span>
           </StatItem>
           <StatItem label="Holders">
-            <span className="text-text-primary">
+            <span className="text-zinc-300">
               <CountUp end={stats.holders} formatFn={formatNumber} />
             </span>
           </StatItem>
@@ -59,7 +59,7 @@ export default function StatsBar({ stats }: { stats: CollectionStats }) {
 function StatItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-text-secondary uppercase text-[10px] tracking-[0.16em]">{label}:</span>
+      <span className="text-zinc-500 uppercase text-[10px] tracking-[0.16em]">{label}:</span>
       {children}
     </div>
   );
