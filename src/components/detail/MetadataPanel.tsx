@@ -5,7 +5,7 @@ export default function MetadataPanel({ bitmap }: { bitmap: Bitmap }) {
   const properties = [
     { label: "Inscription ID", value: truncateInscription(bitmap.inscriptionId) },
     { label: "Owner", value: truncateAddr(bitmap.owner) },
-    { label: "Block Height", value: formatNumber(bitmap.blockNumber) },
+    { label: "Block Height", value: `${bitmap.blockNumber}.bitmap` },
     { label: "Genesis Height", value: formatNumber(bitmap.genesisHeight) },
     { label: "Sat Number", value: formatNumber(bitmap.sat) },
     { label: "Minted At", value: new Date(bitmap.mintedAt).toLocaleDateString() },

@@ -1,11 +1,14 @@
-import ComingSoonPage from "@/components/layout/ComingSoonPage";
+import BrowseClient from "@/components/browse/BrowseClient";
+import { getBitmaps } from "@/lib/api";
 
-export default function BrowsePage() {
+export const revalidate = 60;
+
+export default async function BrowsePage() {
+  const { bitmaps, total } = await getBitmaps();
+
   return (
-    <ComingSoonPage
-      eyebrow="MVP rollout"
-      title="Browse coming soon"
-      description="The full browse surface is being tightened for launch. The market homepage remains the primary MVP experience for now."
-    />
+    <div className="min-h-screen bg-bg">
+      <BrowseClient initialBitmaps={bitmaps} total={total} />
+    </div>
   );
 }

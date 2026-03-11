@@ -69,7 +69,7 @@ export default function ActivityTable({ events }: { events: ActivityEvent[] }) {
                     </div>
                     <div>
                       <div className="font-mono text-sm font-bold uppercase text-primary">
-                        {formatNumber(event.bitmap.blockNumber)}
+                        {event.bitmap.blockNumber}.bitmap
                       </div>
                       <div className="font-mono text-[10px] uppercase text-zinc-500">
                         {event.bitmap.bitmapType}

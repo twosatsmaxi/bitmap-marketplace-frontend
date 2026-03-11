@@ -279,28 +279,28 @@ export const HOME_MARKET_ROWS: HomeMarketRow[] = [
 export const HOME_RECENT_SALES: HomeRecentSale[] = [
   {
     id: "sale-1",
-    bitmapId: "Bitmap #840000",
+    bitmapId: "840000.bitmap",
     traitName: "Bitmap Punk",
     price: 195_000,
     soldAt: new Date(Date.now() - 4 * 60_000).toISOString(),
   },
   {
     id: "sale-2",
-    bitmapId: "Bitmap #700000",
+    bitmapId: "700000.bitmap",
     traitName: "Patoshi",
     price: 1_120_000,
     soldAt: new Date(Date.now() - 12 * 60_000).toISOString(),
   },
   {
     id: "sale-3",
-    bitmapId: "Bitmap #500000",
+    bitmapId: "500000.bitmap",
     traitName: "Bitmap",
     price: 180_000,
     soldAt: new Date(Date.now() - 26 * 60_000).toISOString(),
   },
   {
     id: "sale-4",
-    bitmapId: "Bitmap #210000",
+    bitmapId: "210000.bitmap",
     traitName: "Billionaire",
     price: 1_740_000,
     soldAt: new Date(Date.now() - 41 * 60_000).toISOString(),

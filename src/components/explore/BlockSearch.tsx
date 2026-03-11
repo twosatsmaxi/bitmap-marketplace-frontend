@@ -17,7 +17,7 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
     e.preventDefault();
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 0 || num > 1_000_000) {
-      setError("Enter a block height between 0 and 1,000,000");
+      setError("Pick a block between 0 and 1,000,000");
       return;
     }
     setError("");
@@ -36,7 +36,7 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
         <input
           type="text"
           inputMode="numeric"
-          placeholder="Block height…"
+          placeholder="Jump to any block…"
           value={value}
           onChange={(e) => {
             setValue(e.target.value);

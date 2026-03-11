@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import ExploreClient from "@/components/explore/ExploreClient";
 
 export const metadata: Metadata = {
-  title: "Block Explorer — Bitmap Marketplace",
+  title: "Bitmap Explorer — Bitmap Marketplace",
   description:
-    "Browse any Bitcoin block as a WASM-rendered bitmap visualization. Explore block data, transaction counts, and listing status.",
+    "Every Bitcoin block has a bitmap. Browse them all — from genesis to now.",
 };
 
 async function getChainTip(): Promise<number> {

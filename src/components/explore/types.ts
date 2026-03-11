@@ -27,6 +27,11 @@ export interface InterestingBlock {
   height: number;
 }
 
+export type FilterCategory = {
+  id: string;
+  label: string;
+};
+
 export interface BlockRendered {
   height: number;
   status: RenderStatus;

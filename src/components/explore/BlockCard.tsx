@@ -53,7 +53,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 bg-[#0d1117]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-              Rendering…
+              Painting…
             </span>
           </div>
         )}
@@ -62,7 +62,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {status === "idle" && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
-              Loading…
+              Fetching pixels…
             </span>
           </div>
         )}
@@ -71,7 +71,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {status === "error" && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-              Block unavailable
+              Bitmap not found
             </span>
           </div>
         )}
@@ -88,7 +88,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       <div className="flex flex-col gap-1 p-3">
         <div className="flex items-center justify-between">
           <span className="font-mono text-sm font-bold text-primary">
-            #{height.toLocaleString()}
+            {height}.bitmap
           </span>
           {meta && (
             <span className="font-mono text-[10px] text-zinc-500">

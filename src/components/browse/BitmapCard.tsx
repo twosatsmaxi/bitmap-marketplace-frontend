@@ -31,7 +31,7 @@ export default function BitmapCard({ bitmap }: { bitmap: Bitmap }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="font-mono text-lg font-bold uppercase tracking-[0.04em] text-primary">
-              {formatNumber(bitmap.blockNumber)}
+              {bitmap.blockNumber}.bitmap
             </h3>
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500 capitalize">
               {bitmap.bitmapType}
