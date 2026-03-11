@@ -32,6 +32,7 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/"}>Market</NavLink>
+            <NavLink href="/explore" active={pathname === "/explore"}>Explore</NavLink>
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
             <SoonNav label="Analytics" />
@@ -76,6 +77,9 @@ export default function Navbar() {
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             <MobileNavLink href="/" active={pathname === "/"} onClick={() => setMenuOpen(false)}>
               Market
+            </MobileNavLink>
+            <MobileNavLink href="/explore" active={pathname === "/explore"} onClick={() => setMenuOpen(false)}>
+              Explore
             </MobileNavLink>
             <MobileSoonNav label="Activity" />
             <MobileSoonNav label="Analytics" />
