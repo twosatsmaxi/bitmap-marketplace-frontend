@@ -1,55 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const STUB_DATA: Record<string, number[]> = {
-  patoshi: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-  billionaire: [123456, 234567, 345678, 456789, 567890],
-  "epic-sat": [111, 222, 333, 444, 555, 666, 777, 888, 999],
-  pizza: [57043, 57044, 57045, 57046, 57047, 57048],
-  "pristine-punk": [100, 200, 300, 400, 500],
-  "perfect-punk": [42, 69, 420, 1337]
+const TRAIT_MAP: Record<string, string> = {
+  punks: "pristine_punk",
+  palindrome: "palindrome",
+  "sub-100k": "sub_100k",
+  nakamoto: "nakamoto",
+  patoshi: "patoshi",
+  billionaire: "billionaire",
+  "epic-sat": "epic_sat",
+  pizza: "pizza",
+  "pristine-punk": "pristine_punk",
+  "perfect-punk": "perfect_punk",
 };
-
-function isPalindrome(n: number): boolean {
-  const s = n.toString();
-  return s === s.split("").reverse().join("");
-}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter") || "all";
   const page = parseInt(searchParams.get("page") || "0", 10);
   const limit = parseInt(searchParams.get("limit") || "9", 10);
-  const offset = page * limit;
+
+  const BITMAP_INDEX_URL = process.env.BITMAP_INDEX_URL || "http://localhost:8080";
 
   let heights: number[] = [];
 
-  if (filter === "punks") {
-    // blocks where height % 4 === 3
-    // We start from 0 and find the first page of matches
-    // This is inefficient for real use but matches the stub requirement
-    for (let i = offset * 4; heights.length < limit && i < 1_000_000; i++) {
-      if (i % 4 === 3) heights.push(i);
+  if (filter === "all") {
+    // For "all", we just return consecutive heights starting from page * limit
+    const offset = page * limit;
+    for (let i = offset; i < offset + limit; i++) {
+      heights.push(i);
     }
-  } else if (filter === "palindrome") {
-    // This would be slow to calculate on the fly for deep pages
-    // For now, let's just find some palindromes starting from offset
-    let current = offset;
-    while (heights.length < limit && current < 1_000_000) {
-      if (isPalindrome(current)) {
-        heights.push(current);
+  } else {
+    const trait = TRAIT_MAP[filter] || filter;
+    try {
+      const url = new URL(`${BITMAP_INDEX_URL}/api/bitmaps`);
+      url.searchParams.set("traits", trait);
+      url.searchParams.set("page", page.toString());
+      url.searchParams.set("limit", limit.toString());
+
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        throw new Error(`bitmap-index API error: ${res.status}`);
       }
-      current++;
+      const data = await res.json();
+      // Assuming bitmap-index returns { bitmaps: [{ height: number }, ...], total: number }
+      // Or maybe it returns a list of heights directly.
+      // Based on description "GET /api/bitmaps?traits=...&page=...&limit=..."
+      // and issue-2ht: "Replace with calls to bitmap-index GET /api/bitmaps?traits=...&page=...&limit=..."
+      // Let's assume it returns { bitmaps: { height: number }[] }
+      heights = data.bitmaps.map((b: { height: number }) => b.height);
+    } catch (error) {
+      console.error("Error fetching from bitmap-index:", error);
+      // Fallback or empty if API fails
+      heights = [];
     }
-  } else if (filter === "sub-100k") {
-    for (let i = offset; i < offset + limit && i < 100_000; i++) {
-      heights.push(i);
-    }
-  } else if (filter === "nakamoto") {
-    for (let i = offset; i < offset + limit && i < 36_288; i++) {
-      heights.push(i);
-    }
-  } else if (STUB_DATA[filter]) {
-    heights = STUB_DATA[filter].slice(offset, offset + limit);
   }
 
   const hasMore = heights.length === limit;

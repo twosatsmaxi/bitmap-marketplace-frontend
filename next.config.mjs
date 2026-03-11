@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    BITMAP_INDEX_URL: process.env.BITMAP_INDEX_URL,
+  },
   images: {
     domains: ["ord.bestinslot.xyz"],
   },
