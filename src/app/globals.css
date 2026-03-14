@@ -277,4 +277,33 @@ body::before {
     animation-timing-function: steps(2, end);
     animation-iteration-count: infinite;
   }
+
+  /* bitmap-render style: clean, minimal cards & buttons */
+  .br-card {
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+      rgba(7, 7, 9, 0.96);
+    padding: 12px;
+  }
+
+  .br-btn {
+    border: 1px solid rgba(247, 162, 59, 0.45);
+    border-radius: 4px;
+    background: rgba(247, 162, 59, 0.18);
+    color: #f3b15a;
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .br-btn:hover {
+    background: rgba(247, 162, 59, 0.28);
+    border-color: rgba(247, 162, 59, 0.7);
+  }
 }

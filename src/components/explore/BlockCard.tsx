@@ -34,11 +34,23 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
   return (
     <Link
       href={`/bitmap/${height}.bitmap`}
-      className="home-panel group flex flex-col overflow-hidden transition-all hover:border-primary/40"
+      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
     >
+      {/* Card head */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="font-mono text-xs font-bold text-[#f7a23b]">
+          #{height.toLocaleString()}
+        </span>
+        {meta && (
+          <span className="font-mono text-[10px] text-[rgba(255,255,255,0.78)]">
+            {meta.tx_count.toLocaleString()} txs
+          </span>
+        )}
+      </div>
+
       {/* Canvas area */}
-      <div className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]">
-        {/* Renderer — always mounted so it starts fetching */}
+      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11]">
+        {/* Renderer */}
         <div
           className={cn(
             "absolute inset-0 transition-opacity duration-500",
@@ -50,7 +62,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
 
         {/* Loading skeleton */}
         {status === "loading" && (
-          <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 bg-[#0d1117]">
+          <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
               Painting…
@@ -58,9 +70,9 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           </div>
         )}
 
-        {/* Idle state (initial) — shows while loading hasn't started */}
+        {/* Idle state */}
         {status === "idle" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
               Fetching pixels…
             </span>
@@ -69,7 +81,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
 
         {/* Error state */}
         {status === "error" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
               Bitmap not found
             </span>
@@ -85,31 +97,26 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Metadata row */}
-      <div className="flex flex-col gap-1 p-3">
+      <div className="flex flex-col gap-1 px-3 py-2.5">
         <div className="flex items-center justify-between">
           <span className="font-mono text-sm font-bold text-primary">
             {height}.bitmap
           </span>
-          {meta && (
-            <span className="font-mono text-[10px] text-zinc-500">
-              {meta.tx_count.toLocaleString()} txs
-            </span>
-          )}
         </div>
 
         {meta && (
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-zinc-600">
+            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
               {formatDate(meta.timestamp)}
             </span>
-            <span className="font-mono text-[10px] text-zinc-600">
+            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
               {formatSize(meta.size)}
             </span>
           </div>
         )}
 
         {price !== undefined && (
-          <div className="mt-1 border-t border-[rgba(120,72,18,0.3)] pt-1">
+          <div className="mt-1 border-t border-[rgba(255,255,255,0.08)] pt-1">
             <PriceDisplay price={price} size="sm" />
           </div>
         )}
