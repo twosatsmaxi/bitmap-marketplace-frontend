@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RENDER_API = process.env.NEXT_PUBLIC_RENDER_API_BASE ?? "http://localhost:3000";
+const RENDER_API =
+  process.env.RENDER_API_BASE ?? "http://r2d2.local:3020";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { height: string } }
+  { params }: { params: Promise<{ height: string }> }
 ) {
-  const { height } = params;
+  const { height } = await params;
   const url = `${RENDER_API}/api/block/${height}/meta`;
 
   try {
@@ -21,7 +22,10 @@ export async function GET(
     return NextResponse.json(data, {
       headers: { "Cache-Control": "public, max-age=60" },
     });
-  } catch (e) {
-    return NextResponse.json({ error: "Upstream unreachable" }, { status: 502 });
+  } catch {
+    return NextResponse.json(
+      { error: "Upstream unreachable" },
+      { status: 502 }
+    );
   }
 }

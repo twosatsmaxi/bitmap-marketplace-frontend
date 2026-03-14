@@ -88,7 +88,7 @@ export default function BitmapRenderer({
 
     (async () => {
       try {
-        const res = await fetch(`${RENDER_API}/api/block/${height}`);
+        const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buffer = await res.arrayBuffer();
         if (cancelled) return;

@@ -38,7 +38,7 @@ const metaCache = new Map<number, BlockMeta>();
 async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
   if (metaCache.has(height)) return metaCache.get(height);
   try {
-    const res = await fetch(`${RENDER_API}/api/block/${height}/meta`);
+    const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}/meta`);
     if (!res.ok) return undefined;
     const data: BlockMeta = await res.json();
     metaCache.set(height, data);
