@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare } from "./types";
 
-const RENDER_API = process.env.NEXT_PUBLIC_RENDER_API_BASE ?? "http://localhost:3000";
+const RENDER_API = "";
 
 interface BitmapRendererProps {
   height: number;

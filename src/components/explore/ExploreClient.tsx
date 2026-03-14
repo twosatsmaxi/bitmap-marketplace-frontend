@@ -7,7 +7,7 @@ import BlockSearch from "./BlockSearch";
 import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory } from "./types";
 import { cn } from "@/lib/utils";
 
-const RENDER_API = process.env.NEXT_PUBLIC_RENDER_API_BASE ?? "http://localhost:3000";
+const RENDER_API = "";
 const GRID_SIZE = 9;
 
 const INTERESTING_BLOCKS: InterestingBlock[] = [
