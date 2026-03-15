@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
-import type { BlockMeta, RenderStatus } from "./types";
+import type { BlockMeta, RenderStatus, QualityTier } from "./types";
+import { QualityMonitor } from "./quality-monitor";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
@@ -36,6 +37,54 @@ function formatSize(bytes: number) {
 export default function BlockCard({ height, meta, listingStatus, price }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [qualityTier, setQualityTier] = useState<QualityTier>(
+    supportsWebGL2 ? "full" : "canvas2d"
+  );
+  const monitorRef = useRef<QualityMonitor>(
+    new QualityMonitor(supportsWebGL2 ? "full" : "canvas2d")
+  );
+  const staticImageRef = useRef<string | null>(null);
+
+  // FPS monitoring via rAF — runs alongside the renderer's own loop
+  useEffect(() => {
+    if (status !== "done") return;
+    const monitor = monitorRef.current;
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const changed = monitor.recordFrame(now);
+      if (changed) {
+        setQualityTier(monitor.tier);
+      }
+      // Stop monitoring once we hit static — nothing left to measure
+      if (monitor.tier !== "static") {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(raf);
+  }, [status]);
+
+  const rendererContainerRef = useRef<HTMLDivElement>(null);
+
+  // Generate static fallback image when tier drops to static
+  useEffect(() => {
+    if (qualityTier === "static" && !staticImageRef.current && rendererContainerRef.current) {
+      const canvas = rendererContainerRef.current.querySelector("canvas");
+      if (canvas) {
+        try {
+          staticImageRef.current = canvas.toDataURL("image/png");
+          // Force re-render to show the static image
+          setQualityTier("static");
+        } catch {
+          // Security error — stay on canvas2d instead
+          monitorRef.current.lock();
+          setQualityTier("canvas2d");
+        }
+      }
+    }
+  }, [qualityTier]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const card = e.currentTarget.getBoundingClientRect();
@@ -80,22 +129,32 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
         {/* Renderer */}
         <div
+          ref={rendererContainerRef}
           className={cn(
             "absolute inset-0 transition-opacity duration-500",
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          {supportsWebGL2 ? (
-            <WebGLBitmapRenderer
+          {qualityTier === "static" && staticImageRef.current ? (
+            <img
+              src={staticImageRef.current}
+              alt={`Block ${height}`}
+              style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
+              className="block"
+            />
+          ) : qualityTier === "canvas2d" ? (
+            <BitmapRenderer
               height={height}
               canvasSize={300}
               onStatus={setStatus}
             />
           ) : (
-            <BitmapRenderer
+            <WebGLBitmapRenderer
               height={height}
               canvasSize={300}
               onStatus={setStatus}
+              enableRepulsion={qualityTier === "full"}
+              enableFlicker={qualityTier === "full"}
             />
           )}
         </div>

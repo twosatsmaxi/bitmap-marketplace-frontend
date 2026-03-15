@@ -22,6 +22,8 @@ interface WebGLBitmapRendererProps {
     usedHeight: number
   ) => void;
   animationStyle?: AnimationStyle;
+  enableRepulsion?: boolean;
+  enableFlicker?: boolean;
 }
 
 /** Render one frame into the shared GL context, then copy to the 2D canvas. */
@@ -38,7 +40,9 @@ function renderFrame(
   flickerIndex: number,
   mouseX: number,
   mouseY: number,
-  scale: number
+  scale: number,
+  enableRepulsion = true,
+  enableFlicker = true
 ) {
   const { gl, program, buffers, uniforms, canvas: offscreen } = shared;
 
@@ -64,6 +68,8 @@ function renderFrame(
   gl.uniform1f(uniforms.u_flickerIndex, flickerIndex);
   gl.uniform2f(uniforms.u_mouse, mouseX, mouseY);
   gl.uniform1f(uniforms.u_scale, scale);
+  gl.uniform1f(uniforms.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
+  gl.uniform1f(uniforms.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
 
   // Draw
   gl.viewport(0, 0, canvasSize, canvasSize);
@@ -83,6 +89,8 @@ export default function WebGLBitmapRenderer({
   onStatus,
   onResult,
   animationStyle = "bitfeed",
+  enableRepulsion = true,
+  enableFlicker = true,
 }: WebGLBitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -96,6 +104,8 @@ export default function WebGLBitmapRenderer({
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
+  const featuresRef = useRef({ enableRepulsion, enableFlicker });
+  featuresRef.current = { enableRepulsion, enableFlicker };
 
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -178,12 +188,13 @@ export default function WebGLBitmapRenderer({
         const run = (now: number) => {
           if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) return;
 
+          const feat = featuresRef.current;
           const flickerIdx =
-            Math.random() < 0.01
+            feat.enableFlicker && Math.random() < 0.01
               ? Math.floor(Math.random() * count)
               : -1;
 
-          const m = mousePosRef.current;
+          const m = feat.enableRepulsion ? mousePosRef.current : null;
 
           renderFrame(
             sharedRef.current,
@@ -198,7 +209,9 @@ export default function WebGLBitmapRenderer({
             flickerIdx,
             m ? m.x : -1,
             m ? m.y : -1,
-            1.0
+            1.0,
+            feat.enableRepulsion,
+            feat.enableFlicker
           );
 
           const elapsed = now - start;
