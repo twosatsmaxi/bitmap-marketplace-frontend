@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
 import type { BlockMeta, RenderStatus } from "./types";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
+
+const supportsWebGL2 =
+  typeof document !== "undefined" &&
+  !!document.createElement("canvas").getContext("webgl2");
 
 interface BlockCardProps {
   height: number;
@@ -80,11 +85,19 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          <BitmapRenderer 
-            height={height} 
-            canvasSize={300} 
-            onStatus={setStatus} 
-          />
+          {supportsWebGL2 ? (
+            <WebGLBitmapRenderer
+              height={height}
+              canvasSize={300}
+              onStatus={setStatus}
+            />
+          ) : (
+            <BitmapRenderer
+              height={height}
+              canvasSize={300}
+              onStatus={setStatus}
+            />
+          )}
         </div>
 
         {/* Loading skeleton */}
