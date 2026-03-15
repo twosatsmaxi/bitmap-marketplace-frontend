@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import { getBitmapType, getBitmapRarity } from "./bitmap-type";
 
-function makeBitmap(
+export function makeMockBitmap(
   blockNumber: number,
   overrides: Partial<Bitmap> = {}
 ): Bitmap {
@@ -33,22 +33,22 @@ function makeBitmap(
 }
 
 export const MOCK_BITMAPS: Bitmap[] = [
-  makeBitmap(420000, { price: 250000, listingStatus: "listed", rarity: "rare" }),
-  makeBitmap(777777, { price: 1500000, listingStatus: "listed", rarity: "epic" }),
-  makeBitmap(123456, { listingStatus: "has_offer", rarity: "uncommon" }),
-  makeBitmap(500000, { price: 180000, listingStatus: "listed" }),
-  makeBitmap(1, { price: 50000000, listingStatus: "listed", rarity: "legendary" }),
-  makeBitmap(100000, { price: 750000, listingStatus: "listed", rarity: "rare" }),
-  makeBitmap(210000, { listingStatus: "unlisted", rarity: "rare" }),
-  makeBitmap(840000, { price: 95000, listingStatus: "listed" }),
-  makeBitmap(12321, { price: 320000, listingStatus: "listed", rarity: "uncommon" }),
-  makeBitmap(999, { price: 8000000, listingStatus: "listed", rarity: "legendary" }),
-  makeBitmap(314159, { listingStatus: "has_offer" }),
-  makeBitmap(700000, { price: 110000, listingStatus: "listed" }),
-  makeBitmap(600000, { listingStatus: "unlisted" }),
-  makeBitmap(88888, { price: 450000, listingStatus: "listed", rarity: "uncommon" }),
-  makeBitmap(42000, { price: 220000, listingStatus: "listed" }),
-  makeBitmap(7, { price: 25000000, listingStatus: "listed", rarity: "legendary" }),
+  makeMockBitmap(420000, { price: 250000, listingStatus: "listed", rarity: "rare" }),
+  makeMockBitmap(777777, { price: 1500000, listingStatus: "listed", rarity: "epic" }),
+  makeMockBitmap(123456, { listingStatus: "has_offer", rarity: "uncommon" }),
+  makeMockBitmap(500000, { price: 180000, listingStatus: "listed" }),
+  makeMockBitmap(1, { price: 50000000, listingStatus: "listed", rarity: "legendary" }),
+  makeMockBitmap(100000, { price: 750000, listingStatus: "listed", rarity: "rare" }),
+  makeMockBitmap(210000, { listingStatus: "unlisted", rarity: "rare" }),
+  makeMockBitmap(840000, { price: 95000, listingStatus: "listed" }),
+  makeMockBitmap(12321, { price: 320000, listingStatus: "listed", rarity: "uncommon" }),
+  makeMockBitmap(999, { price: 8000000, listingStatus: "listed", rarity: "legendary" }),
+  makeMockBitmap(314159, { listingStatus: "has_offer" }),
+  makeMockBitmap(700000, { price: 110000, listingStatus: "listed" }),
+  makeMockBitmap(600000, { listingStatus: "unlisted" }),
+  makeMockBitmap(88888, { price: 450000, listingStatus: "listed", rarity: "uncommon" }),
+  makeMockBitmap(42000, { price: 220000, listingStatus: "listed" }),
+  makeMockBitmap(7, { price: 25000000, listingStatus: "listed", rarity: "legendary" }),
 ];
 
 export const MOCK_STATS: CollectionStats = {
