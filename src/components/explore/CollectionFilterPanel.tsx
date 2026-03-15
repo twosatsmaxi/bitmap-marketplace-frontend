@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CollectionFilterMeta } from "./types";
 
@@ -14,9 +15,14 @@ export default function CollectionFilterPanel({
   activeFilter,
   onToggle,
 }: CollectionFilterPanelProps) {
+  const [showAll, setShowAll] = useState(false);
   const sortedCollections = [...collections].sort((a, b) => a.priority - b.priority);
   const spotlight = sortedCollections.slice(0, 3);
-  const detail = sortedCollections.slice(3);
+  const extraItems = sortedCollections.slice(3);
+  const baseVisible = Math.min(sortedCollections.length, 10);
+  const detailLimit = Math.max(baseVisible - 3, 0);
+  const detail = showAll ? extraItems : extraItems.slice(0, detailLimit);
+  const hiddenCount = Math.max(0, sortedCollections.length - baseVisible);
 
   return (
     <div className="br-card p-5">
@@ -74,6 +80,20 @@ export default function CollectionFilterPanel({
           ))}
         </div>
       )}
+      <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        <span className="font-mono">More soon</span>
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary hover:text-primary/70"
+          >
+            {showAll
+              ? "Show fewer collections"
+              : `Show all (+${hiddenCount})`}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
