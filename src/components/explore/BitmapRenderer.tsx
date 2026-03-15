@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
-import { drawGravityPack, drawGlowPulse, drawBitfeedVacuum } from "./renderFunctions";
+import { drawGravityPack, drawGlowPulse, drawBitfeedVacuum, drawInteractive } from "./renderFunctions";
 
 const RENDER_API = "";
 
@@ -24,11 +24,39 @@ export default function BitmapRenderer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const animationRef = useRef<number>(0);
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
   const prevDataRef = useRef<{
     squares: WorkerSquare[];
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
+
+  // Handle Mouse Tracking
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      mousePosRef.current = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    };
+
+    const handleMouseLeave = () => {
+      mousePosRef.current = null;
+    };
+
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
   // Spawn worker once
   useEffect(() => {
@@ -54,16 +82,22 @@ export default function BitmapRenderer({
 
               if (animationStyle === "glow") {
                 const pulse = 0.5 + 0.5 * Math.sin(now / 1000);
-                drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex);
+                drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex, mousePosRef.current);
                 animationRef.current = requestAnimationFrame(run);
               } else if (animationStyle === "bitfeed") {
-                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex);
-                if (progress < 1) {
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                // Continue loop if mouse is over or animating
+                if (progress < 1 || mousePosRef.current) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
+              } else if (animationStyle === "interactive") {
+                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                if (progress < 1 || mousePosRef.current) {
                   animationRef.current = requestAnimationFrame(run);
                 }
               } else {
-                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex);
-                if (progress < 1) {
+                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                if (progress < 1 || mousePosRef.current) {
                   animationRef.current = requestAnimationFrame(run);
                 }
               }
@@ -120,6 +154,8 @@ export default function BitmapRenderer({
               
               if (animationStyle === "bitfeed") {
                 drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              } else if (animationStyle === "interactive") {
+                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
               } else {
                 drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
               }

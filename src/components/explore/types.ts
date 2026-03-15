@@ -22,7 +22,7 @@ export interface WorkerResult {
 
 export type RenderStatus = "idle" | "loading" | "done" | "error";
 
-export type AnimationStyle = "gravity" | "glow" | "bitfeed";
+export type AnimationStyle = "gravity" | "glow" | "bitfeed" | "interactive";
 
 export interface InterestingBlock {
   label: string;
