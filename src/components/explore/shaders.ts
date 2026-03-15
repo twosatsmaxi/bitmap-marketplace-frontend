@@ -74,19 +74,22 @@ void main() {
   // Target position
   float tx = x;
   float ty = y;
+  float shrinkFactor = 1.0;
 
-  // Mouse repulsion (only after entry animation finishes, if enabled)
+  // Mouse repulsion + shrink (only after entry animation finishes, if enabled)
   if (u_enableRepulsion > 0.5 && overallProg >= 1.0 && u_mouse.x >= 0.0) {
     float mx = u_mouse.x / gridSize;
     float my = (u_mouse.y - offsetY) / gridSize;
     float dx = tx + size * 0.5 - mx;
     float dy = ty + size * 0.5 - my;
     float dist = sqrt(dx * dx + dy * dy);
-    float radius = 6.0;
+    float radius = 18.0;
     if (dist < radius && dist > 0.001) {
-      float force = (1.0 - dist / radius) * 3.0;
+      float force = (1.0 - dist / radius) * 5.0;
       tx += (dx / dist) * force;
       ty += (dy / dist) * force;
+      // Shrink tiles near cursor (0 at center, 1 at edge)
+      shrinkFactor = smoothstep(0.0, radius, dist);
     }
   }
 
@@ -110,6 +113,13 @@ void main() {
   px = floor(px);
   py = floor(py);
   pw = ceil(pw);
+
+  // Cursor magnetic shrink: reduce tile size toward its center
+  float shrunkPw = pw * shrinkFactor;
+  float shrinkOffset = (pw - shrunkPw) * 0.5;
+  px += shrinkOffset;
+  py += shrinkOffset;
+  pw = shrunkPw;
 
   if (pw <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);

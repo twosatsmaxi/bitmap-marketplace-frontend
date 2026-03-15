@@ -36,19 +36,23 @@ export function drawBitfeedVacuum(
     // Target position
     let tx = sq.x;
     let ty = sq.y;
+    let shrinkFactor = 1;
 
-    // Interactive Repulsion
+    // Interactive Repulsion + Shrink
     if (mousePos && progress === 1) {
       const mx = mousePos.x / gridSize;
       const my = (mousePos.y - offsetY) / gridSize;
       const dx = tx + sq.r / 2 - mx;
       const dy = ty + sq.r / 2 - my;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const radius = 6; // grid units
-      if (dist < radius) {
-        const force = (1 - dist / radius) * 3; // Strength of push
+      const radius = 18; // grid units
+      if (dist < radius && dist > 0.001) {
+        const force = (1 - dist / radius) * 5; // Strength of push
         tx += (dx / dist) * force;
         ty += (dy / dist) * force;
+        // Shrink tiles near cursor (smoothstep: 0 at center, 1 at edge)
+        const t = Math.max(0, Math.min(1, dist / radius));
+        shrinkFactor = t * t * (3 - 2 * t);
       }
     }
 
@@ -73,9 +77,13 @@ export function drawBitfeedVacuum(
     const curX = startX + (tx - startX) * eased;
     const curY = startY + (ty - startY) * eased;
 
-    const px = curX * gridSize + unitPadding;
-    const py = curY * gridSize + offsetY + unitPadding;
-    const pw = sq.r * gridSize - unitPadding * 2;
+    let pw = sq.r * gridSize - unitPadding * 2;
+    // Cursor magnetic shrink: reduce tile size toward its center
+    const shrunkPw = pw * shrinkFactor;
+    const shrinkOffset = (pw - shrunkPw) * 0.5;
+    const px = curX * gridSize + unitPadding + shrinkOffset;
+    const py = curY * gridSize + offsetY + unitPadding + shrinkOffset;
+    pw = shrunkPw;
 
     if (pw <= 0) continue;
 
