@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { drawBitfeedVacuum } from "./renderFunctions";
-import { getCachedLayout, setCachedLayout } from "./layout-cache";
 
 const RENDER_API = "";
 
@@ -26,8 +25,6 @@ export default function BitmapRenderer({
   const workerRef = useRef<Worker | null>(null);
   const animationRef = useRef<number>(0);
   const mousePosRef = useRef<{ x: number; y: number } | null>(null);
-  const heightRef = useRef(height);
-  heightRef.current = height;
   const prevDataRef = useRef<{
     squares: WorkerSquare[];
     layoutWidth: number;
@@ -100,7 +97,6 @@ export default function BitmapRenderer({
         }
 
         prevDataRef.current = currentData;
-        setCachedLayout(heightRef.current, { squares, layoutWidth, usedHeight });
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -120,21 +116,6 @@ export default function BitmapRenderer({
   useEffect(() => {
     const worker = workerRef.current;
     if (!worker) return;
-
-    // Check layout cache — restore instantly without animation
-    const cached = getCachedLayout(height);
-    if (cached && canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (ctx) {
-        canvasRef.current.width = scaledSize;
-        canvasRef.current.height = scaledSize;
-        drawBitfeedVacuum(ctx, cached.squares, cached.layoutWidth, cached.usedHeight, scaledSize, 1);
-        prevDataRef.current = cached;
-        onResult?.(cached.squares, cached.layoutWidth, cached.usedHeight);
-        onStatus("done");
-        return;
-      }
-    }
 
     onStatus("loading");
 

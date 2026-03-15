@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
-import { getCachedLayout, setCachedLayout } from "./layout-cache";
 
 const RENDER_API = "";
 const MAX_INSTANCES = 8192;
@@ -105,8 +104,6 @@ export default function WebGLBitmapRenderer({
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
-  const heightRef = useRef(height);
-  heightRef.current = height;
   const featuresRef = useRef({ enableRepulsion, enableFlicker });
   featuresRef.current = { enableRepulsion, enableFlicker };
   const loopActiveRef = useRef(false);
@@ -288,7 +285,6 @@ export default function WebGLBitmapRenderer({
         animationRef.current = requestAnimationFrame(run);
 
         prevDataRef.current = { squares, layoutWidth, usedHeight };
-        setCachedLayout(heightRef.current, { squares, layoutWidth, usedHeight });
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -313,36 +309,6 @@ export default function WebGLBitmapRenderer({
     const shared = sharedRef.current;
     const ctx2d = ctx2dRef.current;
     if (!worker || !shared || !ctx2d) return;
-
-    // Check layout cache — restore instantly without animation
-    const cached = getCachedLayout(height);
-    if (cached) {
-      const { squares, layoutWidth, usedHeight } = cached;
-      const count = Math.min(squares.length, MAX_INSTANCES);
-
-      const data = new Float32Array(count * 4);
-      for (let i = 0; i < count; i++) {
-        const sq = squares[i];
-        const off = i * 4;
-        data[off] = sq.x;
-        data[off + 1] = sq.y;
-        data[off + 2] = sq.r;
-        data[off + 3] = i;
-      }
-      instanceDataRef.current = data;
-
-      // Render single frame at final state (startTime far in the past)
-      renderFrame(
-        shared, ctx2d, scaledSize, data, count,
-        layoutWidth, usedHeight,
-        0, 4000, -1, -1, -1, 1.0
-      );
-
-      prevDataRef.current = { squares, layoutWidth, usedHeight };
-      onResult?.(squares, layoutWidth, usedHeight);
-      onStatus("done");
-      return;
-    }
 
     onStatus("loading");
 
