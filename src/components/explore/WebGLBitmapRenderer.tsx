@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
+import { getCachedLayout, setCachedLayout } from "./layout-cache";
 
 const RENDER_API = "";
 const MAX_INSTANCES = 8192;
@@ -104,8 +105,11 @@ export default function WebGLBitmapRenderer({
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
+  const heightRef = useRef(height);
+  heightRef.current = height;
   const featuresRef = useRef({ enableRepulsion, enableFlicker });
   featuresRef.current = { enableRepulsion, enableFlicker };
+  const loopActiveRef = useRef(false);
 
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -130,13 +134,66 @@ export default function WebGLBitmapRenderer({
       mousePosRef.current = null;
     };
 
+    // Restart render loop when mouse re-enters after it stopped
+    const handleMouseEnter = () => {
+      if (loopActiveRef.current) return;
+      const prev = prevDataRef.current;
+      const data = instanceDataRef.current;
+      if (!prev || !data || !sharedRef.current || !ctx2dRef.current) return;
+
+      const count = data.length / 4;
+      loopActiveRef.current = true;
+
+      const tick = (now: number) => {
+        if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
+          loopActiveRef.current = false;
+          return;
+        }
+        const feat = featuresRef.current;
+        const flickerIdx =
+          feat.enableFlicker && Math.random() < 0.01
+            ? Math.floor(Math.random() * count)
+            : -1;
+        const m = feat.enableRepulsion ? mousePosRef.current : null;
+
+        renderFrame(
+          sharedRef.current,
+          ctx2dRef.current,
+          scaledSize,
+          instanceDataRef.current,
+          count,
+          prev.layoutWidth,
+          prev.usedHeight,
+          0,
+          4000, // well past entry animation
+          flickerIdx,
+          m ? m.x : -1,
+          m ? m.y : -1,
+          1.0,
+          feat.enableRepulsion,
+          feat.enableFlicker
+        );
+
+        if (mousePosRef.current) {
+          animationRef.current = requestAnimationFrame(tick);
+        } else {
+          loopActiveRef.current = false;
+        }
+      };
+
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = requestAnimationFrame(tick);
+    };
+
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("mouseenter", handleMouseEnter);
     return () => {
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("mouseenter", handleMouseEnter);
     };
-  }, []);
+  }, [scaledSize]);
 
   // Shared GL + worker init
   useEffect(() => {
@@ -185,8 +242,12 @@ export default function WebGLBitmapRenderer({
 
         // Start animation loop
         const start = performance.now();
+        loopActiveRef.current = true;
         const run = (now: number) => {
-          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) return;
+          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
+            loopActiveRef.current = false;
+            return;
+          }
 
           const feat = featuresRef.current;
           const flickerIdx =
@@ -218,6 +279,8 @@ export default function WebGLBitmapRenderer({
           const progress = Math.min(1, elapsed / 3000);
           if (progress < 1 || mousePosRef.current) {
             animationRef.current = requestAnimationFrame(run);
+          } else {
+            loopActiveRef.current = false;
           }
         };
 
@@ -225,6 +288,7 @@ export default function WebGLBitmapRenderer({
         animationRef.current = requestAnimationFrame(run);
 
         prevDataRef.current = { squares, layoutWidth, usedHeight };
+        setCachedLayout(heightRef.current, { squares, layoutWidth, usedHeight });
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -249,6 +313,36 @@ export default function WebGLBitmapRenderer({
     const shared = sharedRef.current;
     const ctx2d = ctx2dRef.current;
     if (!worker || !shared || !ctx2d) return;
+
+    // Check layout cache — restore instantly without animation
+    const cached = getCachedLayout(height);
+    if (cached) {
+      const { squares, layoutWidth, usedHeight } = cached;
+      const count = Math.min(squares.length, MAX_INSTANCES);
+
+      const data = new Float32Array(count * 4);
+      for (let i = 0; i < count; i++) {
+        const sq = squares[i];
+        const off = i * 4;
+        data[off] = sq.x;
+        data[off + 1] = sq.y;
+        data[off + 2] = sq.r;
+        data[off + 3] = i;
+      }
+      instanceDataRef.current = data;
+
+      // Render single frame at final state (startTime far in the past)
+      renderFrame(
+        shared, ctx2d, scaledSize, data, count,
+        layoutWidth, usedHeight,
+        0, 4000, -1, -1, -1, 1.0
+      );
+
+      prevDataRef.current = { squares, layoutWidth, usedHeight };
+      onResult?.(squares, layoutWidth, usedHeight);
+      onStatus("done");
+      return;
+    }
 
     onStatus("loading");
 
