@@ -37,6 +37,7 @@ export function drawBitfeedVacuum(
     let tx = sq.x;
     let ty = sq.y;
     let shrinkFactor = 1;
+    let proximityGlow = 0;
 
     // Interactive Repulsion + Shrink
     if (mousePos && progress === 1) {
@@ -53,6 +54,12 @@ export function drawBitfeedVacuum(
         // Shrink tiles near cursor (smoothstep: 0 at center, 1 at edge)
         const t = Math.max(0, Math.min(1, dist / radius));
         shrinkFactor = t * t * (3 - 2 * t);
+
+        // Size-adaptive: small blocks glow instead of vanishing
+        if (sq.r <= 4) {
+          proximityGlow = 1.0 - shrinkFactor;
+          shrinkFactor = Math.max(shrinkFactor, 0.5);
+        }
       }
     }
 
@@ -89,12 +96,16 @@ export function drawBitfeedVacuum(
 
     // Bitfeed aesthetic: opacity increases as it "packs"
     ctx.globalAlpha = isFlicker ? 1 : Math.min(1, currentProgress * 1.5);
-    const brightness = isFlicker ? 1.6 : 1;
+    const glowBrightness = 1.0 + proximityGlow * 1.2;
+    const brightness = isFlicker ? 1.6 : glowBrightness;
     ctx.fillStyle = `rgb(${Math.min(255, baseR * brightness)}, ${Math.min(255, baseG * brightness)}, ${Math.min(255, baseB * brightness)})`;
-    
+
     if (isFlicker) {
       ctx.shadowBlur = 6;
       ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, 0.8)`;
+    } else if (proximityGlow > 0.01) {
+      ctx.shadowBlur = 8 * proximityGlow;
+      ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, ${proximityGlow * 0.9})`;
     } else {
       ctx.shadowBlur = 0;
     }

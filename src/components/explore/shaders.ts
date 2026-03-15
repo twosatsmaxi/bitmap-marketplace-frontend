@@ -27,6 +27,7 @@ uniform float u_enableFlicker;   // 1.0 = on, 0.0 = off
 
 out float v_brightness;
 out float v_alpha;
+out float v_proximityGlow;
 
 float easeOutBack(float x) {
   float c1 = 1.70158;
@@ -66,6 +67,7 @@ void main() {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     v_alpha     = 0.0;
     v_brightness = 1.0;
+    v_proximityGlow = 0.0;
     return;
   }
 
@@ -75,6 +77,7 @@ void main() {
   float tx = x;
   float ty = y;
   float shrinkFactor = 1.0;
+  v_proximityGlow = 0.0;
 
   // Mouse repulsion + shrink (only after entry animation finishes, if enabled)
   if (u_enableRepulsion > 0.5 && overallProg >= 1.0 && u_mouse.x >= 0.0) {
@@ -90,6 +93,12 @@ void main() {
       ty += (dy / dist) * force;
       // Shrink tiles near cursor (0 at center, 1 at edge)
       shrinkFactor = smoothstep(0.0, radius, dist);
+
+      // Size-adaptive: small blocks glow instead of vanishing
+      if (size <= 4.0) {
+        v_proximityGlow = 1.0 - shrinkFactor;
+        shrinkFactor = max(shrinkFactor, 0.5);
+      }
     }
   }
 
@@ -125,6 +134,7 @@ void main() {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     v_alpha     = 0.0;
     v_brightness = 1.0;
+    v_proximityGlow = 0.0;
     return;
   }
 
@@ -148,7 +158,8 @@ void main() {
 
   // Flicker (skip entirely when disabled)
   bool isFlicker = u_enableFlicker > 0.5 && abs(index - u_flickerIndex) < 0.5;
-  v_brightness   = isFlicker ? 1.6 : 1.0;
+  float glowBrightness = 1.0 + v_proximityGlow * 1.2;
+  v_brightness   = isFlicker ? 1.6 : glowBrightness;
   v_alpha        = isFlicker ? 1.0 : min(1.0, currentProg * 1.5);
 }
 `;
@@ -160,6 +171,7 @@ uniform vec3 u_baseColor;
 
 in float v_brightness;
 in float v_alpha;
+in float v_proximityGlow;
 
 out vec4 fragColor;
 
