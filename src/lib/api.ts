@@ -13,6 +13,7 @@ import {
   MOCK_ACTIVITY,
   MOCK_PRICE_HISTORY,
   MOCK_ANALYTICS,
+  makeMockBitmap,
 } from "./mock-data";
 
 const BIS_BASE = "https://api.bestinslot.xyz/v3";
@@ -60,11 +61,22 @@ export async function getBitmaps(
 }
 
 export async function getBitmap(id: string): Promise<Bitmap | null> {
+  const bitmapMatch = id.match(/^(\d+)\.bitmap$/);
+  const blockNum = bitmapMatch ? Number(bitmapMatch[1]) : Number.NaN;
+
   try {
+    if (bitmapMatch) {
+      const mockBitmap = MOCK_BITMAPS.find((b) => b.blockNumber === blockNum);
+      return mockBitmap ?? makeMockBitmap(blockNum);
+    }
+
     return await bis<Bitmap>(`/inscription/single`, { inscription_id: id });
   } catch {
-    const blockNum = parseInt(id.replace(".bitmap", ""), 10);
-    return MOCK_BITMAPS.find((b) => b.blockNumber === blockNum) ?? MOCK_BITMAPS[0];
+    if (bitmapMatch) {
+      return MOCK_BITMAPS.find((b) => b.blockNumber === blockNum) ?? makeMockBitmap(blockNum);
+    }
+
+    return MOCK_BITMAPS.find((b) => b.inscriptionId === id) ?? null;
   }
 }
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import BitmapRenderer from "./BitmapRenderer";
-import type { BlockMeta, RenderStatus } from "./types";
+import type { BlockMeta, RenderStatus, AnimationStyle } from "./types";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
@@ -14,6 +14,7 @@ interface BlockCardProps {
   meta?: BlockMeta;
   listingStatus?: ListingStatus;
   price?: number;
+  animationStyle?: AnimationStyle;
 }
 
 function formatDate(ts: number) {
@@ -28,29 +29,70 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export default function BlockCard({ height, meta, listingStatus, price }: BlockCardProps) {
+export default function BlockCard({ height, meta, listingStatus, price, animationStyle }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const card = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - card.left;
+    const mouseY = e.clientY - card.top;
+    
+    // Tilt limit: 8 degrees
+    const rotateX = ((mouseY - card.height / 2) / (card.height / 2)) * -8;
+    const rotateY = ((mouseX - card.width / 2) / (card.width / 2)) * 8;
+    
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
 
   return (
     <Link
       href={`/bitmap/${height}.bitmap`}
-      className="home-panel group flex flex-col overflow-hidden transition-all hover:border-primary/40"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
+      style={{
+        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: "transform 0.1s ease-out, border-color 0.2s ease",
+      }}
     >
+      {/* Card head */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="font-mono text-xs font-bold text-[#f7a23b]">
+          #{height.toLocaleString()}
+        </span>
+        {meta && (
+          <span className="font-mono text-[10px] text-[rgba(255,255,255,0.78)]">
+            {meta.tx_count.toLocaleString()} txs
+          </span>
+        )}
+      </div>
+
       {/* Canvas area */}
-      <div className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]">
-        {/* Renderer — always mounted so it starts fetching */}
+      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+        {/* Renderer */}
         <div
           className={cn(
             "absolute inset-0 transition-opacity duration-500",
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          <BitmapRenderer height={height} canvasSize={300} onStatus={setStatus} />
+          <div className="scanline" />
+          <BitmapRenderer 
+            height={height} 
+            canvasSize={300} 
+            onStatus={setStatus} 
+            animationStyle={animationStyle}
+          />
         </div>
 
         {/* Loading skeleton */}
         {status === "loading" && (
-          <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 bg-[#0d1117]">
+          <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
               Painting…
@@ -58,9 +100,9 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           </div>
         )}
 
-        {/* Idle state (initial) — shows while loading hasn't started */}
+        {/* Idle state */}
         {status === "idle" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
               Fetching pixels…
             </span>
@@ -69,7 +111,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
 
         {/* Error state */}
         {status === "error" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117]">
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
               Bitmap not found
             </span>
@@ -85,31 +127,26 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Metadata row */}
-      <div className="flex flex-col gap-1 p-3">
+      <div className="flex flex-col gap-1 px-3 py-2.5">
         <div className="flex items-center justify-between">
           <span className="font-mono text-sm font-bold text-primary">
             {height}.bitmap
           </span>
-          {meta && (
-            <span className="font-mono text-[10px] text-zinc-500">
-              {meta.tx_count.toLocaleString()} txs
-            </span>
-          )}
         </div>
 
         {meta && (
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-zinc-600">
+            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
               {formatDate(meta.timestamp)}
             </span>
-            <span className="font-mono text-[10px] text-zinc-600">
+            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
               {formatSize(meta.size)}
             </span>
           </div>
         )}
 
         {price !== undefined && (
-          <div className="mt-1 border-t border-[rgba(120,72,18,0.3)] pt-1">
+          <div className="mt-1 border-t border-[rgba(255,255,255,0.08)] pt-1">
             <PriceDisplay price={price} size="sm" />
           </div>
         )}

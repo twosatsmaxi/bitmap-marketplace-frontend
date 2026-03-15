@@ -27,38 +27,36 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-1">
       <div className="flex">
-        {/* Left icon border */}
-        <div className="flex items-center border border-r-0 border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.04)] px-2.5 text-zinc-600">
-          <Search className="h-3.5 w-3.5" />
-        </div>
-
         {/* Input */}
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Jump to any block…"
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            if (error) setError("");
-          }}
-          disabled={disabled}
-          className={cn(
-            "w-40 border border-r-0 border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.6)] px-3 py-2",
-            "font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none",
-            "focus:border-primary/50 focus:bg-[rgba(247,147,26,0.04)]",
-            "disabled:opacity-50"
-          )}
-        />
+        <div className="relative flex items-center">
+          <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-zinc-600" />
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Jump to block…"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              if (error) setError("");
+            }}
+            disabled={disabled}
+            className={cn(
+              "w-44 rounded-l border border-r-0 border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.07)] py-2 pl-8 pr-3",
+              "font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none",
+              "focus:border-[rgba(255,255,255,0.25)] focus:bg-[rgba(255,255,255,0.09)]",
+              "disabled:opacity-50"
+            )}
+          />
+        </div>
 
         {/* Go button */}
         <button
           type="submit"
           disabled={disabled}
           className={cn(
-            "border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.08)] px-3 py-2",
+            "rounded-r border border-[rgba(247,162,59,0.45)] bg-[rgba(247,162,59,0.18)] px-3 py-2",
             "font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary",
-            "transition-colors hover:bg-[rgba(247,147,26,0.16)]",
+            "transition-colors hover:bg-[rgba(247,162,59,0.28)]",
             "disabled:opacity-50"
           )}
         >

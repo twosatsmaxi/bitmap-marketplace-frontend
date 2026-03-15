@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Zap, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
-import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory } from "./types";
+import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory, AnimationStyle } from "./types";
 import { cn } from "@/lib/utils";
 
-const RENDER_API = process.env.NEXT_PUBLIC_RENDER_API_BASE ?? "http://localhost:3000";
+const RENDER_API = "";
 const GRID_SIZE = 9;
 
 const INTERESTING_BLOCKS: InterestingBlock[] = [
@@ -38,7 +38,7 @@ const metaCache = new Map<number, BlockMeta>();
 async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
   if (metaCache.has(height)) return metaCache.get(height);
   try {
-    const res = await fetch(`${RENDER_API}/api/block/${height}/meta`);
+    const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}/meta`);
     if (!res.ok) return undefined;
     const data: BlockMeta = await res.json();
     metaCache.set(height, data);
@@ -58,11 +58,12 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterPage, setFilterPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  
+  const [animationStyle, setAnimationStyle] = useState<AnimationStyle>("gravity");
+
   const [anchorHeight, setAnchorHeight] = useState(
     Math.max(latestBlock - (GRID_SIZE - 1), 0)
   );
-  
+
   const [blocks, setBlocks] = useState<BlockRendered[]>([]);
 
   // Fetch meta for blocks
@@ -88,7 +89,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           const data = await res.json();
           const heights: number[] = data.heights;
           setHasMore(data.hasMore);
-          
+
           const newBlocks = heights.map(h => ({ height: h, status: "idle" as const }));
           setBlocks(newBlocks);
           loadMeta(heights);
@@ -149,7 +150,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-12 pt-4 md:px-6">
 
       {/* Header panel */}
-      <div className="home-panel p-5">
+      <div className="br-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="font-mono text-xl font-black uppercase tracking-[0.12em] text-primary md:text-2xl">
@@ -159,25 +160,45 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
               Every Bitcoin block is a bitmap. This is what they look like.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.06)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-              Chain tip{" "}
-              <span className="text-primary">#{latestBlock.toLocaleString()}</span>
-            </span>
-            <span className="border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.06)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-              {activeFilter ? (
-                <>
-                  <span className="text-primary">{currentCategory?.label}</span> · Page {filterPage + 1}
-                </>
-              ) : (
-                <>
-                  Viewing{" "}
-                  <span className="text-primary">
-                    {anchorHeight.toLocaleString()}–{rangeEnd.toLocaleString()}
-                  </span>
-                </>
-              )}
-            </span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                Chain tip{" "}
+                <span className="text-primary">#{latestBlock.toLocaleString()}</span>
+              </span>
+              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                {activeFilter ? (
+                  <>
+                    <span className="text-primary">{currentCategory?.label}</span> · Page {filterPage + 1}
+                  </>
+                ) : (
+                  <>
+                    Viewing{" "}
+                    <span className="text-primary">
+                      {anchorHeight.toLocaleString()}–{rangeEnd.toLocaleString()}
+                    </span>
+                  </>
+                )}
+              </span>
+            </div>
+
+            {/* Animation Toggle */}
+            <div className="flex items-center gap-1 rounded bg-black/40 p-0.5 border border-[rgba(255,255,255,0.08)]">
+              {(["gravity", "glow", "bitfeed", "interactive"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setAnimationStyle(s)}
+                  className={cn(
+                    "rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.15em] transition-all",
+                    animationStyle === s
+                      ? "bg-[rgba(247,162,59,0.18)] text-primary"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -189,12 +210,12 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           <button
             onClick={goPrev}
             disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-            className="flex items-center gap-1 border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.04)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+            className="br-btn flex items-center gap-1 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Prev
           </button>
-          
+
           <div className="flex min-w-[120px] items-center justify-center gap-2 font-mono text-[10px] text-zinc-600">
             {activeFilter ? (
               <span>PAGE {filterPage + 1}</span>
@@ -206,7 +227,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           <button
             onClick={goNext}
             disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-            className="flex items-center gap-1 border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.04)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+            className="br-btn flex items-center gap-1 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />
@@ -228,7 +249,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             <button
               key={b.height}
               onClick={() => jumpTo(b.height)}
-              className="home-chip flex-shrink-0"
+              className="flex-shrink-0 border border-[rgba(255,255,255,0.1)] rounded bg-[rgba(255,255,255,0.04)] px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-400 transition-colors hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
             >
               {b.label}
             </button>
@@ -248,10 +269,10 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
               key={cat.id}
               onClick={() => toggleFilter(cat.id)}
               className={cn(
-                "home-chip flex-shrink-0 transition-all",
-                activeFilter === cat.id 
-                  ? "bg-[rgba(247,147,26,0.12)] text-primary border-primary/40 ring-1 ring-primary/20" 
-                  : "text-zinc-500 hover:text-zinc-300"
+                "flex-shrink-0 border rounded px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] transition-all",
+                activeFilter === cat.id
+                  ? "bg-[rgba(247,162,59,0.18)] text-primary border-[rgba(247,162,59,0.45)] ring-1 ring-primary/20"
+                  : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] text-zinc-500 hover:text-zinc-300 hover:border-[rgba(255,255,255,0.15)]"
               )}
             >
               {cat.label}
@@ -269,10 +290,11 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             meta={b.meta}
             listingStatus={b.listingStatus}
             price={b.price}
+            animationStyle={animationStyle}
           />
         ))}
         {blocks.length === 0 && (
-          <div className="col-span-full py-20 text-center border border-dashed border-[rgba(120,72,18,0.3)] bg-black/20">
+          <div className="col-span-full py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
             <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
               No matching bitmaps found for this page
             </p>

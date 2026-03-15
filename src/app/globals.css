@@ -89,6 +89,44 @@ body::before {
     }
   }
 
+  @keyframes home-pixel-rain {
+    0% {
+      transform: translateY(-20vh);
+      opacity: 0;
+    }
+    15% {
+      opacity: var(--pixel-opacity, 0.15);
+    }
+    85% {
+      opacity: var(--pixel-opacity, 0.15);
+    }
+    100% {
+      transform: translateY(120vh);
+      opacity: 0;
+    }
+  }
+
+  @keyframes scanline {
+    0% {
+      top: -10%;
+    }
+    100% {
+      top: 110%;
+    }
+  }
+
+  .scanline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(247, 162, 59, 0.4), transparent);
+    box-shadow: 0 0 8px rgba(247, 162, 59, 0.6);
+    animation: scanline 4s linear infinite;
+    pointer-events: none;
+    z-index: 10;
+  }
+
   .pixel-cut {
     clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   }
@@ -247,6 +285,7 @@ body::before {
     display: block;
     background: rgba(247, 147, 26, 0.12);
     outline: 1px solid rgba(126, 73, 18, 0.24);
+    animation: home-pixel-rain linear infinite;
   }
 
   .panel-pixel-grid {
@@ -273,8 +312,35 @@ body::before {
     outline: 1px solid rgba(193, 117, 25, 0.1);
     box-shadow:
       0 0 12px rgba(255, 196, 42, 0.1);
-    animation-name: bitmap-square-blink;
-    animation-timing-function: steps(2, end);
-    animation-iteration-count: infinite;
+    animation: panel-pixel-rain steps(40, end) infinite;
+  }
+
+  /* bitmap-render style: clean, minimal cards & buttons */
+  .br-card {
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+      rgba(7, 7, 9, 0.96);
+    padding: 12px;
+  }
+
+  .br-btn {
+    border: 1px solid rgba(247, 162, 59, 0.45);
+    border-radius: 4px;
+    background: rgba(247, 162, 59, 0.18);
+    color: #f3b15a;
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .br-btn:hover {
+    background: rgba(247, 162, 59, 0.28);
+    border-color: rgba(247, 162, 59, 0.7);
   }
 }

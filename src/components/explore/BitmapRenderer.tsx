@@ -1,40 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RenderStatus, WorkerSquare } from "./types";
+import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
+import { drawGravityPack, drawGlowPulse, drawBitfeedVacuum, drawInteractive } from "./renderFunctions";
 
-const RENDER_API = process.env.NEXT_PUBLIC_RENDER_API_BASE ?? "http://localhost:3000";
+const RENDER_API = "";
 
 interface BitmapRendererProps {
   height: number;
   canvasSize?: number;
   onStatus: (status: RenderStatus) => void;
   onResult?: (squares: WorkerSquare[], layoutWidth: number, usedHeight: number) => void;
-}
-
-function drawSquares(
-  ctx: CanvasRenderingContext2D,
-  squares: WorkerSquare[],
-  layoutWidth: number,
-  usedHeight: number,
-  canvasSize: number
-) {
-  ctx.fillStyle = "#0d1117";
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
-  const draw = Math.max(layoutWidth, usedHeight);
-  const gridSize = canvasSize / draw;
-  const offsetY = (canvasSize - usedHeight * gridSize) / 2;
-  const unitPadding = gridSize / 4;
-
-  // HCL orange matching bitmap-render
-  ctx.fillStyle = "rgb(203,120,37)";
-  for (const sq of squares) {
-    const px = sq.x * gridSize + unitPadding;
-    const py = sq.y * gridSize + offsetY + unitPadding;
-    const pw = sq.r * gridSize - unitPadding * 2;
-    if (pw <= 0) continue;
-    ctx.fillRect(px, py, pw, pw);
-  }
+  animationStyle?: AnimationStyle;
 }
 
 export default function BitmapRenderer({
@@ -42,27 +19,95 @@ export default function BitmapRenderer({
   canvasSize = 300,
   onStatus,
   onResult,
+  animationStyle = "gravity",
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
-  const offscreenTransferredRef = useRef(false);
+  const animationRef = useRef<number>(0);
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const prevDataRef = useRef<{
+    squares: WorkerSquare[];
+    layoutWidth: number;
+    usedHeight: number;
+  } | null>(null);
+
+  // Handle Mouse Tracking
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      mousePosRef.current = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    };
+
+    const handleMouseLeave = () => {
+      mousePosRef.current = null;
+    };
+
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
   // Spawn worker once
   useEffect(() => {
     const worker = new Worker("/bitmap-worker.js");
     workerRef.current = worker;
-    offscreenTransferredRef.current = false;
 
     worker.onmessage = (e: MessageEvent) => {
       if (e.data.type === "done") {
         const { squares, layoutWidth, usedHeight } = e.data;
+        const currentData = { squares, layoutWidth, usedHeight };
 
-        // If OffscreenCanvas was NOT used (Safari), draw on main thread
-        if (!offscreenTransferredRef.current && canvasRef.current) {
+        if (canvasRef.current) {
           const ctx = canvasRef.current.getContext("2d");
-          if (ctx) drawSquares(ctx, squares, layoutWidth, usedHeight, canvasSize);
+          if (ctx) {
+            const start = performance.now();
+            const run = (now: number) => {
+              const elapsed = now - start;
+              const totalDuration = 3000;
+              const progress = Math.min(1, elapsed / totalDuration);
+              
+              // Occasional flicker (approx 1% chance per frame)
+              const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
+
+              if (animationStyle === "glow") {
+                const pulse = 0.5 + 0.5 * Math.sin(now / 1000);
+                drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex, mousePosRef.current);
+                animationRef.current = requestAnimationFrame(run);
+              } else if (animationStyle === "bitfeed") {
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                // Continue loop if mouse is over or animating
+                if (progress < 1 || mousePosRef.current) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
+              } else if (animationStyle === "interactive") {
+                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                if (progress < 1 || mousePosRef.current) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
+              } else {
+                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+                if (progress < 1 || mousePosRef.current) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
+              }
+            };
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = requestAnimationFrame(run);
+          }
         }
 
+        prevDataRef.current = currentData;
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -73,9 +118,10 @@ export default function BitmapRenderer({
     return () => {
       worker.terminate();
       workerRef.current = null;
+      cancelAnimationFrame(animationRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [animationStyle]); // Re-run if style changes to restart loop if needed
 
   // Fetch + render when height changes
   useEffect(() => {
@@ -87,8 +133,47 @@ export default function BitmapRenderer({
     let cancelled = false;
 
     (async () => {
+      // 1. Implode current if exists
+      if (prevDataRef.current && canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) {
+          const { squares, layoutWidth, usedHeight } = prevDataRef.current;
+          const outStart = performance.now();
+          const outDuration = 300;
+          
+          await new Promise<void>((resolve) => {
+            const animateOut = (now: number) => {
+              const elapsed = now - outStart;
+              const progress = Math.min(1, elapsed / outDuration);
+              
+              // Reverse gravity/implode: scale down to center
+              ctx.save();
+              ctx.translate(canvasSize / 2, canvasSize / 2);
+              ctx.scale(1 - progress, 1 - progress);
+              ctx.translate(-canvasSize / 2, -canvasSize / 2);
+              
+              if (animationStyle === "bitfeed") {
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              } else if (animationStyle === "interactive") {
+                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              } else {
+                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              }
+              ctx.restore();
+
+              if (progress < 1 && !cancelled) {
+                requestAnimationFrame(animateOut);
+              } else {
+                resolve();
+              }
+            };
+            requestAnimationFrame(animateOut);
+          });
+        }
+      }
+
       try {
-        const res = await fetch(`${RENDER_API}/api/block/${height}`);
+        const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
@@ -99,20 +184,8 @@ export default function BitmapRenderer({
         canvas.width = canvasSize;
         canvas.height = canvasSize;
 
-        const supportsOffscreen =
-          typeof OffscreenCanvas !== "undefined" &&
-          typeof canvas.transferControlToOffscreen === "function";
-
-        if (supportsOffscreen && !offscreenTransferredRef.current) {
-          offscreenTransferredRef.current = true;
-          const offscreen = canvas.transferControlToOffscreen();
-          worker.postMessage(
-            { type: "layout", buffer, canvasSize, offscreenCanvas: offscreen },
-            [buffer, offscreen]
-          );
-        } else {
-          worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
-        }
+        // We disable OffscreenCanvas for the reveal animation to ensure main thread control
+        worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
       } catch {
         if (!cancelled) onStatus("error");
       }
