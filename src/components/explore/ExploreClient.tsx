@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Zap, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
-import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory, AnimationStyle } from "./types";
+import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory } from "./types";
 import { cn } from "@/lib/utils";
 
 const RENDER_API = "";
@@ -58,7 +58,6 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterPage, setFilterPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [animationStyle, setAnimationStyle] = useState<AnimationStyle>("gravity");
 
   const [anchorHeight, setAnchorHeight] = useState(
     Math.max(latestBlock - (GRID_SIZE - 1), 0)
@@ -160,45 +159,25 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
               Every Bitcoin block is a bitmap. This is what they look like.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-                Chain tip{" "}
-                <span className="text-primary">#{latestBlock.toLocaleString()}</span>
-              </span>
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-                {activeFilter ? (
-                  <>
-                    <span className="text-primary">{currentCategory?.label}</span> · Page {filterPage + 1}
-                  </>
-                ) : (
-                  <>
-                    Viewing{" "}
-                    <span className="text-primary">
-                      {anchorHeight.toLocaleString()}–{rangeEnd.toLocaleString()}
-                    </span>
-                  </>
-                )}
-              </span>
-            </div>
-
-            {/* Animation Toggle */}
-            <div className="flex items-center gap-1 rounded bg-black/40 p-0.5 border border-[rgba(255,255,255,0.08)]">
-              {(["gravity", "glow", "bitfeed", "interactive"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setAnimationStyle(s)}
-                  className={cn(
-                    "rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.15em] transition-all",
-                    animationStyle === s
-                      ? "bg-[rgba(247,162,59,0.18)] text-primary"
-                      : "text-zinc-600 hover:text-zinc-400"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+              Chain tip{" "}
+              <span className="text-primary">#{latestBlock.toLocaleString()}</span>
+            </span>
+            <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+              {activeFilter ? (
+                <>
+                  <span className="text-primary">{currentCategory?.label}</span> · Page {filterPage + 1}
+                </>
+              ) : (
+                <>
+                  Viewing{" "}
+                  <span className="text-primary">
+                    {anchorHeight.toLocaleString()}–{rangeEnd.toLocaleString()}
+                  </span>
+                </>
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -290,7 +269,6 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             meta={b.meta}
             listingStatus={b.listingStatus}
             price={b.price}
-            animationStyle={animationStyle}
           />
         ))}
         {blocks.length === 0 && (

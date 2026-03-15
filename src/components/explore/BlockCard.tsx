@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import BitmapRenderer from "./BitmapRenderer";
-import type { BlockMeta, RenderStatus, AnimationStyle } from "./types";
+import type { BlockMeta, RenderStatus } from "./types";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
@@ -14,7 +14,6 @@ interface BlockCardProps {
   meta?: BlockMeta;
   listingStatus?: ListingStatus;
   price?: number;
-  animationStyle?: AnimationStyle;
 }
 
 function formatDate(ts: number) {
@@ -29,7 +28,7 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export default function BlockCard({ height, meta, listingStatus, price, animationStyle }: BlockCardProps) {
+export default function BlockCard({ height, meta, listingStatus, price }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
@@ -81,12 +80,10 @@ export default function BlockCard({ height, meta, listingStatus, price, animatio
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          <div className="scanline" />
           <BitmapRenderer 
             height={height} 
             canvasSize={300} 
             onStatus={setStatus} 
-            animationStyle={animationStyle}
           />
         </div>
 

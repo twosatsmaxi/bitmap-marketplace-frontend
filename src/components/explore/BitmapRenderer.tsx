@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
-import { drawGravityPack, drawGlowPulse, drawBitfeedVacuum, drawInteractive } from "./renderFunctions";
+import { drawBitfeedVacuum } from "./renderFunctions";
 
 const RENDER_API = "";
 
@@ -19,7 +19,7 @@ export default function BitmapRenderer({
   canvasSize = 300,
   onStatus,
   onResult,
-  animationStyle = "gravity",
+  animationStyle = "bitfeed",
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -80,26 +80,11 @@ export default function BitmapRenderer({
               // Occasional flicker (approx 1% chance per frame)
               const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
 
-              if (animationStyle === "glow") {
-                const pulse = 0.5 + 0.5 * Math.sin(now / 1000);
-                drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex, mousePosRef.current);
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+              
+              // Continue loop if mouse is over or animating
+              if (progress < 1 || mousePosRef.current) {
                 animationRef.current = requestAnimationFrame(run);
-              } else if (animationStyle === "bitfeed") {
-                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
-                // Continue loop if mouse is over or animating
-                if (progress < 1 || mousePosRef.current) {
-                  animationRef.current = requestAnimationFrame(run);
-                }
-              } else if (animationStyle === "interactive") {
-                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
-                if (progress < 1 || mousePosRef.current) {
-                  animationRef.current = requestAnimationFrame(run);
-                }
-              } else {
-                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
-                if (progress < 1 || mousePosRef.current) {
-                  animationRef.current = requestAnimationFrame(run);
-                }
               }
             };
             cancelAnimationFrame(animationRef.current);
@@ -152,13 +137,8 @@ export default function BitmapRenderer({
               ctx.scale(1 - progress, 1 - progress);
               ctx.translate(-canvasSize / 2, -canvasSize / 2);
               
-              if (animationStyle === "bitfeed") {
-                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
-              } else if (animationStyle === "interactive") {
-                drawInteractive(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
-              } else {
-                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
-              }
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              
               ctx.restore();
 
               if (progress < 1 && !cancelled) {
