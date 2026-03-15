@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RenderStatus, WorkerSquare } from "./types";
+import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
+import { drawGravityPack, drawGlowPulse } from "./renderFunctions";
 
 const RENDER_API = "";
 
@@ -10,67 +11,7 @@ interface BitmapRendererProps {
   canvasSize?: number;
   onStatus: (status: RenderStatus) => void;
   onResult?: (squares: WorkerSquare[], layoutWidth: number, usedHeight: number) => void;
-}
-
-function easeOutBack(x: number): number {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
-}
-
-function drawSquares(
-  ctx: CanvasRenderingContext2D,
-  squares: WorkerSquare[],
-  layoutWidth: number,
-  usedHeight: number,
-  canvasSize: number,
-  progress: number = 1,
-  startTime: number = 0,
-  currentTime: number = 0
-) {
-  ctx.fillStyle = "#0d1117";
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
-  const draw = Math.max(layoutWidth, usedHeight);
-  const gridSize = canvasSize / draw;
-  const offsetY = (canvasSize - usedHeight * gridSize) / 2;
-  const unitPadding = gridSize / 4;
-
-  const duration = 600; // ms
-  const totalStagger = 400; // ms stagger over all squares
-
-  // HCL orange matching bitmap-render
-  ctx.fillStyle = "rgb(203,120,37)";
-  
-  for (let i = 0; i < squares.length; i++) {
-    const sq = squares[i];
-    
-    // Animation logic
-    let currentProgress = 1;
-    if (progress < 1) {
-      const staggerDelay = (i / squares.length) * totalStagger;
-      const elapsed = currentTime - startTime - staggerDelay;
-      currentProgress = Math.max(0, Math.min(1, elapsed / duration));
-    }
-
-    if (currentProgress <= 0) continue;
-
-    const easedProgress = easeOutBack(currentProgress);
-    
-    const px = sq.x * gridSize + unitPadding;
-    // Fall from 20 units above
-    const startY = sq.y - 20;
-    const currentY = startY + (sq.y - startY) * easedProgress;
-    
-    const py = currentY * gridSize + offsetY + unitPadding;
-    const pw = sq.r * gridSize - unitPadding * 2;
-    
-    if (pw <= 0) continue;
-    
-    // Fade in
-    ctx.globalAlpha = currentProgress;
-    ctx.fillRect(px, py, pw, pw);
-  }
-  ctx.globalAlpha = 1;
+  animationStyle?: AnimationStyle;
 }
 
 export default function BitmapRenderer({
@@ -78,10 +19,16 @@ export default function BitmapRenderer({
   canvasSize = 300,
   onStatus,
   onResult,
+  animationStyle = "gravity",
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const animationRef = useRef<number>(0);
+  const prevDataRef = useRef<{
+    squares: WorkerSquare[];
+    layoutWidth: number;
+    usedHeight: number;
+  } | null>(null);
 
   // Spawn worker once
   useEffect(() => {
@@ -91,6 +38,7 @@ export default function BitmapRenderer({
     worker.onmessage = (e: MessageEvent) => {
       if (e.data.type === "done") {
         const { squares, layoutWidth, usedHeight } = e.data;
+        const currentData = { squares, layoutWidth, usedHeight };
 
         if (canvasRef.current) {
           const ctx = canvasRef.current.getContext("2d");
@@ -98,13 +46,21 @@ export default function BitmapRenderer({
             const start = performance.now();
             const run = (now: number) => {
               const elapsed = now - start;
-              const totalDuration = 1000; // Total including stagger
+              const totalDuration = 1000;
               const progress = Math.min(1, elapsed / totalDuration);
+              
+              // Occasional flicker (approx 1% chance per frame)
+              const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
 
-              drawSquares(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now);
-
-              if (progress < 1) {
+              if (animationStyle === "glow") {
+                const pulse = 0.5 + 0.5 * Math.sin(now / 1000);
+                drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex);
                 animationRef.current = requestAnimationFrame(run);
+              } else {
+                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex);
+                if (progress < 1) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
               }
             };
             cancelAnimationFrame(animationRef.current);
@@ -112,6 +68,7 @@ export default function BitmapRenderer({
           }
         }
 
+        prevDataRef.current = currentData;
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -125,7 +82,7 @@ export default function BitmapRenderer({
       cancelAnimationFrame(animationRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [animationStyle]); // Re-run if style changes to restart loop if needed
 
   // Fetch + render when height changes
   useEffect(() => {
@@ -133,11 +90,43 @@ export default function BitmapRenderer({
     if (!worker) return;
 
     onStatus("loading");
-    cancelAnimationFrame(animationRef.current);
 
     let cancelled = false;
 
     (async () => {
+      // 1. Implode current if exists
+      if (prevDataRef.current && canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) {
+          const { squares, layoutWidth, usedHeight } = prevDataRef.current;
+          const outStart = performance.now();
+          const outDuration = 300;
+          
+          await new Promise<void>((resolve) => {
+            const animateOut = (now: number) => {
+              const elapsed = now - outStart;
+              const progress = Math.min(1, elapsed / outDuration);
+              
+              // Reverse gravity/implode: scale down to center
+              ctx.save();
+              ctx.translate(canvasSize / 2, canvasSize / 2);
+              ctx.scale(1 - progress, 1 - progress);
+              ctx.translate(-canvasSize / 2, -canvasSize / 2);
+              
+              drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              ctx.restore();
+
+              if (progress < 1 && !cancelled) {
+                requestAnimationFrame(animateOut);
+              } else {
+                resolve();
+              }
+            };
+            requestAnimationFrame(animateOut);
+          });
+        }
+      }
+
       try {
         const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

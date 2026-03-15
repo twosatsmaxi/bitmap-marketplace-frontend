@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import BitmapRenderer from "./BitmapRenderer";
-import type { BlockMeta, RenderStatus } from "./types";
+import type { BlockMeta, RenderStatus, AnimationStyle } from "./types";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
@@ -14,6 +14,7 @@ interface BlockCardProps {
   meta?: BlockMeta;
   listingStatus?: ListingStatus;
   price?: number;
+  animationStyle?: AnimationStyle;
 }
 
 function formatDate(ts: number) {
@@ -28,13 +29,36 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export default function BlockCard({ height, meta, listingStatus, price }: BlockCardProps) {
+export default function BlockCard({ height, meta, listingStatus, price, animationStyle }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const card = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - card.left;
+    const mouseY = e.clientY - card.top;
+    
+    // Tilt limit: 8 degrees
+    const rotateX = ((mouseY - card.height / 2) / (card.height / 2)) * -8;
+    const rotateY = ((mouseX - card.width / 2) / (card.width / 2)) * 8;
+    
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
 
   return (
     <Link
       href={`/bitmap/${height}.bitmap`}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
+      style={{
+        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: "transform 0.1s ease-out, border-color 0.2s ease",
+      }}
     >
       {/* Card head */}
       <div className="flex items-center justify-between px-3 py-2">
@@ -49,7 +73,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Canvas area */}
-      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11]">
+      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
         {/* Renderer */}
         <div
           className={cn(
@@ -57,7 +81,13 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          <BitmapRenderer height={height} canvasSize={300} onStatus={setStatus} />
+          <div className="scanline" />
+          <BitmapRenderer 
+            height={height} 
+            canvasSize={300} 
+            onStatus={setStatus} 
+            animationStyle={animationStyle}
+          />
         </div>
 
         {/* Loading skeleton */}
