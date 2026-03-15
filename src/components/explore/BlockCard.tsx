@@ -203,7 +203,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           </span>
         </div>
 
-        {meta && (
+        {meta && meta.timestamp > 0 && meta.size > 0 && (
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
               {formatDate(meta.timestamp)}
