@@ -16,13 +16,12 @@ const INTERESTING_BLOCKS: InterestingBlock[] = [
   { label: "Halving II", height: 420_000 },
   { label: "Halving III", height: 630_000 },
   { label: "Halving IV", height: 840_000 },
-  { label: "777777", height: 777_777 },
-  { label: "800800", height: 800_800 },
 ];
 
 const FILTER_CATEGORIES: FilterCategory[] = [
   { id: "punks", label: "Punks" },
   { id: "palindrome", label: "Palindrome" },
+  { id: "repdigit", label: "Repdigit" },
   { id: "sub-100k", label: "Sub 100k" },
   { id: "patoshi", label: "Patoshi" },
   { id: "billionaire", label: "Billionaire" },
@@ -173,20 +172,6 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
               Chain tip{" "}
               <span className="text-primary">#{latestBlock.toLocaleString()}</span>
-            </span>
-            <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
-              {activeFilter ? (
-                <>
-                  <span className="text-primary">{currentCategory?.label}</span> · Page {filterPage + 1}
-                </>
-              ) : (
-                <>
-                  Viewing{" "}
-                  <span className="text-primary">
-                    {anchorHeight.toLocaleString()}–{rangeEnd.toLocaleString()}
-                  </span>
-                </>
-              )}
             </span>
           </div>
         </div>

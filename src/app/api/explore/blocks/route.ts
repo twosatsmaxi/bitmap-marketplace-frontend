@@ -48,6 +48,15 @@ export async function GET(req: NextRequest) {
     for (let i = offset; i < offset + limit && i < 36_288; i++) {
       heights.push(i);
     }
+  } else if (filter === "repdigit") {
+    const allRepdigits: number[] = [];
+    for (let digits = 1; digits <= 6; digits++) {
+      for (let d = 1; d <= 9; d++) {
+        allRepdigits.push(Number(String(d).repeat(digits)));
+      }
+    }
+    allRepdigits.sort((a, b) => a - b);
+    heights = allRepdigits.slice(offset, offset + limit);
   } else if (STUB_DATA[filter]) {
     heights = STUB_DATA[filter].slice(offset, offset + limit);
   }
