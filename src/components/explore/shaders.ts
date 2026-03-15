@@ -3,11 +3,10 @@
  * All animation (easing, stagger, mouse repulsion) runs on the GPU.
  */
 
-export const vertexShader = /* glsl */ `\
-#version 300 es
+export const vertexShader = `#version 300 es
 precision highp float;
 
-// Shared unit quad vertex (0,0)–(1,1)
+// Shared unit quad vertex (0,0)-(1,1)
 in vec2 a_quadPos;
 
 // Per-instance: x, y, size, index (in grid units)
@@ -45,7 +44,7 @@ void main() {
   float offsetY     = (u_canvasSize - u_usedHeight * gridSize) * 0.5;
   float unitPadding = gridSize * 0.25;
 
-  // ── Timing ──
+  // Timing
   float baseDuration  = 1400.0;
   float totalStagger  = 1200.0;
   float massFactor    = size * 50.0;
@@ -60,7 +59,7 @@ void main() {
                         ? 1.0
                         : clamp(elapsed / duration, 0.0, 1.0);
 
-  // Not yet visible → move off-screen
+  // Not yet visible - move off-screen
   if (currentProg <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     v_alpha     = 0.0;
@@ -70,7 +69,7 @@ void main() {
 
   float eased = easeOutBack(currentProg);
 
-  // ── Target position ──
+  // Target position
   float tx = x;
   float ty = y;
 
@@ -89,18 +88,18 @@ void main() {
     }
   }
 
-  // ── Start position (pseudo-random, outside canvas) ──
+  // Start position (pseudo-random, outside canvas)
   float angle = sin(index * 1234.56) * 6.283185307;
   float distFromCenter = (u_canvasSize / gridSize)
                        * (1.2 + cos(index * 789.1) * 0.5);
   float startX = x + cos(angle) * distFromCenter;
   float startY = y + sin(angle) * distFromCenter;
 
-  // Interpolate start → target
+  // Interpolate start to target
   float curX = startX + (tx - startX) * eased;
   float curY = startY + (ty - startY) * eased;
 
-  // ── Pixel coordinates ──
+  // Pixel coordinates
   float px = curX * gridSize + unitPadding;
   float py = curY * gridSize + offsetY + unitPadding;
   float pw = size * gridSize - unitPadding * 2.0;
@@ -130,15 +129,14 @@ void main() {
     1.0
   );
 
-  // ── Flicker ──
+  // Flicker
   bool isFlicker = abs(index - u_flickerIndex) < 0.5;
   v_brightness   = isFlicker ? 1.6 : 1.0;
   v_alpha        = isFlicker ? 1.0 : min(1.0, currentProg * 1.5);
 }
 `;
 
-export const fragmentShader = /* glsl */ `\
-#version 300 es
+export const fragmentShader = `#version 300 es
 precision highp float;
 
 uniform vec3 u_baseColor;

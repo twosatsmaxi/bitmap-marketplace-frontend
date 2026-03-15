@@ -2,16 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
-import { createProgram, setupInstancedQuads } from "./webgl-utils";
-import { vertexShader, fragmentShader } from "./shaders";
+import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
 
 const RENDER_API = "";
 const MAX_INSTANCES = 8192;
-
-// Normalized base color: RGB(203, 120, 37) / 255
-const BASE_R = 203 / 255;
-const BASE_G = 120 / 255;
-const BASE_B = 37 / 255;
 
 // Background color: #0d1117
 const BG_R = 13 / 255;
@@ -30,36 +24,57 @@ interface WebGLBitmapRendererProps {
   animationStyle?: AnimationStyle;
 }
 
-interface GLState {
-  gl: WebGL2RenderingContext;
-  program: WebGLProgram;
-  vao: WebGLVertexArrayObject;
-  instanceBuffer: WebGLBuffer;
-  uniforms: Record<string, WebGLUniformLocation>;
-}
+/** Render one frame into the shared GL context, then copy to the 2D canvas. */
+function renderFrame(
+  shared: SharedGL,
+  ctx2d: CanvasRenderingContext2D,
+  canvasSize: number,
+  squares: Float32Array,
+  count: number,
+  layoutWidth: number,
+  usedHeight: number,
+  startTime: number,
+  now: number,
+  flickerIndex: number,
+  mouseX: number,
+  mouseY: number,
+  scale: number
+) {
+  const { gl, program, buffers, uniforms, canvas: offscreen } = shared;
 
-function getUniforms(
-  gl: WebGL2RenderingContext,
-  program: WebGLProgram
-): Record<string, WebGLUniformLocation> {
-  const names = [
-    "u_canvasSize",
-    "u_layoutWidth",
-    "u_usedHeight",
-    "u_squareCount",
-    "u_startTime",
-    "u_currentTime",
-    "u_mouse",
-    "u_flickerIndex",
-    "u_scale",
-    "u_baseColor",
-  ];
-  const out: Record<string, WebGLUniformLocation> = {};
-  for (const name of names) {
-    const loc = gl.getUniformLocation(program, name);
-    if (loc !== null) out[name] = loc;
+  // Ensure offscreen matches size
+  if (offscreen.width !== canvasSize || offscreen.height !== canvasSize) {
+    offscreen.width = canvasSize;
+    offscreen.height = canvasSize;
   }
-  return out;
+
+  gl.useProgram(program);
+
+  // Upload instance data
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.instanceBuffer);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, squares);
+
+  // Set uniforms
+  gl.uniform1f(uniforms.u_canvasSize, canvasSize);
+  gl.uniform1f(uniforms.u_layoutWidth, layoutWidth);
+  gl.uniform1f(uniforms.u_usedHeight, usedHeight);
+  gl.uniform1f(uniforms.u_squareCount, count);
+  gl.uniform1f(uniforms.u_startTime, startTime);
+  gl.uniform1f(uniforms.u_currentTime, now);
+  gl.uniform1f(uniforms.u_flickerIndex, flickerIndex);
+  gl.uniform2f(uniforms.u_mouse, mouseX, mouseY);
+  gl.uniform1f(uniforms.u_scale, scale);
+
+  // Draw
+  gl.viewport(0, 0, canvasSize, canvasSize);
+  gl.clearColor(BG_R, BG_G, BG_B, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.bindVertexArray(buffers.vao);
+  gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+
+  // Copy to visible 2D canvas
+  ctx2d.clearRect(0, 0, canvasSize, canvasSize);
+  ctx2d.drawImage(offscreen, 0, 0);
 }
 
 export default function WebGLBitmapRenderer({
@@ -73,14 +88,16 @@ export default function WebGLBitmapRenderer({
   const workerRef = useRef<Worker | null>(null);
   const animationRef = useRef<number>(0);
   const mousePosRef = useRef<{ x: number; y: number } | null>(null);
-  const glStateRef = useRef<GLState | null>(null);
+  const sharedRef = useRef<SharedGL | null>(null);
+  const ctx2dRef = useRef<CanvasRenderingContext2D | null>(null);
+  const instanceDataRef = useRef<Float32Array | null>(null);
   const prevDataRef = useRef<{
     squares: WorkerSquare[];
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
 
-  // ── Mouse tracking ──
+  // Mouse tracking
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -107,7 +124,7 @@ export default function WebGLBitmapRenderer({
     };
   }, []);
 
-  // ── WebGL init + worker spawn ──
+  // Shared GL + worker init
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -115,36 +132,21 @@ export default function WebGLBitmapRenderer({
     canvas.width = canvasSize;
     canvas.height = canvasSize;
 
-    // Init WebGL2
-    const gl = canvas.getContext("webgl2", {
-      alpha: false,
-      antialias: false,
-      premultipliedAlpha: false,
-    });
-    if (!gl) {
-      console.error("WebGL2 not available");
+    const ctx2d = canvas.getContext("2d");
+    if (!ctx2d) {
       onStatus("error");
       return;
     }
+    ctx2dRef.current = ctx2d;
 
-    const program = createProgram(gl, vertexShader, fragmentShader);
-    const { vao, instanceBuffer } = setupInstancedQuads(
-      gl,
-      program,
-      MAX_INSTANCES
-    );
-    const uniforms = getUniforms(gl, program);
-
-    gl.useProgram(program);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-    // Set static uniforms
-    gl.uniform3f(uniforms.u_baseColor, BASE_R, BASE_G, BASE_B);
-    gl.uniform1f(uniforms.u_canvasSize, canvasSize);
-
-    const state: GLState = { gl, program, vao, instanceBuffer, uniforms };
-    glStateRef.current = state;
+    let shared: SharedGL;
+    try {
+      shared = acquireSharedGL(canvasSize);
+    } catch {
+      onStatus("error");
+      return;
+    }
+    sharedRef.current = shared;
 
     // Worker
     const worker = new Worker("/bitmap-worker.js");
@@ -153,9 +155,9 @@ export default function WebGLBitmapRenderer({
     worker.onmessage = (e: MessageEvent) => {
       if (e.data.type === "done") {
         const { squares, layoutWidth, usedHeight } = e.data;
-
-        // Upload instance data
         const count = Math.min(squares.length, MAX_INSTANCES);
+
+        // Pack instance data
         const data = new Float32Array(count * 4);
         for (let i = 0; i < count; i++) {
           const sq = squares[i];
@@ -163,41 +165,37 @@ export default function WebGLBitmapRenderer({
           data[off] = sq.x;
           data[off + 1] = sq.y;
           data[off + 2] = sq.r;
-          data[off + 3] = i; // use loop index as instance index
+          data[off + 3] = i;
         }
-        gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
-
-        // Set layout uniforms
-        gl.useProgram(program);
-        gl.uniform1f(uniforms.u_layoutWidth, layoutWidth);
-        gl.uniform1f(uniforms.u_usedHeight, usedHeight);
-        gl.uniform1f(uniforms.u_squareCount, count);
-        gl.uniform1f(uniforms.u_scale, 1.0);
+        instanceDataRef.current = data;
 
         // Start animation loop
         const start = performance.now();
         const run = (now: number) => {
-          gl.uniform1f(uniforms.u_startTime, start);
-          gl.uniform1f(uniforms.u_currentTime, now);
+          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) return;
 
-          // Flicker: ~1% chance per frame
           const flickerIdx =
             Math.random() < 0.01
               ? Math.floor(Math.random() * count)
               : -1;
-          gl.uniform1f(uniforms.u_flickerIndex, flickerIdx);
 
-          // Mouse
           const m = mousePosRef.current;
-          gl.uniform2f(uniforms.u_mouse, m ? m.x : -1, m ? m.y : -1);
 
-          // Clear and draw
-          gl.viewport(0, 0, canvasSize, canvasSize);
-          gl.clearColor(BG_R, BG_G, BG_B, 1.0);
-          gl.clear(gl.COLOR_BUFFER_BIT);
-          gl.bindVertexArray(vao);
-          gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+          renderFrame(
+            sharedRef.current,
+            ctx2dRef.current,
+            canvasSize,
+            instanceDataRef.current,
+            count,
+            layoutWidth,
+            usedHeight,
+            start,
+            now,
+            flickerIdx,
+            m ? m.x : -1,
+            m ? m.y : -1,
+            1.0
+          );
 
           const elapsed = now - start;
           const progress = Math.min(1, elapsed / 3000);
@@ -221,20 +219,19 @@ export default function WebGLBitmapRenderer({
       worker.terminate();
       workerRef.current = null;
       cancelAnimationFrame(animationRef.current);
-      gl.deleteProgram(program);
-      gl.deleteVertexArray(vao);
-      gl.deleteBuffer(instanceBuffer);
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-      glStateRef.current = null;
+      releaseSharedGL();
+      sharedRef.current = null;
+      ctx2dRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationStyle, canvasSize]);
 
-  // ── Fetch + layout when height changes ──
+  // Fetch + layout when height changes
   useEffect(() => {
     const worker = workerRef.current;
-    const state = glStateRef.current;
-    if (!worker || !state) return;
+    const shared = sharedRef.current;
+    const ctx2d = ctx2dRef.current;
+    if (!worker || !shared || !ctx2d) return;
 
     onStatus("loading");
 
@@ -242,12 +239,10 @@ export default function WebGLBitmapRenderer({
 
     (async () => {
       // Implode previous if exists
-      if (prevDataRef.current && state) {
-        const { gl, program, vao, uniforms } = state;
+      if (prevDataRef.current) {
         const prev = prevDataRef.current;
         const count = Math.min(prev.squares.length, MAX_INSTANCES);
 
-        // Re-upload previous data
         const data = new Float32Array(count * 4);
         for (let i = 0; i < count; i++) {
           const sq = prev.squares[i];
@@ -257,15 +252,7 @@ export default function WebGLBitmapRenderer({
           data[off + 2] = sq.r;
           data[off + 3] = i;
         }
-        gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer);
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
 
-        gl.useProgram(program);
-        gl.uniform1f(uniforms.u_layoutWidth, prev.layoutWidth);
-        gl.uniform1f(uniforms.u_usedHeight, prev.usedHeight);
-        gl.uniform1f(uniforms.u_squareCount, count);
-
-        // Render implode at progress=1 (fully arrived), scale shrinking
         const outStart = performance.now();
         const outDuration = 300;
 
@@ -274,18 +261,21 @@ export default function WebGLBitmapRenderer({
             const elapsed = now - outStart;
             const progress = Math.min(1, elapsed / outDuration);
 
-            // Set time so all squares are at final position (progress=1)
-            gl.uniform1f(uniforms.u_startTime, 0);
-            gl.uniform1f(uniforms.u_currentTime, 4000); // well past 3s
-            gl.uniform1f(uniforms.u_flickerIndex, -1);
-            gl.uniform2f(uniforms.u_mouse, -1, -1);
-            gl.uniform1f(uniforms.u_scale, 1 - progress);
-
-            gl.viewport(0, 0, canvasSize, canvasSize);
-            gl.clearColor(BG_R, BG_G, BG_B, 1.0);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.bindVertexArray(vao);
-            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+            renderFrame(
+              shared,
+              ctx2d,
+              canvasSize,
+              data,
+              count,
+              prev.layoutWidth,
+              prev.usedHeight,
+              0,
+              4000, // well past 3s so all squares at final position
+              -1,
+              -1,
+              -1,
+              1 - progress
+            );
 
             if (progress < 1 && !cancelled) {
               requestAnimationFrame(animateOut);
@@ -304,12 +294,6 @@ export default function WebGLBitmapRenderer({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
-
-        // Reset scale for new block reveal
-        if (state) {
-          state.gl.useProgram(state.program);
-          state.gl.uniform1f(state.uniforms.u_scale, 1.0);
-        }
 
         worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
       } catch {
