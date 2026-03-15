@@ -12,12 +12,21 @@ interface BitmapRendererProps {
   onResult?: (squares: WorkerSquare[], layoutWidth: number, usedHeight: number) => void;
 }
 
+function easeOutBack(x: number): number {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
 function drawSquares(
   ctx: CanvasRenderingContext2D,
   squares: WorkerSquare[],
   layoutWidth: number,
   usedHeight: number,
-  canvasSize: number
+  canvasSize: number,
+  progress: number = 1,
+  startTime: number = 0,
+  currentTime: number = 0
 ) {
   ctx.fillStyle = "#0d1117";
   ctx.fillRect(0, 0, canvasSize, canvasSize);
@@ -26,15 +35,42 @@ function drawSquares(
   const offsetY = (canvasSize - usedHeight * gridSize) / 2;
   const unitPadding = gridSize / 4;
 
+  const duration = 600; // ms
+  const totalStagger = 400; // ms stagger over all squares
+
   // HCL orange matching bitmap-render
   ctx.fillStyle = "rgb(203,120,37)";
-  for (const sq of squares) {
+  
+  for (let i = 0; i < squares.length; i++) {
+    const sq = squares[i];
+    
+    // Animation logic
+    let currentProgress = 1;
+    if (progress < 1) {
+      const staggerDelay = (i / squares.length) * totalStagger;
+      const elapsed = currentTime - startTime - staggerDelay;
+      currentProgress = Math.max(0, Math.min(1, elapsed / duration));
+    }
+
+    if (currentProgress <= 0) continue;
+
+    const easedProgress = easeOutBack(currentProgress);
+    
     const px = sq.x * gridSize + unitPadding;
-    const py = sq.y * gridSize + offsetY + unitPadding;
+    // Fall from 20 units above
+    const startY = sq.y - 20;
+    const currentY = startY + (sq.y - startY) * easedProgress;
+    
+    const py = currentY * gridSize + offsetY + unitPadding;
     const pw = sq.r * gridSize - unitPadding * 2;
+    
     if (pw <= 0) continue;
+    
+    // Fade in
+    ctx.globalAlpha = currentProgress;
     ctx.fillRect(px, py, pw, pw);
   }
+  ctx.globalAlpha = 1;
 }
 
 export default function BitmapRenderer({
@@ -45,22 +81,35 @@ export default function BitmapRenderer({
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
-  const offscreenTransferredRef = useRef(false);
+  const animationRef = useRef<number>(0);
 
   // Spawn worker once
   useEffect(() => {
     const worker = new Worker("/bitmap-worker.js");
     workerRef.current = worker;
-    offscreenTransferredRef.current = false;
 
     worker.onmessage = (e: MessageEvent) => {
       if (e.data.type === "done") {
         const { squares, layoutWidth, usedHeight } = e.data;
 
-        // If OffscreenCanvas was NOT used (Safari), draw on main thread
-        if (!offscreenTransferredRef.current && canvasRef.current) {
+        if (canvasRef.current) {
           const ctx = canvasRef.current.getContext("2d");
-          if (ctx) drawSquares(ctx, squares, layoutWidth, usedHeight, canvasSize);
+          if (ctx) {
+            const start = performance.now();
+            const run = (now: number) => {
+              const elapsed = now - start;
+              const totalDuration = 1000; // Total including stagger
+              const progress = Math.min(1, elapsed / totalDuration);
+
+              drawSquares(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now);
+
+              if (progress < 1) {
+                animationRef.current = requestAnimationFrame(run);
+              }
+            };
+            cancelAnimationFrame(animationRef.current);
+            animationRef.current = requestAnimationFrame(run);
+          }
         }
 
         onResult?.(squares, layoutWidth, usedHeight);
@@ -73,6 +122,7 @@ export default function BitmapRenderer({
     return () => {
       worker.terminate();
       workerRef.current = null;
+      cancelAnimationFrame(animationRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -83,6 +133,7 @@ export default function BitmapRenderer({
     if (!worker) return;
 
     onStatus("loading");
+    cancelAnimationFrame(animationRef.current);
 
     let cancelled = false;
 
@@ -99,20 +150,8 @@ export default function BitmapRenderer({
         canvas.width = canvasSize;
         canvas.height = canvasSize;
 
-        const supportsOffscreen =
-          typeof OffscreenCanvas !== "undefined" &&
-          typeof canvas.transferControlToOffscreen === "function";
-
-        if (supportsOffscreen && !offscreenTransferredRef.current) {
-          offscreenTransferredRef.current = true;
-          const offscreen = canvas.transferControlToOffscreen();
-          worker.postMessage(
-            { type: "layout", buffer, canvasSize, offscreenCanvas: offscreen },
-            [buffer, offscreen]
-          );
-        } else {
-          worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
-        }
+        // We disable OffscreenCanvas for the reveal animation to ensure main thread control
+        worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
       } catch {
         if (!cancelled) onStatus("error");
       }
