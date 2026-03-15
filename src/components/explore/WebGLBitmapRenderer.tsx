@@ -97,6 +97,10 @@ export default function WebGLBitmapRenderer({
     usedHeight: number;
   } | null>(null);
 
+  // DPR-scaled size for crisp rendering on high-density displays
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const scaledSize = Math.round(canvasSize * dpr);
+
   // Mouse tracking
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,8 +133,8 @@ export default function WebGLBitmapRenderer({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.width = canvasSize;
-    canvas.height = canvasSize;
+    canvas.width = scaledSize;
+    canvas.height = scaledSize;
 
     const ctx2d = canvas.getContext("2d");
     if (!ctx2d) {
@@ -141,7 +145,7 @@ export default function WebGLBitmapRenderer({
 
     let shared: SharedGL;
     try {
-      shared = acquireSharedGL(canvasSize);
+      shared = acquireSharedGL(scaledSize);
     } catch {
       onStatus("error");
       return;
@@ -184,7 +188,7 @@ export default function WebGLBitmapRenderer({
           renderFrame(
             sharedRef.current,
             ctx2dRef.current,
-            canvasSize,
+            scaledSize,
             instanceDataRef.current,
             count,
             layoutWidth,
@@ -224,7 +228,7 @@ export default function WebGLBitmapRenderer({
       ctx2dRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animationStyle, canvasSize]);
+  }, [animationStyle, scaledSize]);
 
   // Fetch + layout when height changes
   useEffect(() => {
@@ -264,7 +268,7 @@ export default function WebGLBitmapRenderer({
             renderFrame(
               shared,
               ctx2d,
-              canvasSize,
+              scaledSize,
               data,
               count,
               prev.layoutWidth,
@@ -295,7 +299,7 @@ export default function WebGLBitmapRenderer({
         const buffer = await res.arrayBuffer();
         if (cancelled) return;
 
-        worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
+        worker.postMessage({ type: "layout", buffer, canvasSize: scaledSize }, [buffer]);
       } catch {
         if (!cancelled) onStatus("error");
       }
@@ -310,9 +314,9 @@ export default function WebGLBitmapRenderer({
   return (
     <canvas
       ref={canvasRef}
-      width={canvasSize}
-      height={canvasSize}
-      style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
+      width={scaledSize}
+      height={scaledSize}
+      style={{ width: "100%", height: "100%" }}
       className="block"
     />
   );
