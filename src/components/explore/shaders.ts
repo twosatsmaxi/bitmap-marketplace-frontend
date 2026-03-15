@@ -104,6 +104,11 @@ void main() {
   float py = curY * gridSize + offsetY + unitPadding;
   float pw = size * gridSize - unitPadding * 2.0;
 
+  // Snap to integer pixels to eliminate sub-pixel edge blending (matches Canvas 2D fillRect)
+  px = floor(px);
+  py = floor(py);
+  pw = ceil(pw);
+
   if (pw <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     v_alpha     = 0.0;

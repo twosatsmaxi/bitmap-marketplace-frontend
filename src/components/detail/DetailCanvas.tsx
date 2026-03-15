@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import WebGLBitmapRenderer from "@/components/explore/WebGLBitmapRenderer";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
+
+const supportsWebGL2 =
+  typeof document !== "undefined" &&
+  !!document.createElement("canvas").getContext("webgl2");
 
 export default function DetailCanvas({ blockNumber }: { blockNumber: number }) {
   const [status, setStatus] = useState<RenderStatus>("idle");
@@ -18,7 +23,11 @@ export default function DetailCanvas({ blockNumber }: { blockNumber: number }) {
             status === "done" ? "opacity-100" : "opacity-0"
           )}
         >
-          <BitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
+          {supportsWebGL2 ? (
+            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
+          ) : (
+            <BitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
+          )}
         </div>
 
         {/* Loading */}

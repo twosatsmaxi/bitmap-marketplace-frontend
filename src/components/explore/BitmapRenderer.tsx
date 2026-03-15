@@ -31,6 +31,10 @@ export default function BitmapRenderer({
     usedHeight: number;
   } | null>(null);
 
+  // DPR-scaled size for crisp rendering on high-density displays
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const scaledSize = Math.round(canvasSize * dpr);
+
   // Handle Mouse Tracking
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,7 +84,7 @@ export default function BitmapRenderer({
               // Occasional flicker (approx 1% chance per frame)
               const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
 
-              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex, mousePosRef.current);
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current);
               
               // Continue loop if mouse is over or animating
               if (progress < 1 || mousePosRef.current) {
@@ -133,11 +137,11 @@ export default function BitmapRenderer({
               
               // Reverse gravity/implode: scale down to center
               ctx.save();
-              ctx.translate(canvasSize / 2, canvasSize / 2);
+              ctx.translate(scaledSize / 2, scaledSize / 2);
               ctx.scale(1 - progress, 1 - progress);
-              ctx.translate(-canvasSize / 2, -canvasSize / 2);
-              
-              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              ctx.translate(-scaledSize / 2, -scaledSize / 2);
+
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1);
               
               ctx.restore();
 
@@ -161,11 +165,11 @@ export default function BitmapRenderer({
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        canvas.width = canvasSize;
-        canvas.height = canvasSize;
+        canvas.width = scaledSize;
+        canvas.height = scaledSize;
 
         // We disable OffscreenCanvas for the reveal animation to ensure main thread control
-        worker.postMessage({ type: "layout", buffer, canvasSize }, [buffer]);
+        worker.postMessage({ type: "layout", buffer, canvasSize: scaledSize }, [buffer]);
       } catch {
         if (!cancelled) onStatus("error");
       }
@@ -180,9 +184,9 @@ export default function BitmapRenderer({
   return (
     <canvas
       ref={canvasRef}
-      width={canvasSize}
-      height={canvasSize}
-      style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
+      width={scaledSize}
+      height={scaledSize}
+      style={{ width: "100%", height: "100%" }}
       className="block"
     />
   );
