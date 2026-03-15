@@ -89,6 +89,40 @@ body::before {
     }
   }
 
+  @keyframes home-pixel-rain {
+    0% {
+      transform: translateY(-20vh);
+      opacity: 0;
+    }
+    15% {
+      opacity: var(--pixel-opacity, 0.15);
+    }
+    85% {
+      opacity: var(--pixel-opacity, 0.15);
+    }
+    100% {
+      transform: translateY(120vh);
+      opacity: 0;
+    }
+  }
+
+  @keyframes panel-pixel-rain {
+    0% {
+      transform: translateY(-40px);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.35;
+    }
+    85% {
+      opacity: 0.35;
+    }
+    100% {
+      transform: translateY(180px);
+      opacity: 0;
+    }
+  }
+
   .pixel-cut {
     clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
   }
@@ -247,6 +281,7 @@ body::before {
     display: block;
     background: rgba(247, 147, 26, 0.12);
     outline: 1px solid rgba(126, 73, 18, 0.24);
+    animation: home-pixel-rain linear infinite;
   }
 
   .panel-pixel-grid {
@@ -273,9 +308,7 @@ body::before {
     outline: 1px solid rgba(193, 117, 25, 0.1);
     box-shadow:
       0 0 12px rgba(255, 196, 42, 0.1);
-    animation-name: bitmap-square-blink;
-    animation-timing-function: steps(2, end);
-    animation-iteration-count: infinite;
+    animation: panel-pixel-rain steps(40, end) infinite;
   }
 
   /* bitmap-render style: clean, minimal cards & buttons */
