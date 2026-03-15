@@ -17,82 +17,81 @@ export default function CollectionFilterPanel({
 }: CollectionFilterPanelProps) {
   const [showAll, setShowAll] = useState(false);
   const sortedCollections = [...collections].sort((a, b) => a.priority - b.priority);
-  const spotlight = sortedCollections.slice(0, 3);
-  const extraItems = sortedCollections.slice(3);
-  const baseVisible = Math.min(sortedCollections.length, 10);
-  const detailLimit = Math.max(baseVisible - 3, 0);
-  const detail = showAll ? extraItems : extraItems.slice(0, detailLimit);
-  const hiddenCount = Math.max(0, sortedCollections.length - baseVisible);
+  const primaryChips = sortedCollections.slice(0, 6);
+  const secondaryChips = sortedCollections.slice(6);
+  const hiddenCount = secondaryChips.length;
+
+  const chipClass = (active: boolean) =>
+    cn(
+      "rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.18em] transition-colors",
+      active
+        ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
+        : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+    );
+
+  const handleClear = () => {
+    if (activeFilter) onToggle(activeFilter);
+  };
 
   return (
     <div className="br-card p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            Collections Filter
-          </p>
-          <p className="mt-1 font-mono text-[11px] text-zinc-400">
-            Tap a collection to narrow the grid. This view keeps focus on the highest-priority sets.
+            Traits Filter
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {spotlight.map((collection) => (
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {primaryChips.map((collection) => (
           <button
             key={collection.id}
             type="button"
             onClick={() => onToggle(collection.id)}
-            className={cn(
-              "flex flex-col gap-1 rounded-[18px] border px-4 py-3 text-left transition-all",
-              activeFilter === collection.id
-                ? "border-primary bg-[rgba(247,147,26,0.15)] text-primary shadow-[0_10px_25px_rgba(247,147,26,0.25)]"
-                : "border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.02)] text-zinc-200 hover:border-[rgba(247,162,59,0.35)] hover:text-primary"
-            )}
+            className={chipClass(activeFilter === collection.id)}
           >
-            <span className="font-mono text-sm font-bold uppercase tracking-[0.16em]">
-              {collection.label}
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              {collection.group}
-            </span>
-            <span className="font-mono text-[11px] text-zinc-400">{collection.highlight}</span>
+            {collection.label}
           </button>
         ))}
+
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.08)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-primary hover:text-primary"
+          >
+            {showAll ? "Show less" : `+ More (${hiddenCount})`}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={!activeFilter}
+          className="ml-auto rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+        >
+          Clear
+        </button>
       </div>
 
-      {detail.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {detail.map((collection) => (
+      {showAll && hiddenCount > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {secondaryChips.map((collection) => (
             <button
               key={collection.id}
               type="button"
               onClick={() => onToggle(collection.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.18em]",
-                activeFilter === collection.id
-                  ? "border-primary bg-primary/[0.15] text-primary"
-                  : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
-              )}
+              className={chipClass(activeFilter === collection.id)}
             >
               {collection.label}
             </button>
           ))}
         </div>
       )}
-      <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-        <span className="font-mono">More soon</span>
-        {hiddenCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowAll((prev) => !prev)}
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary hover:text-primary/70"
-          >
-            {showAll
-              ? "Show fewer collections"
-              : `Show all (+${hiddenCount})`}
-          </button>
-        )}
+
+      <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        More soon
       </div>
     </div>
   );
