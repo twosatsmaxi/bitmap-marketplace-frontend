@@ -301,10 +301,7 @@ export function drawInteractive(
 
     if (revealProgress <= 0) continue;
 
-    // Target Displacement (Bubble/Ripple)
-    let offsetX = 0;
-    let offsetYDisplace = 0;
-
+    // Dramatic "Bubble" Repulsion
     if (mousePos && progress === 1) {
       const mx = mousePos.x / gridSize;
       const my = (mousePos.y - offsetY) / gridSize;
@@ -313,11 +310,11 @@ export function drawInteractive(
       const dy = (sq.y + sq.r / 2) - my;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
-      const radius = 12; // Large ripple radius
+      const radius = 25; // Much larger interactive bubble
       if (dist < radius) {
         // Smooth Cosine Falloff for "Liquid" feel
         const force = (Math.cos((dist / radius) * Math.PI) + 1) / 2;
-        const strength = 5; // How far they push
+        const strength = 12; // Powerful push
         offsetX = (dx / (dist || 1)) * force * strength;
         offsetYDisplace = (dy / (dist || 1)) * force * strength;
       }
@@ -334,7 +331,7 @@ export function drawInteractive(
     if (pw <= 0) continue;
 
     ctx.globalAlpha = isFlicker ? 1 : revealProgress;
-    const brightness = isFlicker ? 2 : (1 + (Math.abs(offsetX + offsetYDisplace) * 0.05)); // Subtle brighten on move
+    const brightness = isFlicker ? 2 : (1 + (Math.abs(offsetX + offsetYDisplace) * 0.08)); // Brighter glow on move
     ctx.fillStyle = `rgb(${Math.min(255, baseR * brightness)}, ${Math.min(255, baseG * brightness)}, ${Math.min(255, baseB * brightness)})`;
     
     if (isFlicker) {
