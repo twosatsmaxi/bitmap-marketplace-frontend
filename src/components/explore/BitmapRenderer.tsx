@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
-import { drawGravityPack, drawGlowPulse } from "./renderFunctions";
+import { drawGravityPack, drawGlowPulse, drawBitfeedVacuum } from "./renderFunctions";
 
 const RENDER_API = "";
 
@@ -46,7 +46,7 @@ export default function BitmapRenderer({
             const start = performance.now();
             const run = (now: number) => {
               const elapsed = now - start;
-              const totalDuration = 1000;
+              const totalDuration = 3000;
               const progress = Math.min(1, elapsed / totalDuration);
               
               // Occasional flicker (approx 1% chance per frame)
@@ -56,6 +56,11 @@ export default function BitmapRenderer({
                 const pulse = 0.5 + 0.5 * Math.sin(now / 1000);
                 drawGlowPulse(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, progress === 1 ? pulse : 0, flickerIndex);
                 animationRef.current = requestAnimationFrame(run);
+              } else if (animationStyle === "bitfeed") {
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex);
+                if (progress < 1) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
               } else {
                 drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, progress, start, now, flickerIndex);
                 if (progress < 1) {
@@ -113,7 +118,11 @@ export default function BitmapRenderer({
               ctx.scale(1 - progress, 1 - progress);
               ctx.translate(-canvasSize / 2, -canvasSize / 2);
               
-              drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              if (animationStyle === "bitfeed") {
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              } else {
+                drawGravityPack(ctx, squares, layoutWidth, usedHeight, canvasSize, 1);
+              }
               ctx.restore();
 
               if (progress < 1 && !cancelled) {

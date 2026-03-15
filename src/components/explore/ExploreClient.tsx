@@ -184,7 +184,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
 
             {/* Animation Toggle */}
             <div className="flex items-center gap-1 rounded bg-black/40 p-0.5 border border-[rgba(255,255,255,0.08)]">
-              {(["gravity", "glow"] as const).map((s) => (
+              {(["gravity", "glow", "bitfeed"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setAnimationStyle(s)}
