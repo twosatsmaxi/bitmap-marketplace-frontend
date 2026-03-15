@@ -99,11 +99,10 @@ void main() {
   float curX = startX + (tx - startX) * eased;
   float curY = startY + (ty - startY) * eased;
 
-  // Pixel coordinates - 0.5px gap per side for thin crisp borders
-  float gap = 0.5;
-  float px = curX * gridSize + gap;
-  float py = curY * gridSize + offsetY + gap;
-  float pw = size * gridSize - gap * 2.0;
+  // Pixel coordinates - proportional padding matching Canvas 2D renderer
+  float px = curX * gridSize + unitPadding;
+  float py = curY * gridSize + offsetY + unitPadding;
+  float pw = size * gridSize - unitPadding * 2.0;
 
   if (pw <= 0.0) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
