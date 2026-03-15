@@ -22,6 +22,8 @@ uniform float u_currentTime;
 uniform vec2  u_mouse;        // pixels; (-1,-1) = no mouse
 uniform float u_flickerIndex; // -1 = none
 uniform float u_scale;        // 1.0 normal, 0.0 imploded
+uniform float u_enableRepulsion; // 1.0 = on, 0.0 = off
+uniform float u_enableFlicker;   // 1.0 = on, 0.0 = off
 
 out float v_brightness;
 out float v_alpha;
@@ -73,8 +75,8 @@ void main() {
   float tx = x;
   float ty = y;
 
-  // Mouse repulsion (only after entry animation finishes)
-  if (overallProg >= 1.0 && u_mouse.x >= 0.0) {
+  // Mouse repulsion (only after entry animation finishes, if enabled)
+  if (u_enableRepulsion > 0.5 && overallProg >= 1.0 && u_mouse.x >= 0.0) {
     float mx = u_mouse.x / gridSize;
     float my = (u_mouse.y - offsetY) / gridSize;
     float dx = tx + size * 0.5 - mx;
@@ -134,8 +136,8 @@ void main() {
     1.0
   );
 
-  // Flicker
-  bool isFlicker = abs(index - u_flickerIndex) < 0.5;
+  // Flicker (skip entirely when disabled)
+  bool isFlicker = u_enableFlicker > 0.5 && abs(index - u_flickerIndex) < 0.5;
   v_brightness   = isFlicker ? 1.6 : 1.0;
   v_alpha        = isFlicker ? 1.0 : min(1.0, currentProg * 1.5);
 }

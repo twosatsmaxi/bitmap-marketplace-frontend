@@ -24,6 +24,15 @@ export type RenderStatus = "idle" | "loading" | "done" | "error";
 
 export type AnimationStyle = "bitfeed";
 
+/** Quality tiers — ordered from highest to lowest */
+export type QualityTier = "full" | "reduced" | "canvas2d" | "static";
+
+export interface QualityFeatures {
+  repulsion: boolean;
+  flicker: boolean;
+  animated: boolean;
+}
+
 export interface InterestingBlock {
   label: string;
   height: number;

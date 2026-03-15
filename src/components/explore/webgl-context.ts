@@ -32,6 +32,8 @@ const UNIFORM_NAMES = [
   "u_flickerIndex",
   "u_scale",
   "u_baseColor",
+  "u_enableRepulsion",
+  "u_enableFlicker",
 ];
 
 function getUniforms(
