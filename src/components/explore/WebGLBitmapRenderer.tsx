@@ -106,6 +106,7 @@ export default function WebGLBitmapRenderer({
   } | null>(null);
   const featuresRef = useRef({ enableRepulsion, enableFlicker });
   featuresRef.current = { enableRepulsion, enableFlicker };
+  const loopActiveRef = useRef(false);
 
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -130,13 +131,66 @@ export default function WebGLBitmapRenderer({
       mousePosRef.current = null;
     };
 
+    // Restart render loop when mouse re-enters after it stopped
+    const handleMouseEnter = () => {
+      if (loopActiveRef.current) return;
+      const prev = prevDataRef.current;
+      const data = instanceDataRef.current;
+      if (!prev || !data || !sharedRef.current || !ctx2dRef.current) return;
+
+      const count = data.length / 4;
+      loopActiveRef.current = true;
+
+      const tick = (now: number) => {
+        if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
+          loopActiveRef.current = false;
+          return;
+        }
+        const feat = featuresRef.current;
+        const flickerIdx =
+          feat.enableFlicker && Math.random() < 0.01
+            ? Math.floor(Math.random() * count)
+            : -1;
+        const m = feat.enableRepulsion ? mousePosRef.current : null;
+
+        renderFrame(
+          sharedRef.current,
+          ctx2dRef.current,
+          scaledSize,
+          instanceDataRef.current,
+          count,
+          prev.layoutWidth,
+          prev.usedHeight,
+          0,
+          4000, // well past entry animation
+          flickerIdx,
+          m ? m.x : -1,
+          m ? m.y : -1,
+          1.0,
+          feat.enableRepulsion,
+          feat.enableFlicker
+        );
+
+        if (mousePosRef.current) {
+          animationRef.current = requestAnimationFrame(tick);
+        } else {
+          loopActiveRef.current = false;
+        }
+      };
+
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = requestAnimationFrame(tick);
+    };
+
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("mouseenter", handleMouseEnter);
     return () => {
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("mouseenter", handleMouseEnter);
     };
-  }, []);
+  }, [scaledSize]);
 
   // Shared GL + worker init
   useEffect(() => {
@@ -185,8 +239,12 @@ export default function WebGLBitmapRenderer({
 
         // Start animation loop
         const start = performance.now();
+        loopActiveRef.current = true;
         const run = (now: number) => {
-          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) return;
+          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
+            loopActiveRef.current = false;
+            return;
+          }
 
           const feat = featuresRef.current;
           const flickerIdx =
@@ -218,6 +276,8 @@ export default function WebGLBitmapRenderer({
           const progress = Math.min(1, elapsed / 3000);
           if (progress < 1 || mousePosRef.current) {
             animationRef.current = requestAnimationFrame(run);
+          } else {
+            loopActiveRef.current = false;
           }
         };
 

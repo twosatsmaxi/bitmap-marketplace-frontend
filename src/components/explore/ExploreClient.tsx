@@ -35,6 +35,11 @@ const FILTER_CATEGORIES: FilterCategory[] = [
 // Module-level meta cache to avoid refetching
 const metaCache = new Map<number, BlockMeta>();
 
+// Persist navigation state across remounts (e.g. back from detail page)
+let savedAnchorHeight: number | null = null;
+let savedActiveFilter: string | null = null;
+let savedFilterPage = 0;
+
 async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
   if (metaCache.has(height)) return metaCache.get(height);
   try {
@@ -55,13 +60,18 @@ function buildHeights(anchor: number, latest: number): number[] {
 }
 
 export default function ExploreClient({ latestBlock }: { latestBlock: number }) {
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [filterPage, setFilterPage] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string | null>(savedActiveFilter);
+  const [filterPage, setFilterPage] = useState(savedFilterPage);
   const [hasMore, setHasMore] = useState(false);
 
   const [anchorHeight, setAnchorHeight] = useState(
-    Math.max(latestBlock - (GRID_SIZE - 1), 0)
+    savedAnchorHeight ?? Math.max(latestBlock - (GRID_SIZE - 1), 0)
   );
+
+  // Sync navigation state to module-level for persistence across remounts
+  useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
+  useEffect(() => { savedActiveFilter = activeFilter; }, [activeFilter]);
+  useEffect(() => { savedFilterPage = filterPage; }, [filterPage]);
 
   const [blocks, setBlocks] = useState<BlockRendered[]>([]);
 
