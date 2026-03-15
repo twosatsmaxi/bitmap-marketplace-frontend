@@ -59,7 +59,7 @@ export default function CollectionFilterPanel({
           <button
             type="button"
             onClick={() => setShowAll((prev) => !prev)}
-            className="rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.08)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-200 transition-colors hover:border-primary hover:text-primary"
+            className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary underline decoration-primary/40 underline-offset-4 px-1 py-0.5 transition-colors hover:text-primary/80"
           >
             {showAll ? "Show less" : `+ More (${hiddenCount})`}
           </button>
