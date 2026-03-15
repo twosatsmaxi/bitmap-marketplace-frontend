@@ -43,6 +43,12 @@ export type FilterCategory = {
   label: string;
 };
 
+export interface CollectionFilterMeta extends FilterCategory {
+  priority: number;
+  group: "Milestone" | "Collector" | "Collection";
+  highlight: string;
+}
+
 export interface BlockRendered {
   height: number;
   status: RenderStatus;

@@ -4,7 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Zap, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
-import type { BlockMeta, BlockRendered, InterestingBlock, FilterCategory } from "./types";
+import CollectionFilterPanel from "./CollectionFilterPanel";
+import type {
+  BlockMeta,
+  BlockRendered,
+  CollectionFilterMeta,
+  FilterCategory,
+  InterestingBlock,
+} from "./types";
 import { cn } from "@/lib/utils";
 
 const RENDER_API = "";
@@ -18,18 +25,19 @@ const INTERESTING_BLOCKS: InterestingBlock[] = [
   { label: "Halving IV", height: 840_000 },
 ];
 
-const FILTER_CATEGORIES: FilterCategory[] = [
-  { id: "punks", label: "Punks" },
-  { id: "palindrome", label: "Palindrome" },
-  { id: "repdigit", label: "Repdigit" },
-  { id: "sub-100k", label: "Sub 100k" },
-  { id: "patoshi", label: "Patoshi" },
-  { id: "billionaire", label: "Billionaire" },
-  { id: "nakamoto", label: "Nakamoto" },
-  { id: "pizza", label: "Pizza Block" },
-  { id: "pristine-punk", label: "Pristine Punk" },
-  { id: "perfect-punk", label: "Perfect Punk" },
+const COLLECTION_FILTER_LAYOUT: CollectionFilterMeta[] = [
+  { id: "pizza", label: "Pizza Block", priority: 1, group: "Milestone", highlight: "Most storied block" },
+  { id: "nakamoto", label: "Nakamoto", priority: 2, group: "Collector", highlight: "Legendary theme" },
+  { id: "billionaire", label: "Billionaire", priority: 3, group: "Collector", highlight: "High-end rarity" },
+  { id: "patoshi", label: "Patoshi", priority: 4, group: "Collector", highlight: "Threaded miner lore" },
+  { id: "punks", label: "Punks", priority: 5, group: "Collection", highlight: "OG pixel avatars" },
+  { id: "perfect-punk", label: "Perfect Punk", priority: 6, group: "Collection", highlight: "Flawless field" },
+  { id: "pristine-punk", label: "Pristine Punk", priority: 7, group: "Collection", highlight: "Highest fidelity" },
+  { id: "palindrome", label: "Palindrome", priority: 8, group: "Collection", highlight: "Symmetric numbers" },
+  { id: "repdigit", label: "Repdigit", priority: 9, group: "Collection", highlight: "Repeating digits" },
+  { id: "sub-100k", label: "Sub 100k", priority: 10, group: "Collection", highlight: "Low block numbers" },
 ];
+const FILTER_CATEGORIES: FilterCategory[] = COLLECTION_FILTER_LAYOUT.map(({ id, label }) => ({ id, label }));
 
 // Module-level meta cache to avoid refetching
 const metaCache = new Map<number, BlockMeta>();
@@ -152,7 +160,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   };
 
   const rangeEnd = Math.min(anchorHeight + GRID_SIZE - 1, latestBlock);
-  const currentCategory = FILTER_CATEGORIES.find(c => c.id === activeFilter);
+  const currentCategory = FILTER_CATEGORIES.find((c) => c.id === activeFilter);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-12 pt-4 md:px-6">
@@ -209,15 +217,12 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
         </div>
       </div>
 
-      {/* Collections Row */}
+      {/* Collections filter and legendary links */}
       <div className="flex flex-col gap-3">
-        {/* Notable blocks */}
         <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
           <div className="flex flex-shrink-0 items-center gap-1.5 text-zinc-600">
             <Zap className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
-              Legendary
-            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em]">Legendary</span>
           </div>
           {INTERESTING_BLOCKS.map((b) => (
             <button
@@ -230,29 +235,11 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           ))}
         </div>
 
-        {/* Filter chips */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
-          <div className="flex flex-shrink-0 items-center gap-1.5 text-zinc-600">
-            <LayoutGrid className="h-3.5 w-3.5 text-zinc-500" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
-              Collections
-            </span>
-          </div>
-          {FILTER_CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => toggleFilter(cat.id)}
-              className={cn(
-                "flex-shrink-0 border rounded px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] transition-all",
-                activeFilter === cat.id
-                  ? "bg-[rgba(247,162,59,0.18)] text-primary border-[rgba(247,162,59,0.45)] ring-1 ring-primary/20"
-                  : "border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] text-zinc-500 hover:text-zinc-300 hover:border-[rgba(255,255,255,0.15)]"
-              )}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+        <CollectionFilterPanel
+          collections={COLLECTION_FILTER_LAYOUT}
+          activeFilter={activeFilter}
+          onToggle={toggleFilter}
+        />
       </div>
 
       {/* 3×3 grid */}
