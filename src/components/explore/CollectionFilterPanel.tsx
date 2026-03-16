@@ -86,14 +86,14 @@ export default function CollectionFilterPanel({
         </p>
       )}
 
-      {/* Grouped Chips */}
-      <div className="mt-3 flex flex-wrap gap-y-2 gap-x-1 md:gap-x-2">
+      {/* Grouped Chips - single row with dividers */}
+      <div className="mt-3 flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
         {groupOrder.map((group, groupIndex) => (
           <div key={group} className="flex items-center">
-            {/* Divider between groups (not before first) */}
+            {/* Subtle divider between groups */}
             {groupIndex > 0 && (
-              <div className="hidden md:flex items-center mx-1 md:mx-2">
-                <div className="h-5 w-px bg-[rgba(255,255,255,0.12)]" />
+              <div className="flex items-center mx-2 md:mx-3">
+                <div className="h-4 w-px bg-[rgba(255,255,255,0.08)]" />
               </div>
             )}
             
@@ -121,8 +121,13 @@ export default function CollectionFilterPanel({
           </div>
         ))}
         
+        {/* Subtle divider before More soon */}
+        <div className="flex items-center mx-2 md:mx-3">
+          <div className="h-4 w-px bg-[rgba(255,255,255,0.08)]" />
+        </div>
+        
         {/* More soon indicator */}
-        <div className="flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600 shrink-0">
           <span>More soon</span>
           <div className="flex gap-[4px]">
             <span className="h-[3px] w-[3px] bg-primary"></span>
