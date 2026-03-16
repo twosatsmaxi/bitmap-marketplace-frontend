@@ -42,9 +42,14 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
           )}
         </div>
 
-        {/* Loading State - Dark background only */}
+        {/* Loading State */}
         {(status === "loading" || status === "idle") && (
-          <div className="absolute inset-0 bg-[#090c11]" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#090c11]">
+            <div className="h-16 w-16 animate-pulse bg-[rgba(247,147,26,0.08)]" />
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
+              Bitmapping…
+            </span>
+          </div>
         )}
 
         {/* Error State with Retry */}
