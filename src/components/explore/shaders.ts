@@ -88,16 +88,22 @@ void main() {
     float dist = sqrt(dx * dx + dy * dy);
     float radius = 18.0;
     if (dist < radius && dist > 0.001) {
-      float force = (1.0 - dist / radius) * 5.0;
-      tx += (dx / dist) * force;
-      ty += (dy / dist) * force;
-      // Shrink tiles near cursor (0 at center, 1 at edge)
-      shrinkFactor = smoothstep(0.0, radius, dist);
+      float sFactor = smoothstep(0.0, radius, dist);
 
-      // Size-adaptive: small blocks glow instead of vanishing
-      if (size <= 4.0) {
-        v_proximityGlow = 1.0 - shrinkFactor;
-        shrinkFactor = max(shrinkFactor, 0.5);
+      if (size <= 1.0) {
+        // Single blocks: glow only, no repulsion or shrink
+        v_proximityGlow = 1.0 - sFactor;
+      } else {
+        float force = (1.0 - dist / radius) * 5.0;
+        tx += (dx / dist) * force;
+        ty += (dy / dist) * force;
+        shrinkFactor = sFactor;
+
+        // Size-adaptive: small blocks glow instead of vanishing
+        if (size <= 4.0) {
+          v_proximityGlow = 1.0 - shrinkFactor;
+          shrinkFactor = max(shrinkFactor, 0.5);
+        }
       }
     }
   }

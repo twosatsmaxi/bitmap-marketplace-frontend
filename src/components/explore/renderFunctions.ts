@@ -48,17 +48,23 @@ export function drawBitfeedVacuum(
       const dist = Math.sqrt(dx * dx + dy * dy);
       const radius = 18; // grid units
       if (dist < radius && dist > 0.001) {
-        const force = (1 - dist / radius) * 5; // Strength of push
-        tx += (dx / dist) * force;
-        ty += (dy / dist) * force;
-        // Shrink tiles near cursor (smoothstep: 0 at center, 1 at edge)
         const t = Math.max(0, Math.min(1, dist / radius));
-        shrinkFactor = t * t * (3 - 2 * t);
+        const smooth = t * t * (3 - 2 * t);
 
-        // Size-adaptive: small blocks glow instead of vanishing
-        if (sq.r <= 4) {
-          proximityGlow = 1.0 - shrinkFactor;
-          shrinkFactor = Math.max(shrinkFactor, 0.5);
+        if (sq.r === 1) {
+          // Single blocks: glow only, no repulsion or shrink
+          proximityGlow = 1.0 - smooth;
+        } else {
+          const force = (1 - dist / radius) * 5; // Strength of push
+          tx += (dx / dist) * force;
+          ty += (dy / dist) * force;
+          shrinkFactor = smooth;
+
+          // Size-adaptive: small blocks glow instead of vanishing
+          if (sq.r <= 4) {
+            proximityGlow = 1.0 - shrinkFactor;
+            shrinkFactor = Math.max(shrinkFactor, 0.5);
+          }
         }
       }
     }

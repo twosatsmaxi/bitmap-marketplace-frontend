@@ -41,28 +41,32 @@ export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
       <div className="flex flex-col gap-3">
         {bitmap.listingStatus === "listed" ? (
           <>
-            <button className="br-btn flex w-full items-center justify-center gap-2 !bg-primary px-4 py-3 !text-black !border-transparent hover:!bg-[#ffae43]">
+            <button className="br-btn flex w-full items-center justify-center gap-2 !bg-primary px-4 py-3 !text-black !border-transparent opacity-50 cursor-not-allowed pointer-events-none">
               <Wallet className="w-4 h-4" />
               Buy Now
+              <span className="rounded-sm bg-black/20 px-1.5 py-0.5 text-[9px] font-bold uppercase">Soon</span>
             </button>
-            <button className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3">
+            <button className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3 opacity-50 cursor-not-allowed pointer-events-none">
               <Tag className="w-4 h-4" />
               Make Offer
+              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
             </button>
           </>
         ) : (
-          <button className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3">
+          <button className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3 opacity-50 cursor-not-allowed pointer-events-none">
             <Tag className="w-4 h-4" />
             Make Offer
+            <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
           </button>
         )}
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-[rgba(255,255,255,0.08)] pt-4">
         <span className="text-xs text-zinc-500">Owned by <span className="font-mono text-primary">{bitmap.owner.slice(0, 6)}...{bitmap.owner.slice(-4)}</span></span>
-        <button className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500 transition-colors hover:text-primary">
+        <span className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500 opacity-50 cursor-not-allowed">
           <ArrowRightLeft className="w-3 h-3" /> View History
-        </button>
+          <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
+        </span>
       </div>
     </div>
   );

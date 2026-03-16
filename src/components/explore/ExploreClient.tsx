@@ -242,8 +242,8 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
         />
       </div>
 
-      {/* 3×3 grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 4×4 grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {blocks.map((b) => (
           <BlockCard
             key={b.height}

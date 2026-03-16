@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import type {
   HomeMarketRow,
@@ -123,12 +122,12 @@ export default function HomePageClient({
 
             <div className="flex flex-col items-start gap-4 lg:min-w-[220px] lg:items-end">
               <CurrencyToggle value={currency} onChange={setCurrency} />
-              <Link
-                href="/"
-                className="home-button inline-flex items-center justify-center"
-              >
+              <span className="home-button inline-flex items-center justify-center gap-2 opacity-50 cursor-not-allowed pointer-events-none">
                 See all
-              </Link>
+                <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
+                  Soon
+                </span>
+              </span>
             </div>
           </div>
         </section>
@@ -368,7 +367,8 @@ function formatValue(value: number, currency: "BTC" | "USD") {
     return formatBTC(value);
   }
 
-  const usd = value / 100_000_000 * 91_500;
+  // Hardcoded BTC/USD rate
+  const usd = value / 100_000_000 * 83_000;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
