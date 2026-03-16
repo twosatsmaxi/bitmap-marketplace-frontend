@@ -119,7 +119,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           #{height.toLocaleString()}
         </span>
         {meta && (
-          <span className="font-mono text-[10px] text-[rgba(255,255,255,0.78)]">
+          <span className="font-mono text-xs text-[rgba(255,255,255,0.78)]">
             {meta.tx_count.toLocaleString()} txs
           </span>
         )}
@@ -163,7 +163,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {status === "loading" && (
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
               Painting…
             </span>
           </div>
@@ -172,7 +172,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {/* Idle state */}
         {status === "idle" && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700">
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-700">
               Fetching pixels…
             </span>
           </div>
@@ -181,7 +181,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {/* Error state */}
         {status === "error" && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
               Bitmap not found
             </span>
           </div>
@@ -196,7 +196,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Metadata row */}
-      <div className="flex flex-col gap-1 px-3 py-2.5">
+      <div className="flex flex-col gap-1 px-3 py-3">
         <div className="flex items-center justify-between">
           <span className="font-mono text-sm font-bold text-primary">
             {height}.bitmap
@@ -205,10 +205,10 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
 
         {meta && meta.timestamp > 0 && meta.size > 0 && (
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
+            <span className="font-mono text-xs text-[rgba(255,255,255,0.5)]">
               {formatDate(meta.timestamp)}
             </span>
-            <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">
+            <span className="font-mono text-xs text-[rgba(255,255,255,0.5)]">
               {formatSize(meta.size)}
             </span>
           </div>

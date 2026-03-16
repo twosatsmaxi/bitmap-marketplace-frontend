@@ -25,10 +25,10 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+    <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-1">
       <div className="flex">
         {/* Input */}
-        <div className="relative flex items-center">
+        <div className="relative flex flex-1 items-center">
           <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-zinc-600" />
           <input
             type="text"
@@ -41,7 +41,7 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
             }}
             disabled={disabled}
             className={cn(
-              "w-44 rounded-l border border-r-0 border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.07)] py-2 pl-8 pr-3",
+              "w-full sm:w-44 rounded-l border border-r-0 border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.07)] py-2 pl-8 pr-3",
               "font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none",
               "focus:border-[rgba(255,255,255,0.25)] focus:bg-[rgba(255,255,255,0.09)]",
               "disabled:opacity-50"

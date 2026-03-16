@@ -26,16 +26,16 @@ const INTERESTING_BLOCKS: InterestingBlock[] = [
 ];
 
 const COLLECTION_FILTER_LAYOUT: CollectionFilterMeta[] = [
-  { id: "pizza", label: "Pizza Block", priority: 1, group: "Milestone", highlight: "Most storied block" },
-  { id: "nakamoto", label: "Nakamoto", priority: 2, group: "Collector", highlight: "Legendary theme" },
-  { id: "billionaire", label: "Billionaire", priority: 3, group: "Collector", highlight: "High-end rarity" },
-  { id: "patoshi", label: "Patoshi", priority: 4, group: "Collector", highlight: "Threaded miner lore" },
-  { id: "punks", label: "Punks", priority: 5, group: "Collection", highlight: "OG pixel avatars" },
-  { id: "perfect-punk", label: "Perfect Punk", priority: 6, group: "Collection", highlight: "Flawless field" },
-  { id: "pristine-punk", label: "Pristine Punk", priority: 7, group: "Collection", highlight: "Highest fidelity" },
-  { id: "palindrome", label: "Palindrome", priority: 8, group: "Collection", highlight: "Symmetric numbers" },
-  { id: "repdigit", label: "Repdigit", priority: 9, group: "Collection", highlight: "Repeating digits" },
-  { id: "sub-100k", label: "Sub 100k", priority: 10, group: "Collection", highlight: "Low block numbers" },
+  { id: "pizza", label: "Pizza Block", priority: 1, group: "Milestone", highlight: "The 10,000 BTC Pizza Transaction" },
+  { id: "repdigit", label: "Same Digits", priority: 2, group: "Collection", highlight: "Block Height with Identical Digits" },
+  { id: "nakamoto", label: "Nakamoto", priority: 3, group: "Collector", highlight: "Blocks Mined by Satoshi Nakamoto" },
+  { id: "billionaire", label: "Billionaire", priority: 4, group: "Collector", highlight: "Blocks with Massive BTC Activity" },
+  { id: "patoshi", label: "Patoshi", priority: 5, group: "Collector", highlight: "Early Patoshi Pattern Miner Blocks" },
+  { id: "punks", label: "Punks", priority: 6, group: "Collection", highlight: "Blocks Rendered as Pixel Avatars" },
+  { id: "perfect-punk", label: "Perfect Punk", priority: 7, group: "Collection", highlight: "Flawlessly Formed Avatar Patterns" },
+  { id: "pristine-punk", label: "Pristine Punk", priority: 8, group: "Collection", highlight: "Highest Fidelity Avatar Rendering" },
+  { id: "palindrome", label: "Palindrome", priority: 9, group: "Collection", highlight: "Block Height Reads Same Backwards" },
+  { id: "sub-100k", label: "Sub 100k", priority: 10, group: "Collection", highlight: "First 100,000 Historic Blocks" },
 ];
 const FILTER_CATEGORIES: FilterCategory[] = COLLECTION_FILTER_LAYOUT.map(({ id, label }) => ({ id, label }));
 
@@ -186,9 +186,9 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
       </div>
 
       {/* Controls row */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <BlockSearch onSearch={jumpTo} />
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
           <button
             onClick={goPrev}
             disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}

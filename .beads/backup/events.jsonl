@@ -104,3 +104,4 @@
 {"actor":"twosat","comment":null,"created_at":"2026-03-15T09:39:36Z","event_type":"closed","id":106,"issue_id":"bitmap-marketplace-frontend-pga","new_value":"All tiers implemented: Full WebGL → Reduced WebGL → Canvas2D → Static image, with FPS-based auto-detection","old_value":""}
 {"actor":"twosat","comment":null,"created_at":"2026-03-15T14:51:46Z","event_type":"created","id":107,"issue_id":"bitmap-marketplace-frontend-b2o","new_value":"","old_value":""}
 {"actor":"twosat","comment":null,"created_at":"2026-03-16T10:38:41Z","event_type":"created","id":108,"issue_id":"bitmap-marketplace-frontend-60f","new_value":"","old_value":""}
+{"actor":"twosat","comment":null,"created_at":"2026-03-16T10:38:45Z","event_type":"closed","id":109,"issue_id":"bitmap-marketplace-frontend-60f","new_value":"Subagent created at ~/.claude/agents/frontend-dockerizer.md with full Vite/SPA and Next.js Docker patterns","old_value":""}

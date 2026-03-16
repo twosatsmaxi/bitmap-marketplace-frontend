@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { CollectionFilterMeta } from "./types";
 
@@ -10,88 +9,82 @@ interface CollectionFilterPanelProps {
   onToggle: (id: string) => void;
 }
 
+const GROUPS = ["Milestone", "Collector", "Collection"] as const;
+
 export default function CollectionFilterPanel({
   collections,
   activeFilter,
   onToggle,
 }: CollectionFilterPanelProps) {
-  const [showAll, setShowAll] = useState(false);
   const sortedCollections = [...collections].sort((a, b) => a.priority - b.priority);
-  const primaryChips = sortedCollections.slice(0, 6);
-  const secondaryChips = sortedCollections.slice(6);
-  const hiddenCount = secondaryChips.length;
-
-  const chipClass = (active: boolean) =>
-    cn(
-      "rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.18em] transition-colors",
-      active
-        ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
-        : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
-    );
+  const activeCollection = sortedCollections.find((c) => c.id === activeFilter);
+  const activeLabel = activeCollection?.label;
+  const activeHighlight = activeCollection?.highlight;
 
   const handleClear = () => {
     if (activeFilter) onToggle(activeFilter);
   };
 
   return (
-    <div className="br-card p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            Traits Filter
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {primaryChips.map((collection) => (
-          <button
-            key={collection.id}
-            type="button"
-            onClick={() => onToggle(collection.id)}
-            className={chipClass(activeFilter === collection.id)}
-          >
-            {collection.label}
-          </button>
-        ))}
-
-        {hiddenCount > 0 && (
+    <div className="br-card p-4 md:p-5">
+      {/* Header */}
+      {activeFilter && activeLabel ? (
+        <div className="flex items-center justify-between border-l-2 border-primary pl-3">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500 shrink-0">
+              Filtering by
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary shrink-0">
+              {activeLabel}
+            </span>
+            {activeHighlight && (
+              <span className="font-mono text-[10px] text-zinc-400 truncate">
+                ({activeHighlight})
+              </span>
+            )}
+          </div>
           <button
             type="button"
-            onClick={() => setShowAll((prev) => !prev)}
-            className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary underline decoration-primary/40 underline-offset-4 px-1 py-0.5 transition-colors hover:text-primary/80"
+            onClick={handleClear}
+            className="ml-3 shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:text-primary"
           >
-            {showAll ? "Show less" : `+ More (${hiddenCount})`}
+            ✕ Clear
           </button>
-        )}
-
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={!activeFilter}
-          className="ml-auto rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
-        >
-          Clear
-        </button>
-      </div>
-
-      {showAll && hiddenCount > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {secondaryChips.map((collection) => (
-            <button
-              key={collection.id}
-              type="button"
-              onClick={() => onToggle(collection.id)}
-              className={chipClass(activeFilter === collection.id)}
-            >
-              {collection.label}
-            </button>
-          ))}
         </div>
+      ) : (
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          Traits Filter
+        </p>
       )}
 
-      <div className="mt-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-        More soon
+      {/* Chips */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {sortedCollections.map((c) => {
+          const active = activeFilter === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onToggle(c.id)}
+              className={cn(
+                "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors",
+                active
+                  ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
+                  : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+              )}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+        <div className="flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+          <span>More soon</span>
+          <div className="flex gap-[3px]">
+            <span className="h-[3px] w-[3px] bg-primary"></span>
+            <span className="h-[3px] w-[3px] bg-primary/70"></span>
+            <span className="h-[3px] w-[3px] bg-primary/40"></span>
+          </div>
+        </div>
       </div>
     </div>
   );
