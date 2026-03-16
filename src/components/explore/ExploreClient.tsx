@@ -15,7 +15,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const RENDER_API = "";
-const GRID_SIZE = 9;
+const GRID_SIZE = 12;  // Divisible by 2, 3, and 4 for clean grid rows
 
 const INTERESTING_BLOCKS: InterestingBlock[] = [
   { label: "Genesis", height: 0 },
@@ -27,7 +27,7 @@ const INTERESTING_BLOCKS: InterestingBlock[] = [
 
 const COLLECTION_FILTER_LAYOUT: CollectionFilterMeta[] = [
   { id: "pizza", label: "Pizza Block", priority: 1, highlight: "The 10,000 BTC Pizza Transaction" },
-  { id: "repdigit", label: "Same Digits", priority: 2, highlight: "Block Height with Identical Digits" },
+  { id: "same-digits", label: "Same Digits", priority: 2, highlight: "Block Height with Identical Digits" },
   { id: "nakamoto", label: "Nakamoto", priority: 3, highlight: "Blocks Mined by Satoshi Nakamoto" },
   { id: "billionaire", label: "Billionaire", priority: 4, highlight: "Blocks with Massive BTC Activity" },
   { id: "patoshi", label: "Patoshi", priority: 5, highlight: "Early Patoshi Pattern Miner Blocks" },
@@ -81,6 +81,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const [activeFilter, setActiveFilter] = useState<string | null>(urlFilter);
   const [filterPage, setFilterPage] = useState(urlFilterPage);
   const [hasMore, setHasMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [anchorHeight, setAnchorHeight] = useState(() => {
     // Default to Halving IV (840,000) on first load, fallback to latest blocks if saved
@@ -133,7 +134,9 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           const res = await fetch(`/api/explore/blocks?filter=${activeFilter}&page=${filterPage}&limit=${GRID_SIZE}`);
           const data = await res.json();
           const heights: number[] = data.heights;
-          setHasMore(data.hasMore);
+          const total = data.total ?? 0;
+          setHasMore(data.hasMore ?? filterPage * GRID_SIZE + heights.length < total);
+          setTotalPages(Math.ceil(total / GRID_SIZE));
 
           const newBlocks = heights.map(h => ({ height: h, status: "idle" as const }));
           setBlocks(newBlocks);
@@ -275,7 +278,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             {/* Page indicator */}
             <div className="flex min-w-[60px] md:min-w-[120px] items-center justify-center gap-2 font-mono text-[10px] md:text-[11px] text-zinc-500">
               {activeFilter ? (
-                <span>Page {filterPage + 1}</span>
+                <span>Page {filterPage + 1}{totalPages > 0 && ` / ${totalPages}`}</span>
               ) : (
                 <>
                   <span className="md:hidden">{anchorHeight.toLocaleString()}</span>
