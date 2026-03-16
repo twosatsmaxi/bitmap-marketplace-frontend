@@ -32,7 +32,7 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
-            <NavLink href="/market" active={pathname === "/market"}>Market</NavLink>
+            <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
             <SoonNav label="Analytics" />
@@ -78,7 +78,7 @@ export default function Navbar() {
             <MobileNavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")} onClick={() => setMenuOpen(false)}>
               Explore
             </MobileNavLink>
-            <MobileNavLink href="/market" active={pathname === "/market"} onClick={() => setMenuOpen(false)}>Market</MobileNavLink>
+            <MobileSoonNav label="Market" />
             <MobileSoonNav label="Activity" />
             <MobileSoonNav label="Analytics" />
             <div className="mt-2 border-t border-[rgba(120,72,18,0.45)] pt-2">
