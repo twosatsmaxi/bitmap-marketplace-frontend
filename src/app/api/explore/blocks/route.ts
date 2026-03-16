@@ -6,8 +6,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
 
   // Forward request to bitmap-marketplace backend API
-  // Endpoint: GET /explore/blocks?filter=&page=&limit=
-  const backendUrl = `${BITMAP_INDEX_API}/explore/blocks?${searchParams.toString()}`;
+  // Endpoint: GET /api/explore/blocks?filter=&page=&limit=
+  const backendUrl = `${BITMAP_INDEX_API}/api/explore/blocks?${searchParams.toString()}`;
 
   try {
     const res = await fetch(backendUrl, {
