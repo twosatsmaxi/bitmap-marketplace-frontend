@@ -45,6 +45,11 @@ const metaCache = new Map<number, BlockMeta>();
 // Persist navigation state across remounts (e.g. back from detail page)
 let savedAnchorHeight: number | null = null;
 
+// Sanitize saved value to ensure it's never negative
+if (savedAnchorHeight !== null && savedAnchorHeight < 0) {
+  savedAnchorHeight = null;
+}
+
 async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
   if (metaCache.has(height)) return metaCache.get(height);
   try {
@@ -166,12 +171,8 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
     setFilterPage(0);
-    setAnchorHeight(
-      Math.max(
-        Math.min(target - Math.floor(GRID_SIZE / 2), latestBlock - GRID_SIZE + 1),
-        0
-      )
-    );
+    // Show entered block first (no centering), clamped to valid range
+    setAnchorHeight(Math.max(0, Math.min(target, latestBlock)));
   };
 
   const toggleFilter = (id: string) => {
@@ -197,7 +198,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             <h1 className="font-mono text-xl font-black uppercase tracking-[0.12em] text-primary md:text-2xl">
               Bitmap Explorer
             </h1>
-            <BlockSearch onSearch={jumpTo} />
+            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
             <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
               Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
             </span>

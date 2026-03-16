@@ -164,7 +164,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
-              Painting…
+              Bitmapping…
             </span>
           </div>
         )}

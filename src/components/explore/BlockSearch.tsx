@@ -6,20 +6,19 @@ import { cn } from "@/lib/utils";
 
 interface BlockSearchProps {
   onSearch: (height: number) => void;
+  latestBlock: number;
   disabled?: boolean;
 }
 
-const MAX_BLOCK = 1_000_000;
-
-export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
+export default function BlockSearch({ onSearch, latestBlock, disabled }: BlockSearchProps) {
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const num = parseInt(value, 10);
-    if (isNaN(num) || num < 0 || num > MAX_BLOCK) {
-      setError(`Pick a block between 0 and ${MAX_BLOCK.toLocaleString()}`);
+    if (isNaN(num) || num < 0 || num > latestBlock) {
+      setError(`Pick a block between 0 and ${latestBlock.toLocaleString()}`);
       return;
     }
     setError("");
@@ -34,11 +33,11 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
       return;
     }
     
-    // Prevent input above max
+    // Prevent input above latest block
     const num = parseInt(input, 10);
-    if (input !== "" && !isNaN(num) && num > MAX_BLOCK) {
-      setValue(MAX_BLOCK.toString());
-      setError(`Max block is ${MAX_BLOCK.toLocaleString()}`);
+    if (input !== "" && !isNaN(num) && num > latestBlock) {
+      setValue(latestBlock.toString());
+      setError(`Max block is ${latestBlock.toLocaleString()}`);
       return;
     }
     
@@ -55,8 +54,8 @@ export default function BlockSearch({ onSearch, disabled }: BlockSearchProps) {
           inputMode="numeric"
           pattern="[0-9]*"
           min={0}
-          max={MAX_BLOCK}
-          placeholder="Jump to #"
+          max={latestBlock}
+          placeholder={`0-${latestBlock.toLocaleString()}`}
           value={value}
           onChange={handleChange}
           disabled={disabled}
