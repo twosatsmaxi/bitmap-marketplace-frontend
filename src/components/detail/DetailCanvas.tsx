@@ -5,7 +5,6 @@ import WebGLBitmapRenderer from "@/components/explore/WebGLBitmapRenderer";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
-import { useDetailCanvasSize } from "@/hooks/useResponsiveCanvasSize";
 
 const supportsWebGL2 =
   typeof document !== "undefined" &&
@@ -13,9 +12,6 @@ const supportsWebGL2 =
 
 export default function DetailCanvas({ blockNumber }: { blockNumber: number }) {
   const [status, setStatus] = useState<RenderStatus>("idle");
-
-  // Use stable canvas size based on breakpoints
-  const canvasSize = useDetailCanvasSize();
 
   return (
     <div className="br-card p-2 md:p-3">
@@ -28,9 +24,9 @@ export default function DetailCanvas({ blockNumber }: { blockNumber: number }) {
           )}
         >
           {supportsWebGL2 ? (
-            <WebGLBitmapRenderer height={blockNumber} canvasSize={canvasSize} onStatus={setStatus} />
+            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
           ) : (
-            <BitmapRenderer height={blockNumber} canvasSize={canvasSize} onStatus={setStatus} />
+            <BitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
           )}
         </div>
 

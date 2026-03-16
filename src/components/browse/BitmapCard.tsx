@@ -8,7 +8,6 @@ import RarityBadge from "@/components/ui/RarityBadge";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { RenderStatus } from "@/components/explore/types";
-import { useStableCanvasSize } from "@/hooks/useResponsiveCanvasSize";
 
 interface BitmapCardProps {
   bitmap: Bitmap;
@@ -16,14 +15,6 @@ interface BitmapCardProps {
 
 export default function BitmapCard({ bitmap }: BitmapCardProps) {
   const [status, setStatus] = useState<RenderStatus>("loading");
-
-  // Use stable canvas size based on breakpoints (not ResizeObserver)
-  const canvasSize = useStableCanvasSize({
-    mobile: 400,    // 2 columns
-    tablet: 500,    // 3 columns  
-    desktop: 600,   // 4-5 columns
-    large: 600,
-  });
 
   return (
     <Link
@@ -38,7 +29,7 @@ export default function BitmapCard({ bitmap }: BitmapCardProps) {
         )}
         <BitmapRenderer
           height={bitmap.blockNumber}
-          canvasSize={canvasSize}
+          canvasSize={300}
           onStatus={setStatus}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-50 pointer-events-none" />
