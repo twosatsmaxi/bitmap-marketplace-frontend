@@ -12,10 +12,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function PriceHistoryChart({ data }: { data: PriceDataPoint[] }) {
+interface PriceHistoryChartProps {
+  data: PriceDataPoint[];
+}
+
+export default function PriceHistoryChart({ data }: PriceHistoryChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center border border-dashed border-[rgba(120,72,18,0.55)] bg-black/35 font-mono text-zinc-500">
+      <div className="flex h-full items-center justify-center border border-dashed border-[rgba(120,72,18,0.55)] bg-black/35 font-mono text-zinc-500 text-sm">
         No price history available
       </div>
     );
@@ -34,11 +38,11 @@ export default function PriceHistoryChart({ data }: { data: PriceDataPoint[] }) 
   };
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
+          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
         >
           <defs>
             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">

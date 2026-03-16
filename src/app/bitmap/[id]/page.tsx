@@ -33,15 +33,26 @@ export default async function BitmapDetailPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-bg pb-24 md:pb-0">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
-        {/* Back Link */}
+        {/* Header: Back Navigation + Title */}
         <div className="mb-4 md:mb-6">
-          <Link
-            href="/explore"
-            className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500 transition-colors hover:text-primary"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Explorer
-          </Link>
+          {/* Back Link - Icon only on mobile, with text on desktop */}
+          <div className="mb-3 md:mb-4">
+            <Link
+              href="/explore"
+              className="inline-flex items-center gap-1.5 md:gap-2 text-zinc-500 transition-colors hover:text-primary"
+              aria-label="Back to Explorer"
+            >
+              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden md:inline font-mono text-xs font-bold uppercase tracking-[0.14em]">
+                Back to Explorer
+              </span>
+            </Link>
+          </div>
+
+          {/* Page Title */}
+          <h1 className="font-mono text-2xl md:text-4xl font-black uppercase tracking-tight text-primary">
+            {bitmap.blockNumber}.bitmap
+          </h1>
         </div>
 
         {/* Main Content Grid */}
@@ -73,7 +84,10 @@ export default async function BitmapDetailPage({ params }: PageProps) {
         {/* Related Bitmaps Section */}
         {relatedBitmaps.length > 0 && (
           <div className="mt-8 md:mt-16">
-            <RelatedBitmaps bitmaps={relatedBitmaps.filter((b) => b.id !== bitmap.id)} />
+            <RelatedBitmaps 
+              bitmaps={relatedBitmaps.filter((b) => b.id !== bitmap.id)} 
+              patternType={bitmap.bitmapType}
+            />
           </div>
         )}
       </div>

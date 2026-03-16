@@ -26,16 +26,20 @@ export default function StatusPill({
   status: ListingStatus;
   className?: string;
 }) {
-  if (status === "unlisted") return null;
-
   const config = STATUS_CONFIG[status];
+  
+  // Use invisible for unlisted to prevent layout shift while maintaining space
+  const isUnlisted = status === "unlisted";
+  
   return (
     <span
       className={cn(
         "px-2 py-1 pixel-cut-sm text-[9px] uppercase font-mono tracking-[0.2em] font-bold border",
         config.colors,
+        isUnlisted && "opacity-0 pointer-events-none select-none",
         className
       )}
+      aria-hidden={isUnlisted}
     >
       {config.label}
     </span>
