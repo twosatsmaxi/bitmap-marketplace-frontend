@@ -5,6 +5,7 @@ import { formatNumber, truncateAddr, truncateInscription } from "@/lib/utils";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CopyButton from "@/components/ui/CopyButton";
 
 interface MetadataPanelProps {
   bitmap: Bitmap;
@@ -13,17 +14,62 @@ interface MetadataPanelProps {
 export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
   const [showAllProps, setShowAllProps] = useState(false);
 
-  const properties = [
-    { label: "Inscription ID", value: truncateInscription(bitmap.inscriptionId) },
-    { label: "Owner", value: truncateAddr(bitmap.owner) },
-    { label: "Block Height", value: `${bitmap.blockNumber}.bitmap` },
-    { label: "Genesis Height", value: formatNumber(bitmap.genesisHeight) },
-    { label: "Sat Number", value: formatNumber(bitmap.sat) },
-    { label: "Minted At", value: new Date(bitmap.mintedAt).toLocaleDateString() },
+  // Key properties always visible
+  const keyProperties = [
+    { 
+      label: "Block Height", 
+      value: `${bitmap.blockNumber}.bitmap`,
+      rawValue: `${bitmap.blockNumber}.bitmap`,
+      copyable: true 
+    },
+    { 
+      label: "Pattern", 
+      value: bitmap.bitmapType.charAt(0).toUpperCase() + bitmap.bitmapType.slice(1),
+      copyable: false 
+    },
+    { 
+      label: "Rarity", 
+      value: bitmap.rarity.charAt(0).toUpperCase() + bitmap.rarity.slice(1),
+      copyable: false 
+    },
   ];
 
-  // Show first 3 on mobile by default, all on desktop
-  const displayProps = showAllProps ? properties : properties.slice(0, 3);
+  // Extended properties (collapsible on mobile)
+  const extendedProperties = [
+    { 
+      label: "Inscription ID", 
+      value: truncateInscription(bitmap.inscriptionId),
+      rawValue: bitmap.inscriptionId,
+      copyable: true 
+    },
+    { 
+      label: "Owner", 
+      value: truncateAddr(bitmap.owner),
+      rawValue: bitmap.owner,
+      copyable: true 
+    },
+    { 
+      label: "Genesis Height", 
+      value: formatNumber(bitmap.genesisHeight),
+      rawValue: String(bitmap.genesisHeight),
+      copyable: false 
+    },
+    { 
+      label: "Sat Number", 
+      value: formatNumber(bitmap.sat),
+      rawValue: String(bitmap.sat),
+      copyable: false 
+    },
+    { 
+      label: "Minted At", 
+      value: new Date(bitmap.mintedAt).toLocaleDateString(),
+      rawValue: new Date(bitmap.mintedAt).toLocaleDateString(),
+      copyable: false 
+    },
+  ];
+
+  const allProperties = [...keyProperties, ...extendedProperties];
+  const displayProps = showAllProps ? allProperties : keyProperties;
 
   return (
     <div className="br-card px-4 py-4 md:px-5 md:py-5">
@@ -37,18 +83,24 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
             <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500">
               {prop.label}
             </span>
-            <span className="font-mono text-xs md:text-sm text-zinc-300 text-right">
-              {prop.value}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-xs md:text-sm text-zinc-300 text-right">
+                {prop.value}
+              </span>
+              {prop.copyable && prop.rawValue && (
+                <CopyButton value={prop.rawValue} size="sm" />
+              )}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Mobile: Show More/Less */}
-      {properties.length > 3 && (
+      {/* Mobile: Show More/Less for extended properties */}
+      {extendedProperties.length > 0 && (
         <button
           onClick={() => setShowAllProps(!showAllProps)}
           className="md:hidden mt-3 flex w-full items-center justify-center gap-1 rounded-md border border-[rgba(120,72,18,0.45)] bg-black/30 py-2 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500 transition-colors hover:text-primary active:scale-[0.98]"
+          aria-label={showAllProps ? "Show less properties" : "Show more properties"}
         >
           {showAllProps ? "Show Less" : "Show More"}
           <ChevronDown
@@ -60,27 +112,24 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
         </button>
       )}
 
-      <div className="mt-4 md:mt-6 border-t border-[rgba(255,255,255,0.08)] pt-4">
-        <h3 className="mb-3 font-mono text-xs md:text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">
-          Traits
-        </h3>
-        <div className="grid grid-cols-2 gap-2 md:gap-3">
-          <div className="flex flex-col items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] bg-black/45 p-2.5 md:p-3 text-center">
-            <span className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Pattern
-            </span>
-            <span className="font-mono text-sm md:text-base font-bold uppercase text-primary capitalize">
-              {bitmap.bitmapType}
-            </span>
-          </div>
-          <div className="flex flex-col items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] bg-black/45 p-2.5 md:p-3 text-center">
-            <span className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Rarity
-            </span>
-            <span className="font-mono text-sm md:text-base font-bold uppercase text-primary capitalize">
-              {bitmap.rarity}
-            </span>
-          </div>
+      {/* Desktop: Always show extended properties */}
+      <div className="hidden md:block mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4">
+        <div className="flex flex-col gap-2 md:gap-3">
+          {extendedProperties.map((prop, idx) => (
+            <div key={idx} className="flex items-center justify-between text-sm py-1">
+              <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500">
+                {prop.label}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-xs md:text-sm text-zinc-300 text-right">
+                  {prop.value}
+                </span>
+                {prop.copyable && prop.rawValue && (
+                  <CopyButton value={prop.rawValue} size="sm" />
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -158,19 +158,12 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {status === "loading" && (
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
-            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-zinc-600">
-              Bitmapping…
-            </span>
           </div>
         )}
 
         {/* Idle state */}
         {status === "idle" && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
-            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-zinc-700">
-              Fetching pixels…
-            </span>
-          </div>
+          <div className="absolute inset-0 rounded-lg bg-[#090c11]" />
         )}
 
         {/* Error state */}
