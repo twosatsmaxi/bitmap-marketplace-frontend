@@ -9,8 +9,6 @@ interface CollectionFilterPanelProps {
   onToggle: (id: string) => void;
 }
 
-
-
 export default function CollectionFilterPanel({
   collections,
   activeFilter,
@@ -57,7 +55,7 @@ export default function CollectionFilterPanel({
         </p>
       )}
 
-      {/* Chips - Horizontal scroll on mobile */}
+      {/* Chips */}
       <div className="mt-3 flex gap-2 overflow-x-auto hide-scrollbar md:flex-wrap pb-1 md:pb-0">
         {sortedCollections.map((c) => {
           const active = activeFilter === c.id;
