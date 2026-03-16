@@ -9,7 +9,7 @@ interface CollectionFilterPanelProps {
   onToggle: (id: string) => void;
 }
 
-const GROUPS = ["Milestone", "Collector", "Collection"] as const;
+
 
 export default function CollectionFilterPanel({
   collections,
@@ -79,10 +79,10 @@ export default function CollectionFilterPanel({
         })}
         <div className="flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
           <span>More soon</span>
-          <div className="flex gap-[3px]">
+          <div className="flex gap-[4px]">
             <span className="h-[3px] w-[3px] bg-primary"></span>
-            <span className="h-[3px] w-[3px] bg-primary/70"></span>
-            <span className="h-[3px] w-[3px] bg-primary/40"></span>
+            <span className="h-[3px] w-[3px] bg-primary opacity-60"></span>
+            <span className="h-[3px] w-[3px] bg-primary opacity-30"></span>
           </div>
         </div>
       </div>

@@ -14,40 +14,24 @@ function isPalindrome(n: number): boolean {
   return s === s.split("").reverse().join("");
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const filter = searchParams.get("filter") || "all";
-  const page = parseInt(searchParams.get("page") || "0", 10);
-  const limit = parseInt(searchParams.get("limit") || "9", 10);
-  const offset = page * limit;
-
-  let heights: number[] = [];
-
+function getHeightsForFilter(filter: string): number[] {
   if (filter === "punks") {
     // blocks where height % 4 === 3
-    // We start from 0 and find the first page of matches
-    // This is inefficient for real use but matches the stub requirement
-    for (let i = offset * 4; heights.length < limit && i < 1_000_000; i++) {
+    const heights: number[] = [];
+    for (let i = 3; heights.length < 10000 && i < 1_000_000; i++) {
       if (i % 4 === 3) heights.push(i);
     }
+    return heights;
   } else if (filter === "palindrome") {
-    // This would be slow to calculate on the fly for deep pages
-    // For now, let's just find some palindromes starting from offset
-    let current = offset;
-    while (heights.length < limit && current < 1_000_000) {
-      if (isPalindrome(current)) {
-        heights.push(current);
-      }
-      current++;
+    const heights: number[] = [];
+    for (let i = 0; heights.length < 10000 && i < 1_000_000; i++) {
+      if (isPalindrome(i)) heights.push(i);
     }
+    return heights;
   } else if (filter === "sub-100k") {
-    for (let i = offset; i < offset + limit && i < 100_000; i++) {
-      heights.push(i);
-    }
+    return Array.from({ length: 100_000 }, (_, i) => i);
   } else if (filter === "nakamoto") {
-    for (let i = offset; i < offset + limit && i < 36_288; i++) {
-      heights.push(i);
-    }
+    return Array.from({ length: 36_288 }, (_, i) => i);
   } else if (filter === "repdigit") {
     const allRepdigits: number[] = [];
     for (let digits = 1; digits <= 6; digits++) {
@@ -56,16 +40,46 @@ export async function GET(req: NextRequest) {
       }
     }
     allRepdigits.sort((a, b) => a - b);
-    heights = allRepdigits.slice(offset, offset + limit);
+    return allRepdigits;
   } else if (STUB_DATA[filter]) {
-    heights = STUB_DATA[filter].slice(offset, offset + limit);
+    return STUB_DATA[filter];
+  }
+  return [];
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  // Support both single filter (legacy) and multiple filters
+  const filtersParam = searchParams.get("filters");
+  const singleFilter = searchParams.get("filter");
+  const filters = filtersParam ? filtersParam.split(",") : singleFilter ? [singleFilter] : [];
+  
+  const page = parseInt(searchParams.get("page") || "0", 10);
+  const limit = parseInt(searchParams.get("limit") || "9", 10);
+  const offset = page * limit;
+
+  let heights: number[] = [];
+
+  if (filters.length === 0) {
+    // No filters - return empty (explore page handles this case)
+    heights = [];
+  } else if (filters.length === 1) {
+    // Single filter - simple case
+    heights = getHeightsForFilter(filters[0]);
+  } else {
+    // Multiple filters - AND logic (intersection)
+    const allSets = filters.map(getHeightsForFilter);
+    // Find intersection of all sets
+    const firstSet = new Set(allSets[0]);
+    heights = allSets[0].filter(h => allSets.every(set => set.includes(h)));
   }
 
-  const hasMore = heights.length === limit;
+  const paginatedHeights = heights.slice(offset, offset + limit);
+  const hasMore = heights.length > offset + limit;
   const hasPrev = page > 0;
 
   return NextResponse.json({
-    heights,
+    heights: paginatedHeights,
     hasMore,
     hasPrev,
   });

@@ -45,7 +45,6 @@ export type FilterCategory = {
 
 export interface CollectionFilterMeta extends FilterCategory {
   priority: number;
-  group: "Milestone" | "Collector" | "Collection";
   highlight: string;
 }
 

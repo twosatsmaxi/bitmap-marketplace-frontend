@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ExploreClient from "@/components/explore/ExploreClient";
 
 export const metadata: Metadata = {
@@ -24,5 +25,9 @@ async function getChainTip(): Promise<number> {
 export default async function ExplorePage() {
   const latestBlock = await getChainTip();
 
-  return <ExploreClient latestBlock={latestBlock} />;
+  return (
+    <Suspense fallback={null}>
+      <ExploreClient latestBlock={latestBlock} />
+    </Suspense>
+  );
 }
