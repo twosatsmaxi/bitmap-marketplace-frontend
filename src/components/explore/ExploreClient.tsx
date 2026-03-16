@@ -83,9 +83,9 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const [hasMore, setHasMore] = useState(false);
 
   const [anchorHeight, setAnchorHeight] = useState(() => {
-    // Ensure we never start with negative or invalid values
-    const defaultAnchor = Math.max(latestBlock - (GRID_SIZE - 1), 0);
-    const saved = savedAnchorHeight ?? defaultAnchor;
+    // Default to Halving IV (840,000) on first load, fallback to latest blocks if saved
+    const halvingIV = 840_000;
+    const saved = savedAnchorHeight ?? halvingIV;
     // Clamp saved value to valid range
     return Math.max(0, Math.min(saved, latestBlock));
   });
