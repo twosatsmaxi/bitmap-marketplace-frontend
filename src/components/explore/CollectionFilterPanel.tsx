@@ -3,29 +3,11 @@
 import { cn } from "@/lib/utils";
 import type { CollectionFilterMeta } from "./types";
 
-type FilterGroup = "historical" | "punk" | "numeric";
-
-interface GroupedCollectionFilterMeta extends CollectionFilterMeta {
-  group: FilterGroup;
-}
-
 interface CollectionFilterPanelProps {
-  collections: GroupedCollectionFilterMeta[];
+  collections: CollectionFilterMeta[];
   activeFilter: string | null;
   onToggle: (id: string) => void;
 }
-
-const GROUP_LABELS: Record<FilterGroup, string> = {
-  historical: "Historical",
-  punk: "Punk",
-  numeric: "Numeric",
-};
-
-const GROUP_COLORS: Record<FilterGroup, string> = {
-  historical: "text-blue-400",
-  punk: "text-orange-400",
-  numeric: "text-emerald-400",
-};
 
 export default function CollectionFilterPanel({
   collections,
@@ -36,20 +18,10 @@ export default function CollectionFilterPanel({
   const activeCollection = sortedCollections.find((c) => c.id === activeFilter);
   const activeLabel = activeCollection?.label;
   const activeHighlight = activeCollection?.highlight;
-  const activeGroup = activeCollection?.group;
 
   const handleClear = () => {
     if (activeFilter) onToggle(activeFilter);
   };
-
-  // Group filters by their group property
-  const grouped = sortedCollections.reduce((acc, c) => {
-    if (!acc[c.group]) acc[c.group] = [];
-    acc[c.group].push(c);
-    return acc;
-  }, {} as Record<FilterGroup, GroupedCollectionFilterMeta[]>);
-
-  const groupOrder: FilterGroup[] = ["historical", "punk", "numeric"];
 
   return (
     <div className="br-card p-3 md:p-4 lg:p-5">
@@ -60,10 +32,7 @@ export default function CollectionFilterPanel({
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500 shrink-0">
               Filtering by
             </span>
-            <span className={cn(
-              "font-mono text-[11px] uppercase tracking-[0.18em] shrink-0",
-              activeGroup ? GROUP_COLORS[activeGroup] : "text-primary"
-            )}>
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary shrink-0">
               {activeLabel}
             </span>
             {activeHighlight && (
@@ -86,48 +55,27 @@ export default function CollectionFilterPanel({
         </p>
       )}
 
-      {/* Grouped Chips - single row with dividers */}
-      <div className="mt-3 flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-        {groupOrder.map((group, groupIndex) => (
-          <div key={group} className="flex items-center">
-            {/* Subtle divider between groups */}
-            {groupIndex > 0 && (
-              <div className="flex items-center mx-2 md:mx-3">
-                <div className="h-4 w-px bg-[rgba(255,255,255,0.08)]" />
-              </div>
-            )}
-            
-            {/* Filter chips for this group */}
-            <div className="flex items-center gap-1.5 md:gap-2">
-              {grouped[group]?.map((c) => {
-                const active = activeFilter === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => onToggle(c.id)}
-                    className={cn(
-                      "flex-shrink-0 rounded-full border px-2.5 py-1 md:px-3 md:py-1 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.14em] md:tracking-[0.16em] transition-all active:scale-95",
-                      active
-                        ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
-                        : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
-                    )}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        
-        {/* Subtle divider before More soon */}
-        <div className="flex items-center mx-2 md:mx-3">
-          <div className="h-4 w-px bg-[rgba(255,255,255,0.08)]" />
-        </div>
-        
-        {/* More soon indicator */}
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600 shrink-0">
+      {/* Chips */}
+      <div className="mt-3 flex gap-2 overflow-x-auto hide-scrollbar md:flex-wrap pb-1 md:pb-0">
+        {sortedCollections.map((c) => {
+          const active = activeFilter === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onToggle(c.id)}
+              className={cn(
+                "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
+                active
+                  ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
+                  : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+              )}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+        <div className="flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
           <span>More soon</span>
           <div className="flex gap-[4px]">
             <span className="h-[3px] w-[3px] bg-primary"></span>
