@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
@@ -30,6 +30,14 @@ export const metadata: Metadata = {
   keywords: ["Bitcoin", "Ordinals", "Bitmap", "NFT", "Marketplace", "BRC-20"],
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#09090b",
+  viewportFit: "cover",
+};
+
 export default async function RootLayout({
   children,
 }: {
@@ -39,7 +47,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-bg text-text-primary min-h-screen">
+      <body className="bg-bg text-text-primary min-h-screen safe-area-inset-left safe-area-inset-right">
         <Navbar />
         <StatsBar stats={stats} />
         <main className="pt-[var(--header-total)]">{children}</main>

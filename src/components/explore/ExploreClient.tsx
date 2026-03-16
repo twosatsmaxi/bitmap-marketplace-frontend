@@ -73,11 +73,11 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   // Initialize from URL or default
   const urlFilter = searchParams.get("filter");
   const urlFilterPage = parseInt(searchParams.get("page") || "0", 10);
-  
+
   const [activeFilter, setActiveFilter] = useState<string | null>(urlFilter);
   const [filterPage, setFilterPage] = useState(urlFilterPage);
   const [hasMore, setHasMore] = useState(false);
@@ -92,7 +92,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
 
   // Sync navigation state to module-level for persistence across remounts
   useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
-  
+
   // Sync filter to URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -188,74 +188,82 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
   const rangeEnd = Math.min(anchorHeight + GRID_SIZE - 1, latestBlock);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-12 pt-4 md:px-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
 
       {/* Header panel */}
-      <div className="br-card p-5">
-        <div className="flex flex-col gap-3">
+      <div className="br-card p-3 md:p-5">
+        <div className="flex flex-col gap-2 md:gap-3">
           {/* Top row: Title + search + tip */}
-          <div className="flex items-center gap-4">
-            <h1 className="font-mono text-xl font-black uppercase tracking-[0.12em] text-primary md:text-2xl">
-              Bitmap Explorer
+          <div className="flex items-center gap-2 md:gap-4">
+            <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
+              Explorer
             </h1>
-            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
-            <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+            <div className="hidden sm:block">
+              <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
+            </div>
+            <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em] text-zinc-400">
               Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
             </span>
           </div>
-          
+
+          {/* Mobile Search */}
+          <div className="sm:hidden">
+            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
+          </div>
+
           {/* Subtitle below */}
-          <p className="font-mono text-xs text-zinc-500 tracking-wide">
+          <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
             Every Bitcoin block is a bitmap. be the bitmap 🟧
           </p>
         </div>
       </div>
 
       {/* Collections filter and legendary links */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Left: Legendary scrollable section */}
-          <div className="flex flex-1 items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="flex flex-shrink-0 items-center gap-1.5 text-zinc-600">
-              <Zap className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em]">Legendary</span>
+          <div className="flex flex-1 items-center gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex flex-shrink-0 items-center gap-1 md:gap-1.5 text-zinc-600">
+              <Zap className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" />
+              <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em]">Legendary</span>
             </div>
           {INTERESTING_BLOCKS.map((b) => (
             <button
               key={b.height}
               onClick={() => jumpTo(b.height)}
-              className="flex-shrink-0 border border-[rgba(255,255,255,0.1)] rounded bg-[rgba(255,255,255,0.04)] px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-400 transition-colors hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+              className="flex-shrink-0 border border-[rgba(255,255,255,0.1)] rounded bg-[rgba(255,255,255,0.04)] px-2 py-1 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.12em] md:tracking-[0.16em] text-zinc-400 transition-colors hover:border-[rgba(247,162,59,0.45)] hover:text-primary active:scale-95"
             >
               {b.label}
             </button>
           ))}
           </div>
-          
+
           {/* Right: PREV/NEXT navigation */}
-          <div className="flex flex-shrink-0 items-center gap-2">
+          <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
             <button
               onClick={goPrev}
               disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-              className="br-btn flex items-center gap-1 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
+              className="br-btn flex items-center gap-1 px-2.5 py-2 md:px-3 disabled:cursor-not-allowed disabled:opacity-40 text-[10px] md:text-xs"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              Prev
+              <span className="hidden sm:inline">Prev</span>
             </button>
 
-            <div className="flex min-w-[100px] items-center justify-center gap-2 font-mono text-[10px] text-zinc-600">
+            <div className="flex min-w-[80px] md:min-w-[100px] items-center justify-center gap-2 font-mono text-[9px] md:text-[10px] text-zinc-600">
               {activeFilter ? (
                 <span>PAGE {filterPage + 1}</span>
               ) : (
-                <span>{anchorHeight.toLocaleString()} – {rangeEnd.toLocaleString()}</span>
+                <span className="hidden sm:inline">{anchorHeight.toLocaleString()} – {rangeEnd.toLocaleString()}</span>
               )}
+              {activeFilter && <span className="sm:hidden">P{filterPage + 1}</span>}
             </div>
 
             <button
               onClick={goNext}
               disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-              className="br-btn flex items-center gap-1 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40"
+              className="br-btn flex items-center gap-1 px-2.5 py-2 md:px-3 disabled:cursor-not-allowed disabled:opacity-40 text-[10px] md:text-xs"
             >
-              Next
+              <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -268,8 +276,8 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
         />
       </div>
 
-      {/* 4×4 grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
         {blocks.map((b) => (
           <BlockCard
             key={b.height}
@@ -280,7 +288,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           />
         ))}
         {blocks.length === 0 && (
-          <div className="col-span-full py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
+          <div className="col-span-full py-16 md:py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
             <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
               No matching bitmaps found for this page
             </p>
@@ -295,14 +303,14 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
           className="font-mono text-xs text-zinc-500 transition-colors hover:text-primary disabled:opacity-40"
         >
-          ← Older bitmaps
+          ← Older
         </button>
         <button
           onClick={goNext}
           disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
           className="font-mono text-xs text-zinc-500 transition-colors hover:text-primary disabled:opacity-40"
         >
-          Newer bitmaps →
+          Newer →
         </button>
       </div>
     </div>

@@ -26,7 +26,7 @@ export default function CollectionFilterPanel({
   };
 
   return (
-    <div className="br-card p-4 md:p-5">
+    <div className="br-card p-3 md:p-4 lg:p-5">
       {/* Header */}
       {activeFilter && activeLabel ? (
         <div className="flex items-center justify-between border-l-2 border-primary pl-3">
@@ -38,7 +38,7 @@ export default function CollectionFilterPanel({
               {activeLabel}
             </span>
             {activeHighlight && (
-              <span className="font-mono text-[10px] text-zinc-400 truncate">
+              <span className="font-mono text-[10px] text-zinc-400 truncate hidden sm:inline">
                 ({activeHighlight})
               </span>
             )}
@@ -57,8 +57,8 @@ export default function CollectionFilterPanel({
         </p>
       )}
 
-      {/* Chips */}
-      <div className="mt-3 flex flex-wrap gap-2">
+      {/* Chips - Horizontal scroll on mobile */}
+      <div className="mt-3 flex gap-2 overflow-x-auto hide-scrollbar md:flex-wrap pb-1 md:pb-0">
         {sortedCollections.map((c) => {
           const active = activeFilter === c.id;
           return (
@@ -67,7 +67,7 @@ export default function CollectionFilterPanel({
               type="button"
               onClick={() => onToggle(c.id)}
               className={cn(
-                "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors",
+                "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
                 active
                   ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
                   : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"

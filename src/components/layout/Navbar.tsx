@@ -4,15 +4,32 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Terminal, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Lock body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   return (
     <>
-      <nav className="fixed left-0 right-0 top-0 z-50 flex h-nav items-center border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.92)] px-4 backdrop-blur-md md:px-6">
+      <nav className="fixed left-0 right-0 top-0 z-50 flex h-nav items-center border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.95)] px-4 backdrop-blur-md md:px-6">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 md:gap-8">
           {/* Logo */}
           <Link href="/" className="group flex items-center gap-3 transition-colors">
@@ -20,7 +37,7 @@ export default function Navbar() {
               <Terminal className="h-4 w-4 text-black" strokeWidth={3} />
             </div>
             <div className="flex flex-col">
-              <span className="font-mono text-lg font-black uppercase tracking-[0.12em] text-primary md:text-xl">
+              <span className="font-mono text-base font-black uppercase tracking-[0.12em] text-primary md:text-xl">
                 Bitmap
               </span>
               <span className="hidden font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500 md:block">
@@ -62,8 +79,9 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.06)] text-zinc-400 transition-colors hover:text-primary md:hidden"
-              aria-label="Toggle menu"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.06)] text-zinc-400 transition-colors hover:text-primary active:scale-95 md:hidden"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
             >
               {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
@@ -71,27 +89,85 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile dropdown menu */}
-      {menuOpen && (
-        <div className="fixed left-0 right-0 top-nav z-40 border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.97)] px-4 py-3 md:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-1">
-            <MobileNavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")} onClick={() => setMenuOpen(false)}>
-              Explore
-            </MobileNavLink>
-            <MobileSoonNav label="Market" />
-            <MobileSoonNav label="Activity" />
-            <MobileSoonNav label="Analytics" />
-            <div className="mt-2 border-t border-[rgba(120,72,18,0.45)] pt-2">
-              <span className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
-                Connect
-                <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-                  Soon
-                </span>
+      {/* Mobile Drawer */}
+      {/* Backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          menuOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Drawer Panel */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 z-50 h-full w-[280px] border-l border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] shadow-2xl transition-transform duration-300 ease-out md:hidden",
+          menuOpen ? "translate-x-0" : "translate-x-full"
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+      >
+        {/* Drawer Header */}
+        <div className="flex h-nav items-center justify-between border-b border-[rgba(120,72,18,0.55)] px-4">
+          <span className="font-mono text-sm font-bold uppercase tracking-[0.12em] text-primary">
+            Menu
+          </span>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(false)}
+            className="flex h-10 w-10 items-center justify-center text-zinc-400 transition-colors hover:text-primary active:scale-95"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Drawer Content */}
+        <div className="flex flex-col gap-1 p-4">
+          <DrawerNavLink
+            href="/"
+            active={pathname === "/" || pathname.startsWith("/explore")}
+            onClick={() => setMenuOpen(false)}
+          >
+            Explore
+          </DrawerNavLink>
+          <DrawerSoonNav label="Market" />
+          <DrawerSoonNav label="Activity" />
+          <DrawerSoonNav label="Analytics" />
+
+          <div className="my-4 border-t border-[rgba(120,72,18,0.45)]" />
+
+          {/* Mobile Actions */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+                Query
+              </span>
+              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
+                Soon
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+                Connect Wallet
+              </span>
+              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
+                Soon
               </span>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Drawer Footer */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-[rgba(120,72,18,0.45)] p-4 safe-area-inset-bottom">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+            Bitmap Marketplace v0.1.0
+          </p>
+        </div>
+      </div>
     </>
   );
 }
@@ -142,7 +218,7 @@ function SoonNavInline({ label, className }: { label: string; className?: string
   );
 }
 
-function MobileNavLink({
+function DrawerNavLink({
   href,
   active,
   onClick,
@@ -158,10 +234,10 @@ function MobileNavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center border-l-2 px-4 py-3 font-mono text-sm font-bold uppercase tracking-[0.18em] transition-colors",
+        "flex items-center rounded-md border-l-2 px-4 py-3.5 font-mono text-sm font-bold uppercase tracking-[0.18em] transition-all active:scale-[0.98]",
         active
-          ? "border-primary bg-[rgba(247,147,26,0.06)] text-primary"
-          : "border-transparent text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
+          ? "border-primary bg-[rgba(247,147,26,0.08)] text-primary"
+          : "border-transparent text-zinc-500 hover:border-primary/40 hover:bg-[rgba(247,147,26,0.04)] hover:text-zinc-300"
       )}
     >
       {children}
@@ -169,9 +245,9 @@ function MobileNavLink({
   );
 }
 
-function MobileSoonNav({ label }: { label: string }) {
+function DrawerSoonNav({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-between border-l-2 border-transparent px-4 py-3">
+    <div className="flex items-center justify-between rounded-md border-l-2 border-transparent px-4 py-3.5">
       <span className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-zinc-600">
         {label}
       </span>
