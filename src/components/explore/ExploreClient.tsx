@@ -196,7 +196,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           {/* Top row: Title + search + tip */}
           <div className="flex items-center gap-2 md:gap-4">
             <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-              Explorer
+              Bitmap Explorer
             </h1>
             <div className="hidden sm:block">
               <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
@@ -222,49 +222,86 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
       <div className="flex flex-col gap-2 md:gap-3">
         <div className="flex items-center gap-2 md:gap-3">
           {/* Left: Legendary scrollable section */}
-          <div className="flex flex-1 items-center gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="flex flex-shrink-0 items-center gap-1 md:gap-1.5 text-zinc-600">
-              <Zap className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary" />
-              <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em]">Legendary</span>
+          <div className="flex flex-1 items-center gap-2 md:gap-3 min-w-0">
+            {/* Legendary Icon - Only show icon on mobile */}
+            <div className="flex flex-shrink-0 items-center justify-center w-9 h-9 md:w-auto md:h-auto rounded-md border border-[rgba(247,147,26,0.3)] bg-[rgba(247,147,26,0.1)] md:px-3 md:py-2">
+              <Zap className="h-4 w-4 text-primary" fill="currentColor" />
+              <span className="hidden md:inline font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary ml-2">
+                Legendary
+              </span>
             </div>
-          {INTERESTING_BLOCKS.map((b) => (
-            <button
-              key={b.height}
-              onClick={() => jumpTo(b.height)}
-              className="flex-shrink-0 border border-[rgba(255,255,255,0.1)] rounded bg-[rgba(255,255,255,0.04)] px-2 py-1 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.12em] md:tracking-[0.16em] text-zinc-400 transition-colors hover:border-[rgba(247,162,59,0.45)] hover:text-primary active:scale-95"
-            >
-              {b.label}
-            </button>
-          ))}
+
+            {/* Scrollable Buttons */}
+            <div className="relative flex-1 overflow-hidden">
+              {/* Right Fade Gradient */}
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-l from-[rgba(9,9,11,1)] to-transparent" />
+              
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pr-6">
+                {INTERESTING_BLOCKS.map((b) => (
+                  <button
+                    key={b.height}
+                    onClick={() => jumpTo(b.height)}
+                    className="flex-shrink-0 rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-2 py-2 md:px-3 md:py-2 font-mono text-[10px] uppercase tracking-[0.1em] md:tracking-[0.14em] text-zinc-400 transition-all hover:border-[rgba(247,162,59,0.5)] hover:bg-[rgba(247,162,59,0.08)] hover:text-primary active:scale-95"
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Right: PREV/NEXT navigation */}
           <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
+            {/* Mobile: Icon only buttons */}
             <button
               onClick={goPrev}
               disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-              className="br-btn flex items-center gap-1 px-2.5 py-2 md:px-3 disabled:cursor-not-allowed disabled:opacity-40 text-[10px] md:text-xs"
+              className="br-btn flex md:hidden items-center justify-center w-9 h-9 p-0 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous page"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Prev</span>
+              <ChevronLeft className="h-4 w-4" />
             </button>
 
-            <div className="flex min-w-[80px] md:min-w-[100px] items-center justify-center gap-2 font-mono text-[9px] md:text-[10px] text-zinc-600">
+            {/* Desktop: Text + Icon buttons */}
+            <button
+              onClick={goPrev}
+              disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
+              className="br-btn hidden md:flex items-center gap-1.5 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40 text-xs"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Prev
+            </button>
+
+            {/* Page indicator */}
+            <div className="flex min-w-[60px] md:min-w-[120px] items-center justify-center gap-2 font-mono text-[10px] md:text-[11px] text-zinc-500">
               {activeFilter ? (
-                <span>PAGE {filterPage + 1}</span>
+                <span>Page {filterPage + 1}</span>
               ) : (
-                <span className="hidden sm:inline">{anchorHeight.toLocaleString()} – {rangeEnd.toLocaleString()}</span>
+                <>
+                  <span className="md:hidden">{anchorHeight.toLocaleString()}</span>
+                  <span className="hidden md:inline">{anchorHeight.toLocaleString()} – {rangeEnd.toLocaleString()}</span>
+                </>
               )}
-              {activeFilter && <span className="sm:hidden">P{filterPage + 1}</span>}
             </div>
 
+            {/* Mobile: Icon only button */}
             <button
               onClick={goNext}
               disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-              className="br-btn flex items-center gap-1 px-2.5 py-2 md:px-3 disabled:cursor-not-allowed disabled:opacity-40 text-[10px] md:text-xs"
+              className="br-btn flex md:hidden items-center justify-center w-9 h-9 p-0 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next page"
             >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            {/* Desktop: Text + Icon button */}
+            <button
+              onClick={goNext}
+              disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
+              className="br-btn hidden md:flex items-center gap-1.5 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40 text-xs"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
