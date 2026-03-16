@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
@@ -10,6 +10,7 @@ import { QualityMonitor } from "./quality-monitor";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
+import { useStableCanvasSize } from "@/hooks/useResponsiveCanvasSize";
 
 const supportsWebGL2 =
   typeof document !== "undefined" &&
@@ -45,32 +46,13 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
   );
   const staticImageRef = useRef<string | null>(null);
 
-  // Canvas container ref for responsive sizing
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState(300);
-
-  // Measure container and set canvas size
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      // Render at device pixel ratio for crisp visuals, cap at 600 for performance
-      const size = Math.min(Math.round(rect.width * dpr), 600);
-      setCanvasSize(Math.max(size, 150)); // Minimum 150px
-    };
-
-    // Initial size
-    updateSize();
-
-    // Observe resize
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => observer.disconnect();
-  }, []);
+  // Use stable canvas size based on breakpoints (not ResizeObserver)
+  const canvasSize = useStableCanvasSize({
+    mobile: 400,    // 2 columns
+    tablet: 500,    // 3 columns
+    desktop: 600,   // 4 columns
+    large: 600,
+  });
 
   // FPS monitoring via rAF — runs alongside the renderer's own loop
   useEffect(() => {
@@ -153,10 +135,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Canvas area */}
-      <div 
-        ref={canvasContainerRef}
-        className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden"
-      >
+      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
         {/* Renderer */}
         <div
           ref={rendererContainerRef}

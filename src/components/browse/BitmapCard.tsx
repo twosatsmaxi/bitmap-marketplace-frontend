@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { Bitmap } from "@/lib/types";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
@@ -8,6 +8,7 @@ import RarityBadge from "@/components/ui/RarityBadge";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { RenderStatus } from "@/components/explore/types";
+import { useStableCanvasSize } from "@/hooks/useResponsiveCanvasSize";
 
 interface BitmapCardProps {
   bitmap: Bitmap;
@@ -15,43 +16,21 @@ interface BitmapCardProps {
 
 export default function BitmapCard({ bitmap }: BitmapCardProps) {
   const [status, setStatus] = useState<RenderStatus>("loading");
-  
-  // Canvas container ref for responsive sizing
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState(300);
 
-  // Measure container and set canvas size
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      // Render at device pixel ratio for crisp visuals, cap at 600 for performance
-      const size = Math.min(Math.round(rect.width * dpr), 600);
-      setCanvasSize(Math.max(size, 150)); // Minimum 150px
-    };
-
-    // Initial size
-    updateSize();
-
-    // Observe resize
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => observer.disconnect();
-  }, []);
+  // Use stable canvas size based on breakpoints (not ResizeObserver)
+  const canvasSize = useStableCanvasSize({
+    mobile: 400,    // 2 columns
+    tablet: 500,    // 3 columns  
+    desktop: 600,   // 4-5 columns
+    large: 600,
+  });
 
   return (
     <Link
       href={`/bitmap/${bitmap.id}`}
       className="group home-panel flex flex-col overflow-hidden transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.02] active:scale-[0.98]"
     >
-      <div 
-        ref={canvasContainerRef}
-        className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]"
-      >
+      <div className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]">
         {status === "loading" && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />

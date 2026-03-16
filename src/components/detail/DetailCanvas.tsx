@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import WebGLBitmapRenderer from "@/components/explore/WebGLBitmapRenderer";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
+import { useDetailCanvasSize } from "@/hooks/useResponsiveCanvasSize";
 
 const supportsWebGL2 =
   typeof document !== "undefined" &&
@@ -13,39 +14,12 @@ const supportsWebGL2 =
 export default function DetailCanvas({ blockNumber }: { blockNumber: number }) {
   const [status, setStatus] = useState<RenderStatus>("idle");
 
-  // Canvas container ref for responsive sizing
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState(800);
-
-  // Measure container and set canvas size
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      // Render at device pixel ratio for crisp visuals, cap at 1200 for performance
-      const size = Math.min(Math.round(rect.width * dpr), 1200);
-      setCanvasSize(Math.max(size, 300)); // Minimum 300px
-    };
-
-    // Initial size
-    updateSize();
-
-    // Observe resize
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => observer.disconnect();
-  }, []);
+  // Use stable canvas size based on breakpoints
+  const canvasSize = useDetailCanvasSize();
 
   return (
     <div className="br-card p-2 md:p-3">
-      <div 
-        ref={canvasContainerRef}
-        className="relative aspect-square w-full rounded-lg bg-[#090c11] overflow-hidden"
-      >
+      <div className="relative aspect-square w-full rounded-lg bg-[#090c11] overflow-hidden">
         {/* Renderer */}
         <div
           className={cn(
