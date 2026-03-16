@@ -31,8 +31,8 @@ export default function Navbar() {
 
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
-            <NavLink href="/" active={pathname === "/"}>Market</NavLink>
-            <NavLink href="/explore" active={pathname.startsWith("/explore")}>Explore</NavLink>
+            <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
+            <NavLink href="/market" active={pathname === "/market"}>Market</NavLink>
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
             <SoonNav label="Analytics" />
@@ -75,10 +75,10 @@ export default function Navbar() {
       {menuOpen && (
         <div className="fixed left-0 right-0 top-nav z-40 border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.97)] px-4 py-3 md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
-            <MobileNavLink href="/" active={pathname === "/"} onClick={() => setMenuOpen(false)}>
-              Market
+            <MobileNavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")} onClick={() => setMenuOpen(false)}>
+              Explore
             </MobileNavLink>
-            <MobileNavLink href="/explore" active={pathname.startsWith("/explore")} onClick={() => setMenuOpen(false)}>Explore</MobileNavLink>
+            <MobileNavLink href="/market" active={pathname === "/market"} onClick={() => setMenuOpen(false)}>Market</MobileNavLink>
             <MobileSoonNav label="Activity" />
             <MobileSoonNav label="Analytics" />
             <div className="mt-2 border-t border-[rgba(120,72,18,0.45)] pt-2">

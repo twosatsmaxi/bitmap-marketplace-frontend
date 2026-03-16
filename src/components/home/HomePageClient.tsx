@@ -1,12 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type {
   HomeMarketRow,
   HomeRecentSale,
   HomeTimeframe,
 } from "@/lib/types";
 import { cn, formatBTC, formatNumber, timeAgo } from "@/lib/utils";
+
+// Map homepage row IDs to explore page filter IDs
+// null = link to explore with no filter
+// undefined = not clickable (no link)
+const FILTER_MAP: Record<string, string | null | undefined> = {
+  patoshi: "patoshi",
+  billionaire: "billionaire",
+  "sub-100k": "sub-100k",
+  palindrome: "palindrome",
+  "pizza-block": "pizza",
+  "bitmap-punk": "punks",
+  "nakamoto-era": "nakamoto",
+  "epic-sat-block": undefined, // no matching filter
+  bitmap: null, // main collection, link to explore with no filter
+};
 
 interface HomePageClientProps {
   rows: HomeMarketRow[];
@@ -177,9 +193,7 @@ export default function HomePageClient({
                     </BodyCell>
                     <BodyCell className="border-t border-[rgba(247,147,26,0.16)] group-hover:border-[rgba(247,147,26,0.22)]">
                       <div className="flex flex-col gap-0.5">
-                        <div className="font-mono text-sm font-bold uppercase text-primary md:text-base">
-                          {row.name}
-                        </div>
+                        <TraitLink id={row.id} name={row.name} />
                         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                           {row.kind}
                         </div>
@@ -359,6 +373,32 @@ function Sparkline({ points }: { points: number[] }) {
         className="text-primary"
       />
     </svg>
+  );
+}
+
+function TraitLink({ id, name }: { id: string; name: string }) {
+  const filterId = FILTER_MAP[id];
+  
+  // undefined = not clickable
+  if (filterId === undefined) {
+    return (
+      <div className="font-mono text-sm font-bold uppercase text-primary md:text-base">
+        {name}
+      </div>
+    );
+  }
+  
+  // null = link to explore with no filter
+  // string = link to explore with specific filter
+  const href = filterId === null ? "/explore" : `/explore?filter=${filterId}`;
+  
+  return (
+    <Link
+      href={href}
+      className="font-mono text-sm font-bold uppercase text-primary transition-colors hover:text-primary/80 hover:underline underline-offset-2 md:text-base inline-block"
+    >
+      {name}
+    </Link>
   );
 }
 
