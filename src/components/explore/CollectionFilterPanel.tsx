@@ -3,11 +3,23 @@
 import { cn } from "@/lib/utils";
 import type { CollectionFilterMeta } from "./types";
 
+type FilterCategory = "historical" | "punk" | "numeric";
+
+interface CategorizedFilterMeta extends CollectionFilterMeta {
+  category: FilterCategory;
+}
+
 interface CollectionFilterPanelProps {
-  collections: CollectionFilterMeta[];
+  collections: CategorizedFilterMeta[];
   activeFilter: string | null;
   onToggle: (id: string) => void;
 }
+
+const CATEGORY_ICONS: Record<FilterCategory, string> = {
+  historical: "◆",
+  punk: "◈",
+  numeric: "◇",
+};
 
 export default function CollectionFilterPanel({
   collections,
@@ -21,6 +33,34 @@ export default function CollectionFilterPanel({
 
   const handleClear = () => {
     if (activeFilter) onToggle(activeFilter);
+  };
+
+  // Group by category
+  const byCategory = sortedCollections.reduce((acc, c) => {
+    if (!acc[c.category]) acc[c.category] = [];
+    acc[c.category].push(c);
+    return acc;
+  }, {} as Record<FilterCategory, CategorizedFilterMeta[]>);
+
+  const rowOrder: FilterCategory[] = ["historical", "punk", "numeric"];
+
+  const FilterChip = ({ c }: { c: CategorizedFilterMeta }) => {
+    const active = activeFilter === c.id;
+    return (
+      <button
+        key={c.id}
+        type="button"
+        onClick={() => onToggle(c.id)}
+        className={cn(
+          "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
+          active
+            ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
+            : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+        )}
+      >
+        {c.label}
+      </button>
+    );
   };
 
   return (
@@ -55,32 +95,32 @@ export default function CollectionFilterPanel({
         </p>
       )}
 
-      {/* Chips */}
-      <div className="mt-3 flex gap-2 overflow-x-auto hide-scrollbar md:flex-wrap pb-1 md:pb-0">
-        {sortedCollections.map((c) => {
-          const active = activeFilter === c.id;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onToggle(c.id)}
-              className={cn(
-                "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
-                active
-                  ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
-                  : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
-              )}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-        <div className="flex items-center gap-2 px-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
-          <span>More soon</span>
-          <div className="flex gap-[4px]">
-            <span className="h-[3px] w-[3px] bg-primary"></span>
-            <span className="h-[3px] w-[3px] bg-primary opacity-60"></span>
-            <span className="h-[3px] w-[3px] bg-primary opacity-30"></span>
+      {/* 2 Rows of filters */}
+      <div className="mt-3 flex flex-col gap-2">
+        {/* Row 1: Historical + Punk (with divider) */}
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+          {byCategory["historical"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+          
+          {/* Divider between groups */}
+          <div className="flex items-center mx-1 md:mx-2">
+            <div className="h-4 w-px bg-[rgba(255,255,255,0.12)]" />
+          </div>
+          
+          {byCategory["punk"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+        </div>
+        
+        {/* Row 2: Numeric */}
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+          {byCategory["numeric"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+          
+          {/* More soon inline */}
+          <div className="flex items-center gap-2 ml-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+            <span>More soon</span>
+            <div className="flex gap-[4px]">
+              <span className="h-[3px] w-[3px] bg-primary"></span>
+              <span className="h-[3px] w-[3px] bg-primary opacity-60"></span>
+              <span className="h-[3px] w-[3px] bg-primary opacity-30"></span>
+            </div>
           </div>
         </div>
       </div>

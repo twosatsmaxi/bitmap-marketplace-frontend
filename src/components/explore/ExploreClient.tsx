@@ -25,17 +25,26 @@ const INTERESTING_BLOCKS: InterestingBlock[] = [
   { label: "Halving IV", height: 840_000 },
 ];
 
-const COLLECTION_FILTER_LAYOUT: CollectionFilterMeta[] = [
-  { id: "pizza", label: "Pizza Block", priority: 1, highlight: "The 10,000 BTC Pizza Transaction" },
-  { id: "same-digits", label: "Same Digits", priority: 2, highlight: "Block Height with Identical Digits" },
-  { id: "nakamoto", label: "Nakamoto", priority: 3, highlight: "Blocks Mined by Satoshi Nakamoto" },
-  { id: "billionaire", label: "Billionaire", priority: 4, highlight: "Blocks with Massive BTC Activity" },
-  { id: "patoshi", label: "Patoshi", priority: 5, highlight: "Early Patoshi Pattern Miner Blocks" },
-  { id: "punks", label: "Punks", priority: 6, highlight: "Blocks Rendered as Pixel Avatars" },
-  { id: "perfect-punk", label: "Perfect Punk", priority: 7, highlight: "Flawlessly Formed Avatar Patterns" },
-  { id: "pristine-punk", label: "Pristine Punk", priority: 8, highlight: "Highest Fidelity Avatar Rendering" },
-  { id: "palindrome", label: "Palindrome", priority: 9, highlight: "Block Height Reads Same Backwards" },
-  { id: "sub-100k", label: "Sub 100k", priority: 10, highlight: "First 100,000 Historic Blocks" },
+type FilterCategory = "historical" | "punk" | "numeric";
+
+interface CategorizedFilterMeta extends CollectionFilterMeta {
+  category: FilterCategory;
+}
+
+const COLLECTION_FILTER_LAYOUT: CategorizedFilterMeta[] = [
+  // Row 1: Historical/Early Bitcoin
+  { id: "pizza", label: "Pizza Block", priority: 1, highlight: "The 10,000 BTC Pizza Transaction", category: "historical" },
+  { id: "patoshi", label: "Patoshi", priority: 2, highlight: "Early Patoshi Pattern Miner Blocks", category: "historical" },
+  { id: "nakamoto", label: "Nakamoto", priority: 3, highlight: "Blocks Mined by Satoshi Nakamoto", category: "historical" },
+  // Row 2: Punk variants
+  { id: "punks", label: "Punks", priority: 4, highlight: "Blocks Rendered as Pixel Avatars", category: "punk" },
+  { id: "perfect-punk", label: "Perfect Punk", priority: 5, highlight: "Flawlessly Formed Avatar Patterns", category: "punk" },
+  { id: "pristine-punk", label: "Pristine Punk", priority: 6, highlight: "Highest Fidelity Avatar Rendering", category: "punk" },
+  // Row 3: Numeric patterns
+  { id: "same-digits", label: "Same Digits", priority: 7, highlight: "Block Height with Identical Digits", category: "numeric" },
+  { id: "palindrome", label: "Palindrome", priority: 8, highlight: "Block Height Reads Same Backwards", category: "numeric" },
+  { id: "sub-100k", label: "Sub 100k", priority: 9, highlight: "First 100,000 Historic Blocks", category: "numeric" },
+  { id: "billionaire", label: "Billionaire", priority: 10, highlight: "Blocks with Massive BTC Activity", category: "numeric" },
 ];
 
 
