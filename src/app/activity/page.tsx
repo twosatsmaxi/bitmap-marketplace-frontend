@@ -5,11 +5,12 @@ import { getActivityFeed } from "@/lib/api";
 export const revalidate = 30;
 
 interface PageProps {
-  searchParams: { type?: string };
+  searchParams: Promise<{ type?: string }>;
 }
 
 export default async function ActivityPage({ searchParams }: PageProps) {
-  const selectedType = searchParams.type || "all";
+  const params = await searchParams;
+  const selectedType = params.type || "all";
   const { events, total } = await getActivityFeed(selectedType);
 
   return (

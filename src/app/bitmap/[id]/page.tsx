@@ -11,11 +11,11 @@ import DetailCanvas from "@/components/detail/DetailCanvas";
 export const revalidate = 60;
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function BitmapDetailPage({ params }: PageProps) {
-  const { id } = params;
+  const { id } = await params;
   const decodedId = decodeURIComponent(id);
 
   const [bitmap, priceHistory] = await Promise.all([
