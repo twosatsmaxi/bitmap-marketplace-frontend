@@ -202,18 +202,21 @@ let _offscreen = null;
 let _ctx = null;
 
 let wasmInitPromise = null;
-try {
-  importScripts('./wasm/pkg/wasm.js');
-  wasmInitPromise = wasm_bindgen({ module_or_path: './wasm/pkg/wasm_bg.wasm' })
-    .then(() => true)
-    .catch((e) => {
-      console.error('[Worker] WASM init failed', e);
-      return false;
-    });
-} catch (e) {
-  console.error('[Worker] Failed to load WASM script', e);
-  wasmInitPromise = Promise.resolve(false);
+let wasm_bindgen = null;
+
+async function initWasm() {
+  try {
+    const wasmModule = await import('./wasm/pkg/wasm.js');
+    wasm_bindgen = wasmModule.default || wasmModule;
+    await wasm_bindgen({ module_or_path: './wasm/pkg/wasm_bg.wasm' });
+    return true;
+  } catch (e) {
+    console.error('[Worker] Failed to load WASM', e);
+    return false;
+  }
 }
+
+wasmInitPromise = initWasm();
 
 self.onmessage = async function(e) {
   const { type } = e.data;

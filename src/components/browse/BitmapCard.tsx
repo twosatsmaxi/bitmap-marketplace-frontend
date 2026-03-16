@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Bitmap } from "@/lib/types";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
@@ -15,13 +15,43 @@ interface BitmapCardProps {
 
 export default function BitmapCard({ bitmap }: BitmapCardProps) {
   const [status, setStatus] = useState<RenderStatus>("loading");
+  
+  // Canvas container ref for responsive sizing
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState(300);
+
+  // Measure container and set canvas size
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      // Render at device pixel ratio for crisp visuals, cap at 600 for performance
+      const size = Math.min(Math.round(rect.width * dpr), 600);
+      setCanvasSize(Math.max(size, 150)); // Minimum 150px
+    };
+
+    // Initial size
+    updateSize();
+
+    // Observe resize
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <Link
       href={`/bitmap/${bitmap.id}`}
       className="group home-panel flex flex-col overflow-hidden transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.02] active:scale-[0.98]"
     >
-      <div className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]">
+      <div 
+        ref={canvasContainerRef}
+        className="relative aspect-square border-b border-[rgba(120,72,18,0.55)] bg-[#0d1117]"
+      >
         {status === "loading" && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
@@ -29,7 +59,7 @@ export default function BitmapCard({ bitmap }: BitmapCardProps) {
         )}
         <BitmapRenderer
           height={bitmap.blockNumber}
-          canvasSize={300}
+          canvasSize={canvasSize}
           onStatus={setStatus}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-50 pointer-events-none" />

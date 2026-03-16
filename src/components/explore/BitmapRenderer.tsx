@@ -64,7 +64,7 @@ export default function BitmapRenderer({
 
   // Spawn worker once
   useEffect(() => {
-    const worker = new Worker("/bitmap-worker.js");
+    const worker = new Worker("/bitmap-worker.js", { type: "module" });
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
@@ -44,6 +44,33 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
     new QualityMonitor(supportsWebGL2 ? "full" : "canvas2d")
   );
   const staticImageRef = useRef<string | null>(null);
+
+  // Canvas container ref for responsive sizing
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState(300);
+
+  // Measure container and set canvas size
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      // Render at device pixel ratio for crisp visuals, cap at 600 for performance
+      const size = Math.min(Math.round(rect.width * dpr), 600);
+      setCanvasSize(Math.max(size, 150)); // Minimum 150px
+    };
+
+    // Initial size
+    updateSize();
+
+    // Observe resize
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   // FPS monitoring via rAF — runs alongside the renderer's own loop
   useEffect(() => {
@@ -107,26 +134,29 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       href={`/bitmap/${height}.bitmap`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
+      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)] active:scale-[0.98]"
       style={{
         transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
         transition: "transform 0.1s ease-out, border-color 0.2s ease",
       }}
     >
       {/* Card head */}
-      <div className="flex items-center justify-between px-3 py-2">
-        <span className="font-mono text-xs font-bold text-[#f7a23b]">
+      <div className="flex items-center justify-between px-2.5 py-1.5 md:px-3 md:py-2">
+        <span className="font-mono text-[10px] md:text-xs font-bold text-[#f7a23b]">
           #{height.toLocaleString()}
         </span>
         {meta && (
-          <span className="font-mono text-xs text-[rgba(255,255,255,0.78)]">
+          <span className="font-mono text-[10px] md:text-xs text-[rgba(255,255,255,0.78)]">
             {meta.tx_count.toLocaleString()} txs
           </span>
         )}
       </div>
 
       {/* Canvas area */}
-      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+      <div 
+        ref={canvasContainerRef}
+        className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden"
+      >
         {/* Renderer */}
         <div
           ref={rendererContainerRef}
@@ -145,13 +175,13 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
           ) : qualityTier === "canvas2d" ? (
             <BitmapRenderer
               height={height}
-              canvasSize={300}
+              canvasSize={canvasSize}
               onStatus={setStatus}
             />
           ) : (
             <WebGLBitmapRenderer
               height={height}
-              canvasSize={300}
+              canvasSize={canvasSize}
               onStatus={setStatus}
               enableRepulsion={qualityTier === "full"}
               enableFlicker={qualityTier === "full"}
@@ -163,7 +193,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {status === "loading" && (
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
+            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-zinc-600">
               Bitmapping…
             </span>
           </div>
@@ -172,7 +202,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {/* Idle state */}
         {status === "idle" && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-700">
+            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-zinc-700">
               Fetching pixels…
             </span>
           </div>
@@ -181,7 +211,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
         {/* Error state */}
         {status === "error" && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#090c11]">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-600">
+            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-zinc-600">
               Bitmap not found
             </span>
           </div>
@@ -196,26 +226,26 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
       </div>
 
       {/* Metadata row */}
-      <div className="flex flex-col gap-1 px-3 py-3">
+      <div className="flex flex-col gap-0.5 md:gap-1 px-2.5 py-2 md:px-3 md:py-3">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-sm font-bold text-primary">
+          <span className="font-mono text-sm md:text-base font-bold text-primary">
             {height}.bitmap
           </span>
         </div>
 
         {meta && meta.timestamp > 0 && meta.size > 0 && (
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-[rgba(255,255,255,0.5)]">
+            <span className="font-mono text-[10px] md:text-xs text-[rgba(255,255,255,0.5)]">
               {formatDate(meta.timestamp)}
             </span>
-            <span className="font-mono text-xs text-[rgba(255,255,255,0.5)]">
+            <span className="font-mono text-[10px] md:text-xs text-[rgba(255,255,255,0.5)]">
               {formatSize(meta.size)}
             </span>
           </div>
         )}
 
         {price !== undefined && (
-          <div className="mt-1 border-t border-[rgba(255,255,255,0.08)] pt-1">
+          <div className="mt-0.5 md:mt-1 border-t border-[rgba(255,255,255,0.08)] pt-1 md:pt-1">
             <PriceDisplay price={price} size="sm" />
           </div>
         )}
