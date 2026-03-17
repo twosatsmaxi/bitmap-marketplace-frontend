@@ -24,7 +24,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bitmap.market"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bitmap.trade"),
   title: "Bitmap Marketplace — Bitcoin Ordinals Real Estate",
   icons: {
     icon: "/favicon.svg",
@@ -36,7 +36,6 @@ export const metadata: Metadata = {
     title: "Bitmap Marketplace — Bitcoin Ordinals Real Estate",
     description:
       "Discover, buy, and sell Bitcoin Bitmap Ordinals. The leading marketplace for on-chain digital real estate.",
-    url: "https://bitmap.market",
     siteName: "Bitmap Marketplace",
     images: [
       {
