@@ -95,3 +95,60 @@ export function setupInstancedQuads(
 
   return { vao, instanceBuffer, maxInstances };
 }
+
+/**
+ * Sets up a VAO with a shared isometric cube geometry (3 faces x 6 verts = 18)
+ * and a per-instance buffer for [x, y, size, index].
+ * Each vertex is vec3(dx, dy, faceId) where faceId selects top/right/left.
+ */
+export function setupInstancedIsoCubes(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  maxInstances: number
+): InstancedQuadBuffers {
+  const vao = gl.createVertexArray();
+  if (!vao) throw new Error("Failed to create VAO");
+  gl.bindVertexArray(vao);
+
+  // 3 visible faces: top (0), right (1), left (2)
+  // Each face is a quad (2 triangles, 6 vertices)
+  // Vertex format: vec3(dx, dy, faceId) where dx/dy ∈ {0,1}
+  // prettier-ignore
+  const cubeVerts = new Float32Array([
+    // Top face (faceId = 0)
+    0, 0, 0,  1, 0, 0,  0, 1, 0,
+    0, 1, 0,  1, 0, 0,  1, 1, 0,
+    // Right face (faceId = 1)
+    0, 0, 1,  1, 0, 1,  0, 1, 1,
+    0, 1, 1,  1, 0, 1,  1, 1, 1,
+    // Left face (faceId = 2)
+    0, 0, 2,  1, 0, 2,  0, 1, 2,
+    0, 1, 2,  1, 0, 2,  1, 1, 2,
+  ]);
+  const cubeBuf = gl.createBuffer()!;
+  gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, cubeVerts, gl.STATIC_DRAW);
+
+  const aCubePos = gl.getAttribLocation(program, "a_cubePos");
+  gl.enableVertexAttribArray(aCubePos);
+  gl.vertexAttribPointer(aCubePos, 3, gl.FLOAT, false, 0, 0);
+  // divisor = 0 → shared across instances
+
+  // Per-instance buffer: vec4(x, y, size, index) — same format as flat
+  const instanceBuffer = gl.createBuffer()!;
+  gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    maxInstances * 4 * Float32Array.BYTES_PER_ELEMENT,
+    gl.DYNAMIC_DRAW
+  );
+
+  const aInstanceData = gl.getAttribLocation(program, "a_instanceData");
+  gl.enableVertexAttribArray(aInstanceData);
+  gl.vertexAttribPointer(aInstanceData, 4, gl.FLOAT, false, 0, 0);
+  gl.vertexAttribDivisor(aInstanceData, 1); // one per instance
+
+  gl.bindVertexArray(null);
+
+  return { vao, instanceBuffer, maxInstances };
+}

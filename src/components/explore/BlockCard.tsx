@@ -20,6 +20,7 @@ interface BlockCardProps {
   meta?: BlockMeta;
   listingStatus?: ListingStatus;
   price?: number;
+  isometric?: boolean;
 }
 
 function formatDate(ts: number) {
@@ -34,7 +35,7 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export default function BlockCard({ height, meta, listingStatus, price }: BlockCardProps) {
+export default function BlockCard({ height, meta, listingStatus, price, isometric }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [qualityTier, setQualityTier] = useState<QualityTier>(
@@ -150,6 +151,7 @@ export default function BlockCard({ height, meta, listingStatus, price }: BlockC
               onStatus={setStatus}
               enableRepulsion={qualityTier === "full"}
               enableFlicker={qualityTier === "full"}
+              isometric={isometric}
             />
           )}
         </div>
