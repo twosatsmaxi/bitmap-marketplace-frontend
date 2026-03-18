@@ -44,7 +44,8 @@ function renderFrame(
   scale: number,
   enableRepulsion = true,
   enableFlicker = true,
-  isometric = false
+  isometric = false,
+  tileHeightScale = 1.0
 ) {
   const { gl, canvas: offscreen } = shared;
 
@@ -79,7 +80,7 @@ function renderFrame(
   gl.uniform1f(unis.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
   gl.uniform1f(unis.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
   if (isometric && unis.u_tileHeightScale != null) {
-    gl.uniform1f(unis.u_tileHeightScale, 1.0);
+    gl.uniform1f(unis.u_tileHeightScale, tileHeightScale);
   }
 
   // Depth buffer: enable for isometric, disable for flat
@@ -100,6 +101,11 @@ function renderFrame(
   // Copy to visible 2D canvas
   ctx2d.clearRect(0, 0, canvasSize, canvasSize);
   ctx2d.drawImage(offscreen, 0, 0);
+}
+
+/** Ease out quad for smooth transitions */
+function easeOutQuad(t: number): number {
+  return t * (2 - t);
 }
 
 export default function WebGLBitmapRenderer({
@@ -127,6 +133,8 @@ export default function WebGLBitmapRenderer({
   const featuresRef = useRef({ enableRepulsion, enableFlicker, isometric });
   featuresRef.current = { enableRepulsion, enableFlicker, isometric };
   const loopActiveRef = useRef(false);
+  const tileHeightScaleRef = useRef(isometric ? 1.0 : 0.0);
+  const isometricTransitionRef = useRef<number | null>(null);
 
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -189,7 +197,8 @@ export default function WebGLBitmapRenderer({
           1.0,
           feat.enableRepulsion,
           feat.enableFlicker,
-          feat.isometric
+          feat.isometric,
+          tileHeightScaleRef.current
         );
 
         if (mousePosRef.current) {
@@ -291,7 +300,8 @@ export default function WebGLBitmapRenderer({
             1.0,
             feat.enableRepulsion,
             feat.enableFlicker,
-            feat.isometric
+            feat.isometric,
+            tileHeightScaleRef.current
           );
 
           const elapsed = now - start;
@@ -376,7 +386,8 @@ export default function WebGLBitmapRenderer({
               1 - progress,
               undefined,
               undefined,
-              featuresRef.current.isometric
+              featuresRef.current.isometric,
+              tileHeightScaleRef.current
             );
 
             if (progress < 1 && !cancelled) {
@@ -408,6 +419,73 @@ export default function WebGLBitmapRenderer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height]);
+
+  // Animate tileHeightScale when isometric prop changes
+  useEffect(() => {
+    const target = isometric ? 1.0 : 0.0;
+    const start = tileHeightScaleRef.current;
+    if (Math.abs(target - start) < 0.001) return;
+
+    const duration = 600; // ms
+    const startTime = performance.now();
+
+    // Cancel any existing transition
+    if (isometricTransitionRef.current) {
+      cancelAnimationFrame(isometricTransitionRef.current);
+    }
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = easeOutQuad(progress);
+      
+      tileHeightScaleRef.current = start + (target - start) * eased;
+
+      // Trigger a re-render if loop isn't active
+      const prev = prevDataRef.current;
+      const data = instanceDataRef.current;
+      const shared = sharedRef.current;
+      const ctx2d = ctx2dRef.current;
+      
+      if (prev && data && shared && ctx2d && !loopActiveRef.current) {
+        const count = data.length / 4;
+        renderFrame(
+          shared,
+          ctx2d,
+          scaledSize,
+          data,
+          count,
+          prev.layoutWidth,
+          prev.usedHeight,
+          0,
+          4000,
+          -1,
+          -1,
+          -1,
+          1.0,
+          featuresRef.current.enableRepulsion,
+          featuresRef.current.enableFlicker,
+          featuresRef.current.isometric,
+          tileHeightScaleRef.current
+        );
+      }
+
+      if (progress < 1) {
+        isometricTransitionRef.current = requestAnimationFrame(animate);
+      } else {
+        isometricTransitionRef.current = null;
+      }
+    };
+
+    isometricTransitionRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (isometricTransitionRef.current) {
+        cancelAnimationFrame(isometricTransitionRef.current);
+        isometricTransitionRef.current = null;
+      }
+    };
+  }, [isometric, scaledSize]);
 
   return (
     <canvas

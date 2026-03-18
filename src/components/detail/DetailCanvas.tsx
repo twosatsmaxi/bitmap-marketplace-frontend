@@ -74,23 +74,24 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
             </button>
           </div>
         )}
+
+        {/* Isometric toggle - top right corner */}
+        {status === "done" && supportsWebGL2 && (
+          <div className="absolute right-2 top-2 md:right-3 md:top-3">
+            <button
+              onClick={() => setIsometric((v) => !v)}
+              className={cn(
+                "br-btn flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors bg-[rgba(13,17,23,0.8)] backdrop-blur-sm",
+                isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.12)] text-primary"
+              )}
+              aria-label="Toggle 3D isometric view"
+            >
+              <Box className="w-3.5 h-3.5" />
+              3D
+            </button>
+          </div>
+        )}
       </div>
-      {/* Isometric toggle */}
-      {status === "done" && supportsWebGL2 && (
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={() => setIsometric((v) => !v)}
-            className={cn(
-              "br-btn flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
-              isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"
-            )}
-            aria-label="Toggle 3D isometric view"
-          >
-            <Box className="w-3.5 h-3.5" />
-            3D
-          </button>
-        </div>
-      )}
     </div>
   );
 }
