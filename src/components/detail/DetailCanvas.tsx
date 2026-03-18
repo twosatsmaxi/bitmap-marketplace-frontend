@@ -5,7 +5,7 @@ import WebGLBitmapRenderer from "@/components/explore/WebGLBitmapRenderer";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Box } from "lucide-react";
 
 const supportsWebGL2 =
   typeof document !== "undefined" &&
@@ -18,6 +18,7 @@ interface DetailCanvasProps {
 export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [retryKey, setRetryKey] = useState(0);
+  const [isometric, setIsometric] = useState(false);
 
   const handleRetry = useCallback(() => {
     setStatus("idle");
@@ -36,7 +37,7 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
           )}
         >
           {supportsWebGL2 ? (
-            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
+            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} isometric={isometric} />
           ) : (
             <BitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
           )}
@@ -74,6 +75,22 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
           </div>
         )}
       </div>
+      {/* Isometric toggle */}
+      {status === "done" && supportsWebGL2 && (
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() => setIsometric((v) => !v)}
+            className={cn(
+              "br-btn flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
+              isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"
+            )}
+            aria-label="Toggle 3D isometric view"
+          >
+            <Box className="w-3.5 h-3.5" />
+            3D
+          </button>
+        </div>
+      )}
     </div>
   );
 }

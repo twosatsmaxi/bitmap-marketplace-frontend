@@ -24,6 +24,7 @@ interface WebGLBitmapRendererProps {
   animationStyle?: AnimationStyle;
   enableRepulsion?: boolean;
   enableFlicker?: boolean;
+  isometric?: boolean;
 }
 
 /** Render one frame into the shared GL context, then copy to the 2D canvas. */
@@ -42,9 +43,16 @@ function renderFrame(
   mouseY: number,
   scale: number,
   enableRepulsion = true,
-  enableFlicker = true
+  enableFlicker = true,
+  isometric = false
 ) {
-  const { gl, program, buffers, uniforms, canvas: offscreen } = shared;
+  const { gl, canvas: offscreen } = shared;
+
+  // Select flat or isometric program/buffers/uniforms
+  const prog    = isometric ? shared.isoProgram  : shared.program;
+  const bufs    = isometric ? shared.isoBuffers   : shared.buffers;
+  const unis    = isometric ? shared.isoUniforms  : shared.uniforms;
+  const vertCount = isometric ? 18 : 6;
 
   // Ensure offscreen matches size
   if (offscreen.width !== canvasSize || offscreen.height !== canvasSize) {
@@ -52,31 +60,42 @@ function renderFrame(
     offscreen.height = canvasSize;
   }
 
-  gl.useProgram(program);
+  gl.useProgram(prog);
 
   // Upload instance data
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.instanceBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufs.instanceBuffer);
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, squares);
 
   // Set uniforms
-  gl.uniform1f(uniforms.u_canvasSize, canvasSize);
-  gl.uniform1f(uniforms.u_layoutWidth, layoutWidth);
-  gl.uniform1f(uniforms.u_usedHeight, usedHeight);
-  gl.uniform1f(uniforms.u_squareCount, count);
-  gl.uniform1f(uniforms.u_startTime, startTime);
-  gl.uniform1f(uniforms.u_currentTime, now);
-  gl.uniform1f(uniforms.u_flickerIndex, flickerIndex);
-  gl.uniform2f(uniforms.u_mouse, mouseX, mouseY);
-  gl.uniform1f(uniforms.u_scale, scale);
-  gl.uniform1f(uniforms.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
-  gl.uniform1f(uniforms.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
+  gl.uniform1f(unis.u_canvasSize, canvasSize);
+  gl.uniform1f(unis.u_layoutWidth, layoutWidth);
+  gl.uniform1f(unis.u_usedHeight, usedHeight);
+  gl.uniform1f(unis.u_squareCount, count);
+  gl.uniform1f(unis.u_startTime, startTime);
+  gl.uniform1f(unis.u_currentTime, now);
+  gl.uniform1f(unis.u_flickerIndex, flickerIndex);
+  gl.uniform2f(unis.u_mouse, mouseX, mouseY);
+  gl.uniform1f(unis.u_scale, scale);
+  gl.uniform1f(unis.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
+  gl.uniform1f(unis.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
+  if (isometric && unis.u_tileHeightScale != null) {
+    gl.uniform1f(unis.u_tileHeightScale, 1.0);
+  }
+
+  // Depth buffer: enable for isometric, disable for flat
+  if (isometric) {
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LESS);
+  } else {
+    gl.disable(gl.DEPTH_TEST);
+  }
 
   // Draw
   gl.viewport(0, 0, canvasSize, canvasSize);
   gl.clearColor(BG_R, BG_G, BG_B, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.bindVertexArray(buffers.vao);
-  gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+  gl.clear(gl.COLOR_BUFFER_BIT | (isometric ? gl.DEPTH_BUFFER_BIT : 0));
+  gl.bindVertexArray(bufs.vao);
+  gl.drawArraysInstanced(gl.TRIANGLES, 0, vertCount, count);
 
   // Copy to visible 2D canvas
   ctx2d.clearRect(0, 0, canvasSize, canvasSize);
@@ -91,6 +110,7 @@ export default function WebGLBitmapRenderer({
   animationStyle = "bitfeed",
   enableRepulsion = true,
   enableFlicker = true,
+  isometric = false,
 }: WebGLBitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -104,8 +124,8 @@ export default function WebGLBitmapRenderer({
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
-  const featuresRef = useRef({ enableRepulsion, enableFlicker });
-  featuresRef.current = { enableRepulsion, enableFlicker };
+  const featuresRef = useRef({ enableRepulsion, enableFlicker, isometric });
+  featuresRef.current = { enableRepulsion, enableFlicker, isometric };
   const loopActiveRef = useRef(false);
 
   // DPR-scaled size for crisp rendering on high-density displays
@@ -168,7 +188,8 @@ export default function WebGLBitmapRenderer({
           m ? m.y : -1,
           1.0,
           feat.enableRepulsion,
-          feat.enableFlicker
+          feat.enableFlicker,
+          feat.isometric
         );
 
         if (mousePosRef.current) {
@@ -269,7 +290,8 @@ export default function WebGLBitmapRenderer({
             m ? m.y : -1,
             1.0,
             feat.enableRepulsion,
-            feat.enableFlicker
+            feat.enableFlicker,
+            feat.isometric
           );
 
           const elapsed = now - start;
@@ -351,7 +373,10 @@ export default function WebGLBitmapRenderer({
               -1,
               -1,
               -1,
-              1 - progress
+              1 - progress,
+              undefined,
+              undefined,
+              featuresRef.current.isometric
             );
 
             if (progress < 1 && !cancelled) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, ChevronLeft, ChevronRight, Box } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
 import CollectionFilterPanel from "./CollectionFilterPanel";
@@ -119,6 +119,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [activeFilter, filterPage, pathname, router, searchParams]);
 
+  const [isometric, setIsometric] = useState(false);
   const [blocks, setBlocks] = useState<BlockRendered[]>([]);
 
   // Fetch meta for blocks
@@ -262,7 +263,21 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             </div>
           </div>
 
-          {/* Right: PREV/NEXT navigation */}
+          {/* Right: 3D toggle + PREV/NEXT navigation */}
+          <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
+            {/* 3D isometric toggle */}
+            <button
+              onClick={() => setIsometric((v) => !v)}
+              className={cn(
+                "br-btn flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-2 transition-colors",
+                isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"
+              )}
+              aria-label="Toggle 3D isometric view"
+            >
+              <Box className="h-4 w-4" />
+              <span className="hidden md:inline ml-1.5 text-xs">3D</span>
+            </button>
+          </div>
           <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
             {/* Mobile: Icon only buttons */}
             <button
@@ -334,6 +349,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             meta={b.meta}
             listingStatus={b.listingStatus}
             price={b.price}
+            isometric={isometric}
           />
         ))}
         {blocks.length === 0 && (

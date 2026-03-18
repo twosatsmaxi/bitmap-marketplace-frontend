@@ -5,8 +5,9 @@
  * copy rendered pixels to each card's visible canvas.
  */
 
-import { createProgram, setupInstancedQuads, type InstancedQuadBuffers } from "./webgl-utils";
+import { createProgram, setupInstancedQuads, setupInstancedIsoCubes, type InstancedQuadBuffers } from "./webgl-utils";
 import { vertexShader, fragmentShader } from "./shaders";
+import { isoVertexShader, isoFragmentShader } from "./shaders-iso";
 
 const MAX_INSTANCES = 8192;
 
@@ -16,6 +17,9 @@ interface SharedGL {
   program: WebGLProgram;
   buffers: InstancedQuadBuffers;
   uniforms: Record<string, WebGLUniformLocation>;
+  isoProgram: WebGLProgram;
+  isoBuffers: InstancedQuadBuffers;
+  isoUniforms: Record<string, WebGLUniformLocation>;
 }
 
 let shared: SharedGL | null = null;
@@ -34,6 +38,7 @@ const UNIFORM_NAMES = [
   "u_baseColor",
   "u_enableRepulsion",
   "u_enableFlicker",
+  "u_tileHeightScale",
 ];
 
 function getUniforms(
@@ -62,14 +67,21 @@ function init(size: number): SharedGL {
   const buffers = setupInstancedQuads(gl, program, MAX_INSTANCES);
   const uniforms = getUniforms(gl, program);
 
-  gl.useProgram(program);
+  // Isometric program (compiled once, shares same GL context)
+  const isoProgram = createProgram(gl, isoVertexShader, isoFragmentShader);
+  const isoBuffers = setupInstancedIsoCubes(gl, isoProgram, MAX_INSTANCES);
+  const isoUniforms = getUniforms(gl, isoProgram);
+
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   // Static uniform: base color RGB(203, 120, 37) normalized
+  gl.useProgram(program);
   gl.uniform3f(uniforms.u_baseColor, 203 / 255, 120 / 255, 37 / 255);
+  gl.useProgram(isoProgram);
+  gl.uniform3f(isoUniforms.u_baseColor, 203 / 255, 120 / 255, 37 / 255);
 
-  return { canvas, gl, program, buffers, uniforms };
+  return { canvas, gl, program, buffers, uniforms, isoProgram, isoBuffers, isoUniforms };
 }
 
 export function acquireSharedGL(size: number): SharedGL {
@@ -88,10 +100,13 @@ export function acquireSharedGL(size: number): SharedGL {
 export function releaseSharedGL(): void {
   refCount--;
   if (refCount <= 0 && shared) {
-    const { gl, program, buffers } = shared;
+    const { gl, program, buffers, isoProgram, isoBuffers } = shared;
     gl.deleteProgram(program);
     gl.deleteVertexArray(buffers.vao);
     gl.deleteBuffer(buffers.instanceBuffer);
+    gl.deleteProgram(isoProgram);
+    gl.deleteVertexArray(isoBuffers.vao);
+    gl.deleteBuffer(isoBuffers.instanceBuffer);
     shared = null;
     refCount = 0;
   }
