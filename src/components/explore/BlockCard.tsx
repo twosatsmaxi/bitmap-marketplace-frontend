@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
+import { useInView } from "@/hooks/useInView";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
@@ -68,6 +69,7 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
   }, [status]);
 
   const rendererContainerRef = useRef<HTMLDivElement>(null);
+  const { ref: inViewRef, isInView } = useInView({ threshold: 0.2, triggerOnce: true });
 
   // Generate static fallback image when tier drops to static
   useEffect(() => {
@@ -105,6 +107,7 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
 
   return (
     <Link
+      ref={inViewRef}
       href={`/bitmap/${height}.bitmap`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -152,6 +155,7 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
               enableRepulsion={qualityTier === "full"}
               enableFlicker={qualityTier === "full"}
               isometric={isometric}
+              inView={isInView}
             />
           )}
         </div>

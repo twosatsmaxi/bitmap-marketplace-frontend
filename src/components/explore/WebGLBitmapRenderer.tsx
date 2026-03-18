@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
 
@@ -25,6 +25,7 @@ interface WebGLBitmapRendererProps {
   enableRepulsion?: boolean;
   enableFlicker?: boolean;
   isometric?: boolean;
+  inView?: boolean;
 }
 
 /** Render one frame into the shared GL context, then copy to the 2D canvas. */
@@ -117,6 +118,7 @@ export default function WebGLBitmapRenderer({
   enableRepulsion = true,
   enableFlicker = true,
   isometric = false,
+  inView = true,
 }: WebGLBitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -135,10 +137,76 @@ export default function WebGLBitmapRenderer({
   const loopActiveRef = useRef(false);
   const tileHeightScaleRef = useRef(isometric ? 1.0 : 0.0);
   const isometricTransitionRef = useRef<number | null>(null);
-
+  const inViewRef = useRef(inView);
+  inViewRef.current = inView;
+  
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   const scaledSize = Math.round(canvasSize * dpr);
+
+  // Scroll-triggered animation refs
+  const pendingAnimationRef = useRef<{
+    squares: Float32Array;
+    count: number;
+    layoutWidth: number;
+    usedHeight: number;
+  } | null>(null);
+  const hasAnimatedRef = useRef(false);
+
+  // Function to start the entry animation
+  const startAnimation = useCallback((data: Float32Array, count: number, layoutWidth: number, usedHeight: number) => {
+    if (!ctx2dRef.current || !sharedRef.current) return;
+    
+    hasAnimatedRef.current = true;
+    const start = performance.now();
+    loopActiveRef.current = true;
+    
+    const run = (now: number) => {
+      if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
+        loopActiveRef.current = false;
+        return;
+      }
+
+      const feat = featuresRef.current;
+      const flickerIdx =
+        feat.enableFlicker && Math.random() < 0.01
+          ? Math.floor(Math.random() * count)
+          : -1;
+
+      const m = feat.enableRepulsion ? mousePosRef.current : null;
+
+      renderFrame(
+        sharedRef.current,
+        ctx2dRef.current,
+        scaledSize,
+        instanceDataRef.current,
+        count,
+        layoutWidth,
+        usedHeight,
+        start,
+        now,
+        flickerIdx,
+        m ? m.x : -1,
+        m ? m.y : -1,
+        1.0,
+        feat.enableRepulsion,
+        feat.enableFlicker,
+        feat.isometric,
+        tileHeightScaleRef.current
+      );
+
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / 3000);
+      if (progress < 1 || mousePosRef.current) {
+        animationRef.current = requestAnimationFrame(run);
+      } else {
+        loopActiveRef.current = false;
+      }
+    };
+
+    cancelAnimationFrame(animationRef.current);
+    animationRef.current = requestAnimationFrame(run);
+  }, [scaledSize]);
 
   // Mouse tracking
   useEffect(() => {
@@ -266,57 +334,39 @@ export default function WebGLBitmapRenderer({
           data[off + 3] = i;
         }
         instanceDataRef.current = data;
-
-        // Start animation loop
-        const start = performance.now();
-        loopActiveRef.current = true;
-        const run = (now: number) => {
-          if (!ctx2dRef.current || !sharedRef.current || !instanceDataRef.current) {
-            loopActiveRef.current = false;
-            return;
-          }
-
-          const feat = featuresRef.current;
-          const flickerIdx =
-            feat.enableFlicker && Math.random() < 0.01
-              ? Math.floor(Math.random() * count)
-              : -1;
-
-          const m = feat.enableRepulsion ? mousePosRef.current : null;
-
-          renderFrame(
-            sharedRef.current,
-            ctx2dRef.current,
-            scaledSize,
-            instanceDataRef.current,
-            count,
-            layoutWidth,
-            usedHeight,
-            start,
-            now,
-            flickerIdx,
-            m ? m.x : -1,
-            m ? m.y : -1,
-            1.0,
-            feat.enableRepulsion,
-            feat.enableFlicker,
-            feat.isometric,
-            tileHeightScaleRef.current
-          );
-
-          const elapsed = now - start;
-          const progress = Math.min(1, elapsed / 3000);
-          if (progress < 1 || mousePosRef.current) {
-            animationRef.current = requestAnimationFrame(run);
-          } else {
-            loopActiveRef.current = false;
-          }
-        };
-
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = requestAnimationFrame(run);
-
         prevDataRef.current = { squares, layoutWidth, usedHeight };
+
+        // If not in view yet, store pending animation and render static preview
+        // Use inViewRef to get latest value (avoid closure staleness)
+        if (!inViewRef.current && !hasAnimatedRef.current) {
+          pendingAnimationRef.current = { squares: data, count, layoutWidth, usedHeight };
+          // Render one frame at final position (no animation)
+          if (ctx2dRef.current && sharedRef.current) {
+            renderFrame(
+              sharedRef.current,
+              ctx2dRef.current,
+              scaledSize,
+              data,
+              count,
+              layoutWidth,
+              usedHeight,
+              0,
+              4000, // past animation end
+              -1,
+              -1,
+              -1,
+              1.0,
+              false,
+              false,
+              isometric,
+              tileHeightScaleRef.current
+            );
+          }
+        } else {
+          // Start animation loop immediately
+          startAnimation(data, count, layoutWidth, usedHeight);
+        }
+
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -334,6 +384,15 @@ export default function WebGLBitmapRenderer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationStyle, scaledSize]);
+
+  // Start pending animation when card scrolls into view
+  useEffect(() => {
+    if (inView && pendingAnimationRef.current && !hasAnimatedRef.current) {
+      const { squares, count, layoutWidth, usedHeight } = pendingAnimationRef.current;
+      pendingAnimationRef.current = null;
+      startAnimation(squares, count, layoutWidth, usedHeight);
+    }
+  }, [inView, startAnimation]);
 
   // Fetch + layout when height changes
   useEffect(() => {

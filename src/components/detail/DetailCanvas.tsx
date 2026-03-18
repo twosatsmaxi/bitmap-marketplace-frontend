@@ -37,7 +37,7 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
           )}
         >
           {supportsWebGL2 ? (
-            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} isometric={isometric} />
+            <WebGLBitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} isometric={isometric} enableFlicker={false} />
           ) : (
             <BitmapRenderer height={blockNumber} canvasSize={800} onStatus={setStatus} />
           )}
