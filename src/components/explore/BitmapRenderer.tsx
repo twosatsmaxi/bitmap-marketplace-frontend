@@ -171,6 +171,9 @@ export default function BitmapRenderer({
           const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           buffer = await res.arrayBuffer();
+          // Cache a copy for remounts (e.g., when toggling 3D view)
+          // Note: we must cache before transferring to worker
+          setBlockData(height, buffer.slice(0));
         }
         
         if (cancelled) return;
