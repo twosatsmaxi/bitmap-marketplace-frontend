@@ -61,29 +61,50 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
     );
   };
 
-  // Children section component with ordinals.com links
+  // Children section component with collapsible ordinals.com links
   const ChildrenSection = () => {
+    const [showChildren, setShowChildren] = useState(false);
+    
     if (!bitmap.children || bitmap.children.length === 0) return null;
 
+    const childCount = bitmap.children.length;
+    const childLabel = `${childCount} ${childCount === 1 ? 'child' : 'children'}`;
+
     return (
-      <div className="flex items-start justify-between text-sm py-1">
-        <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500 pt-0.5">
-          Children
-        </span>
-        <div className="flex flex-col items-end gap-1.5 max-w-[60%]">
-          {bitmap.children.map((childId, idx) => (
-            <a
-              key={idx}
-              href={`https://ordinals.com/content/${childId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
-            >
-              {truncateInscription(childId)}
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          ))}
+      <div className="flex flex-col text-sm py-1">
+        <div className="flex items-start justify-between">
+          <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500 pt-0.5">
+            Children
+          </span>
+          <button
+            onClick={() => setShowChildren(!showChildren)}
+            className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
+          >
+            {childLabel}
+            <ChevronDown
+              className={cn(
+                "h-3 w-3 transition-transform",
+                showChildren && "rotate-180"
+              )}
+            />
+          </button>
         </div>
+        {showChildren && (
+          <div className="flex flex-col items-end gap-1.5 mt-2 pr-0">
+            {bitmap.children.map((childId, idx) => (
+              <a
+                key={idx}
+                href={`https://ordinals.com/content/${childId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                {truncateInscription(childId)}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -125,12 +146,6 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
       rawValue: String(bitmap.genesisHeight),
       copyable: false 
     },
-    ...(bitmap.childrenCount !== undefined ? [{
-      label: "Children",
-      value: `${bitmap.childrenCount} ${bitmap.childrenCount === 1 ? 'child' : 'children'}`,
-      rawValue: String(bitmap.childrenCount),
-      copyable: false
-    }] : []),
   ];
 
   const allProperties = [...keyProperties, ...extendedProperties];
