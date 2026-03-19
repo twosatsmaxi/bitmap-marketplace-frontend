@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { drawBitfeedVacuum } from "./renderFunctions";
 
@@ -34,8 +34,12 @@ export default function BitmapRenderer({
   } | null>(null);
 
   // DPR-scaled size for crisp rendering on high-density displays
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-  const scaledSize = Math.round(canvasSize * dpr);
+  // Start with canvasSize for SSR hydration consistency, then update to actual DPR
+  const [scaledSize, setScaledSize] = useState(canvasSize);
+  useEffect(() => {
+    const dpr = window.devicePixelRatio || 1;
+    setScaledSize(Math.round(canvasSize * dpr));
+  }, [canvasSize]);
 
   // Handle Mouse Tracking
   useEffect(() => {
