@@ -16,7 +16,6 @@ import type {
 } from "./types";
 import { cn, abbreviateNumber } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
-import { prefetchBlocks } from "./blockDataService";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;
@@ -287,7 +286,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     return lastPage.hasMore ?? lastPage.heights.length === GRID_SIZE;
   }, [activeFilter, anchorHeight, normalPageCount, latestBlock, data]);
 
-  // Load meta for new blocks using batch fetching + prefetch block data in parallel
+  // Load meta for new blocks using batch fetching
   useEffect(() => {
     const heightsMissing = allHeights.filter((h) => !blockMeta.has(h));
     if (heightsMissing.length === 0) return;
@@ -313,12 +312,8 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
     let cancelled = false;
 
-    async function loadMetaAndPrefetchBlocks() {
-      // Parallel batch fetching: meta + block data prefetch
-      const [metaResults] = await Promise.all([
-        fetchMetaBatch(needsFetch),
-        prefetchBlocks(needsFetch), // Prefetch block data in parallel
-      ]);
+    async function loadMeta() {
+      const metaResults = await fetchMetaBatch(needsFetch);
 
       if (cancelled) return;
 
@@ -331,7 +326,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       });
     }
 
-    loadMetaAndPrefetchBlocks();
+    loadMeta();
 
     return () => { cancelled = true; };
   }, [allHeights, blockMeta]);

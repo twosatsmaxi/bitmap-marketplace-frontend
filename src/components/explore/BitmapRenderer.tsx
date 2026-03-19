@@ -3,8 +3,6 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { drawBitfeedVacuum } from "./renderFunctions";
-import { waitForBlockData } from "./blockDataService";
-
 const RENDER_API = "";
 
 interface BitmapRendererProps {
@@ -165,14 +163,9 @@ export default function BitmapRenderer({
       }
 
       try {
-        // Wait for prefetched data, fall back to individual fetch
-        let buffer = await waitForBlockData(height);
-
-        if (!buffer) {
-          const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          buffer = await res.arrayBuffer();
-        }
+        const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const buffer = await res.arrayBuffer();
         
         if (cancelled) return;
 

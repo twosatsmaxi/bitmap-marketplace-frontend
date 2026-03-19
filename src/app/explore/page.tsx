@@ -12,6 +12,7 @@ async function getChainTip(): Promise<number> {
   try {
     const res = await fetch("https://mempool.space/api/blocks/tip/height", {
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) throw new Error("non-ok");
     const text = await res.text();
