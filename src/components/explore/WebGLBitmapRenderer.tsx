@@ -573,11 +573,11 @@ export default function WebGLBitmapRenderer({
     };
   }, [isometric, scaledSize]);
 
+  // Note: width/height are set imperatively in useEffect to avoid hydration mismatch
+  // Server renders without these attributes, client sets them after mount
   return (
     <canvas
       ref={canvasRef}
-      width={scaledSize}
-      height={scaledSize}
       style={{ width: "100%", height: "100%" }}
       className="block"
     />

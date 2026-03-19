@@ -188,11 +188,19 @@ export default function BitmapRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height]);
 
+  // Set canvas dimensions imperatively to avoid hydration mismatch
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = scaledSize;
+    canvas.height = scaledSize;
+  }, [scaledSize]);
+
+  // Note: width/height attributes are not set on JSX to avoid hydration mismatch
+  // Server renders without these attributes, client sets them after mount
   return (
     <canvas
       ref={canvasRef}
-      width={scaledSize}
-      height={scaledSize}
       style={{ width: "100%", height: "100%" }}
       className="block"
     />
