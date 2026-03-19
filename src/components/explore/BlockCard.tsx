@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { useInView } from "@/hooks/useInView";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
@@ -22,6 +22,7 @@ interface BlockCardProps {
   listingStatus?: ListingStatus;
   price?: number;
   isometric?: boolean;
+  index?: number;
 }
 
 function formatDate(ts: number) {
@@ -36,7 +37,7 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export default function BlockCard({ height, meta, listingStatus, price, isometric }: BlockCardProps) {
+export default memo(function BlockCard({ height, meta, listingStatus, price, isometric, index }: BlockCardProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [qualityTier, setQualityTier] = useState<QualityTier>(
@@ -46,6 +47,12 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
     new QualityMonitor(supportsWebGL2 ? "full" : "canvas2d")
   );
   const staticImageRef = useRef<string | null>(null);
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
+
+  // Track whether renderer has been offloaded (scrolled far off-screen)
+  const [offloaded, setOffloaded] = useState(false);
+  // Track whether we've already played the entry animation
+  const hasAnimatedRef = useRef(false);
 
   // FPS monitoring via rAF — runs alongside the renderer's own loop
   useEffect(() => {
@@ -69,7 +76,78 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
   }, [status]);
 
   const rendererContainerRef = useRef<HTMLDivElement>(null);
-  const { ref: inViewRef, isInView } = useInView({ threshold: 0.2, triggerOnce: true });
+
+  // Observer 1: entry animation trigger (triggerOnce: true)
+  const { ref: animRef, isInView } = useInView({ threshold: 0.2, triggerOnce: true });
+
+  // Observer 2: continuous near-viewport tracking for offloading
+  const { ref: nearRef, isInView: isNearViewport } = useInView({
+    triggerOnce: false,
+    rootMargin: "200% 0px",
+    threshold: 0,
+  });
+
+  // Combined ref for the Link element (both observers need to observe it)
+  const combinedRef = useCallback(
+    (node: HTMLElement | null) => {
+      animRef(node);
+      nearRef(node);
+    },
+    [animRef, nearRef]
+  );
+
+  // Capture canvas snapshot once render is done + animation has finished
+  useEffect(() => {
+    if (status !== "done" || offloaded) return;
+
+    const timer = setTimeout(() => {
+      if (!rendererContainerRef.current) return;
+      const canvas = rendererContainerRef.current.querySelector("canvas");
+      if (!canvas) return;
+      try {
+        const url = canvas.toDataURL("image/webp", 0.8);
+        staticImageRef.current = url;
+        setSnapshotUrl(url);
+        hasAnimatedRef.current = true;
+      } catch {
+        // toDataURL may fail on tainted canvases — ignore
+      }
+    }, 3500); // Wait for 3s entry animation + 0.5s buffer
+
+    return () => clearTimeout(timer);
+  }, [status, offloaded]);
+
+  // Re-capture snapshot when isometric changes while renderer is mounted
+  useEffect(() => {
+    if (status !== "done" || offloaded || !hasAnimatedRef.current) return;
+
+    const timer = setTimeout(() => {
+      if (!rendererContainerRef.current) return;
+      const canvas = rendererContainerRef.current.querySelector("canvas");
+      if (!canvas) return;
+      try {
+        const url = canvas.toDataURL("image/webp", 0.8);
+        staticImageRef.current = url;
+        setSnapshotUrl(url);
+      } catch {
+        // ignore
+      }
+    }, 700); // Wait for isometric transition (600ms) + buffer
+
+    return () => clearTimeout(timer);
+  }, [isometric, status, offloaded]);
+
+  // Offload/restore renderer based on viewport proximity
+  useEffect(() => {
+    // Only offload cards that have finished rendering and have a snapshot
+    if (!staticImageRef.current || status !== "done") return;
+
+    if (!isNearViewport) {
+      setOffloaded(true);
+    } else {
+      setOffloaded(false);
+    }
+  }, [isNearViewport, status]);
 
   // Generate static fallback image when tier drops to static
   useEffect(() => {
@@ -78,6 +156,7 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
       if (canvas) {
         try {
           staticImageRef.current = canvas.toDataURL("image/png");
+          setSnapshotUrl(staticImageRef.current);
           // Force re-render to show the static image
           setQualityTier("static");
         } catch {
@@ -93,11 +172,11 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
     const card = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - card.left;
     const mouseY = e.clientY - card.top;
-    
+
     // Tilt limit: 8 degrees
     const rotateX = ((mouseY - card.height / 2) / (card.height / 2)) * -8;
     const rotateY = ((mouseX - card.width / 2) / (card.width / 2)) * 8;
-    
+
     setTilt({ x: rotateX, y: rotateY });
   };
 
@@ -105,9 +184,13 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
     setTilt({ x: 0, y: 0 });
   };
 
+  // Determine whether to show the renderer or the snapshot
+  const showSnapshot = offloaded && snapshotUrl;
+  const skipEntryAnimation = hasAnimatedRef.current;
+
   return (
     <Link
-      ref={inViewRef}
+      ref={combinedRef}
       href={`/bitmap/${height}.bitmap`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -116,6 +199,7 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
         transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
         transition: "transform 0.1s ease-out, border-color 0.2s ease",
       }}
+      {...(index !== undefined ? { "data-block-index": index } : {})}
     >
       {/* Card head */}
       <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
@@ -126,49 +210,67 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
 
       {/* Canvas area */}
       <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
-        {/* Renderer */}
-        <div
-          ref={rendererContainerRef}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-500",
-            status === "done" ? "opacity-100" : "opacity-0"
-          )}
-        >
-          {qualityTier === "static" && staticImageRef.current ? (
-            <img
-              src={staticImageRef.current}
-              alt={`Block ${height}`}
-              style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
-              className="block"
-            />
-          ) : qualityTier === "canvas2d" ? (
-            <BitmapRenderer
-              height={height}
-              canvasSize={300}
-              onStatus={setStatus}
-            />
-          ) : (
-            <WebGLBitmapRenderer
-              height={height}
-              canvasSize={300}
-              onStatus={setStatus}
-              enableRepulsion={qualityTier === "full"}
-              enableFlicker={qualityTier === "full"}
-              isometric={isometric}
-              inView={isInView}
-            />
-          )}
-        </div>
+        {/* Snapshot layer — visible when offloaded or as backdrop during renderer re-mount */}
+        {snapshotUrl && (
+          <img
+            src={snapshotUrl}
+            alt={`Block ${height}`}
+            style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
+            className={cn(
+              "absolute inset-0 block",
+              // When renderer is mounted and done, fade out snapshot
+              !offloaded && status === "done" ? "opacity-0 transition-opacity duration-500" : "opacity-100"
+            )}
+          />
+        )}
+
+        {/* Renderer — unmounted when offloaded */}
+        {!showSnapshot && (
+          <div
+            ref={rendererContainerRef}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-500",
+              status === "done" ? "opacity-100" : "opacity-0"
+            )}
+          >
+            {qualityTier === "static" && staticImageRef.current ? (
+              <img
+                src={staticImageRef.current}
+                alt={`Block ${height}`}
+                style={{ imageRendering: "pixelated", width: "100%", height: "100%" }}
+                className="block"
+              />
+            ) : qualityTier === "canvas2d" ? (
+              <BitmapRenderer
+                height={height}
+                canvasSize={300}
+                onStatus={setStatus}
+                skipEntryAnimation={skipEntryAnimation}
+              />
+            ) : (
+              <WebGLBitmapRenderer
+                height={height}
+                canvasSize={300}
+                onStatus={setStatus}
+                enableRepulsion={qualityTier === "full"}
+                enableFlicker={qualityTier === "full"}
+                isometric={isometric}
+                inView={isInView}
+                skipEntryAnimation={skipEntryAnimation}
+              />
+            )}
+          </div>
+        )}
 
         {/* Loading skeleton */}
-        {status === "loading" && (
+        {status === "loading" && !showSnapshot && (
           <div className="absolute inset-0 flex animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-[#090c11]">
             <div className="h-1/2 w-1/2 animate-pulse bg-[rgba(247,147,26,0.06)]" />
           </div>
         )}
 
         {/* Idle state */}
-        {status === "idle" && (
+        {status === "idle" && !showSnapshot && (
           <div className="absolute inset-0 rounded-lg bg-[#090c11]" />
         )}
 
@@ -219,4 +321,4 @@ export default function BlockCard({ height, meta, listingStatus, price, isometri
       </div>
     </Link>
   );
-}
+});

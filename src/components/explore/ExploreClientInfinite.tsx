@@ -316,14 +316,19 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   const toggleFilter = (id: string) => {
     if (activeFilter === id) {
+      // Turning off filter - clear everything
       setActiveFilter(null);
+      setBlockMeta(new Map());
+      setNormalPageCount(1);
+      setSize(0);
     } else {
+      // Switching to a new filter - just set it
+      // SWR will automatically fetch because getKey changes
       setActiveFilter(id);
+      setBlockMeta(new Map());
+      setNormalPageCount(1);
+      // Don't reset SWR size here - let it load the first page naturally
     }
-    setBlockMeta(new Map());
-    setNormalPageCount(1);
-    setSize(0); // Reset SWR page count
-    mutate(undefined, { revalidate: false });
   };
 
   const isLoading = activeFilter && !data && !error;
@@ -488,15 +493,15 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       {/* Grid */}
       <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {blocks.map((b, index) => (
-          <div key={b.height} data-block-index={index}>
-            <BlockCard
-              height={b.height}
-              meta={b.meta}
-              listingStatus={b.listingStatus}
-              price={b.price}
-              isometric={isometric}
-            />
-          </div>
+          <BlockCard
+            key={b.height}
+            height={b.height}
+            meta={b.meta}
+            listingStatus={b.listingStatus}
+            price={b.price}
+            isometric={isometric}
+            index={index}
+          />
         ))}
         
         {/* Skeleton loaders while loading */}

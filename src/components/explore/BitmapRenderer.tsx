@@ -12,6 +12,7 @@ interface BitmapRendererProps {
   onStatus: (status: RenderStatus) => void;
   onResult?: (squares: WorkerSquare[], layoutWidth: number, usedHeight: number) => void;
   animationStyle?: AnimationStyle;
+  skipEntryAnimation?: boolean;
 }
 
 export default function BitmapRenderer({
@@ -20,6 +21,7 @@ export default function BitmapRenderer({
   onStatus,
   onResult,
   animationStyle = "bitfeed",
+  skipEntryAnimation = false,
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -75,24 +77,29 @@ export default function BitmapRenderer({
         if (canvasRef.current) {
           const ctx = canvasRef.current.getContext("2d");
           if (ctx) {
-            const start = performance.now();
-            const run = (now: number) => {
-              const elapsed = now - start;
-              const totalDuration = 3000;
-              const progress = Math.min(1, elapsed / totalDuration);
-              
-              // Occasional flicker (approx 1% chance per frame)
-              const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
+            if (skipEntryAnimation) {
+              // Render final frame immediately — no 3s animation
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1, 0, 4000, -1, null);
+            } else {
+              const start = performance.now();
+              const run = (now: number) => {
+                const elapsed = now - start;
+                const totalDuration = 3000;
+                const progress = Math.min(1, elapsed / totalDuration);
 
-              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current);
-              
-              // Continue loop if mouse is over or animating
-              if (progress < 1 || mousePosRef.current) {
-                animationRef.current = requestAnimationFrame(run);
-              }
-            };
-            cancelAnimationFrame(animationRef.current);
-            animationRef.current = requestAnimationFrame(run);
+                // Occasional flicker (approx 1% chance per frame)
+                const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
+
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current);
+
+                // Continue loop if mouse is over or animating
+                if (progress < 1 || mousePosRef.current) {
+                  animationRef.current = requestAnimationFrame(run);
+                }
+              };
+              cancelAnimationFrame(animationRef.current);
+              animationRef.current = requestAnimationFrame(run);
+            }
           }
         }
 
