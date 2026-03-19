@@ -488,15 +488,15 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       {/* Grid */}
       <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {blocks.map((b, index) => (
-          <div key={b.height} data-block-index={index}>
-            <BlockCard
-              height={b.height}
-              meta={b.meta}
-              listingStatus={b.listingStatus}
-              price={b.price}
-              isometric={isometric}
-            />
-          </div>
+          <BlockCard
+            key={b.height}
+            height={b.height}
+            meta={b.meta}
+            listingStatus={b.listingStatus}
+            price={b.price}
+            isometric={isometric}
+            index={index}
+          />
         ))}
         
         {/* Skeleton loaders while loading */}

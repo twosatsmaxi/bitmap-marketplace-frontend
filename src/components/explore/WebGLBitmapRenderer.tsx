@@ -26,6 +26,7 @@ interface WebGLBitmapRendererProps {
   enableFlicker?: boolean;
   isometric?: boolean;
   inView?: boolean;
+  skipEntryAnimation?: boolean;
 }
 
 /** Render one frame into the shared GL context, then copy to the 2D canvas. */
@@ -119,6 +120,7 @@ export default function WebGLBitmapRenderer({
   enableFlicker = true,
   isometric = false,
   inView = true,
+  skipEntryAnimation = false,
 }: WebGLBitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -139,6 +141,8 @@ export default function WebGLBitmapRenderer({
   const isometricTransitionRef = useRef<number | null>(null);
   const inViewRef = useRef(inView);
   inViewRef.current = inView;
+  const skipEntryAnimationRef = useRef(skipEntryAnimation);
+  skipEntryAnimationRef.current = skipEntryAnimation;
   
   // DPR-scaled size for crisp rendering on high-density displays
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -336,9 +340,32 @@ export default function WebGLBitmapRenderer({
         instanceDataRef.current = data;
         prevDataRef.current = { squares, layoutWidth, usedHeight };
 
-        // If not in view yet, store pending animation and render static preview
-        // Use inViewRef to get latest value (avoid closure staleness)
-        if (!inViewRef.current && !hasAnimatedRef.current) {
+        // If skipEntryAnimation, render final frame immediately (no animation)
+        if (skipEntryAnimationRef.current) {
+          hasAnimatedRef.current = true;
+          if (ctx2dRef.current && sharedRef.current) {
+            renderFrame(
+              sharedRef.current,
+              ctx2dRef.current,
+              scaledSize,
+              data,
+              count,
+              layoutWidth,
+              usedHeight,
+              0,
+              4000, // past animation end
+              -1,
+              -1,
+              -1,
+              1.0,
+              featuresRef.current.enableRepulsion,
+              featuresRef.current.enableFlicker,
+              featuresRef.current.isometric,
+              tileHeightScaleRef.current
+            );
+          }
+        } else if (!inViewRef.current && !hasAnimatedRef.current) {
+          // If not in view yet, store pending animation and render static preview
           pendingAnimationRef.current = { squares: data, count, layoutWidth, usedHeight };
           // Render one frame at final position (no animation)
           if (ctx2dRef.current && sharedRef.current) {
