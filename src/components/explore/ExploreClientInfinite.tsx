@@ -14,7 +14,7 @@ import type {
   CollectionFilterMeta,
   InterestingBlock,
 } from "./types";
-import { cn } from "@/lib/utils";
+import { cn, abbreviateNumber } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
 
 const RENDER_API = "";
@@ -460,9 +460,9 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
             <span className="text-zinc-400">
               {/* Mobile: abbreviated counts */}
               <span className="md:hidden">
-                <span className="text-primary font-bold">{loadedCount >= 1000 ? (loadedCount / 1000).toFixed(1) + 'K' : loadedCount}</span>
+                <span className="text-primary font-bold">{abbreviateNumber(loadedCount)}</span>
                 <span className="text-zinc-600 mx-1">/</span>
-                <span className="text-zinc-500">{totalCount ? (totalCount >= 1000 ? (totalCount / 1000).toFixed(0) + 'K' : totalCount) : '...'}</span>
+                <span className="text-zinc-500">{totalCount ? abbreviateNumber(totalCount) : '...'}</span>
               </span>
               {/* Desktop: full counts */}
               <span className="hidden md:inline">
@@ -477,7 +477,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
           ) : (
             <span className="text-primary font-bold">
               {/* Mobile: abbreviated */}
-              <span className="md:hidden">{anchorHeight >= 1000 ? (anchorHeight / 1000).toFixed(anchorHeight >= 10000 ? 0 : 1) + 'K+' : anchorHeight}</span>
+              <span className="md:hidden">{abbreviateNumber(anchorHeight, "+")}</span>
               {/* Desktop: full number */}
               <span className="hidden md:inline">{anchorHeight.toLocaleString()}+</span>
             </span>

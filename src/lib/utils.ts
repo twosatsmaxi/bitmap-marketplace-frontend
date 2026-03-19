@@ -32,6 +32,13 @@ export function formatNumber(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
+/** Abbreviate large numbers: 1500 → "1.5K", 25000 → "25K", suffix appended */
+export function abbreviateNumber(n: number, suffix = ""): string {
+  if (n >= 10_000) return `${(n / 1000).toFixed(0)}K${suffix}`;
+  if (n >= 1_000) return `${(n / 1000).toFixed(1)}K${suffix}`;
+  return `${n}${suffix}`;
+}
+
 export function formatPercent(n: number): string {
   const sign = n >= 0 ? "+" : "";
   return `${sign}${n.toFixed(2)}%`;
