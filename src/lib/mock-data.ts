@@ -10,6 +10,30 @@ import type {
 } from "./types";
 import { getBitmapType, getBitmapRarity } from "./bitmap-type";
 
+/**
+ * Generate mock traits based on block number
+ * Simulates traits from bitmap-index backend
+ */
+function getMockTraits(blockNumber: number): string[] {
+  const traits: string[] = [];
+  
+  // Add type-based trait
+  const type = getBitmapType(blockNumber);
+  if (type === "punk") traits.push("punk");
+  if (type === "palindrome") traits.push("palindrome");
+  
+  // Add special traits
+  if (blockNumber < 100_000) traits.push("sub_100k");
+  if (blockNumber < 1000) traits.push("nakamoto");
+  if (blockNumber.toString().includes("777")) traits.push("billionaire");
+  if (blockNumber === 840000) traits.push("pizza");
+  if (blockNumber.toString().split("").reverse().join("") === blockNumber.toString()) {
+    traits.push("palindrome");
+  }
+  
+  return traits.length > 0 ? traits : ["standard"];
+}
+
 export function makeMockBitmap(
   blockNumber: number,
   overrides: Partial<Bitmap> = {}
@@ -18,10 +42,13 @@ export function makeMockBitmap(
     id: `${blockNumber}.bitmap`,
     blockNumber,
     inscriptionId: `${blockNumber}a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t${blockNumber}i0`,
+    inscriptionNumber: blockNumber,
     owner: `bc1q${blockNumber.toString(36).padStart(6, "0")}xyzabc1234`,
     genesisHeight: blockNumber + 1,
     bitmapType: getBitmapType(blockNumber),
     rarity: getBitmapRarity(blockNumber),
+    traits: getMockTraits(blockNumber),
+    childrenCount: Math.floor(Math.random() * 5),
     price: blockNumber < 10000 ? Math.floor(Math.random() * 500000) + 50000 : undefined,
     lastSalePrice: Math.floor(Math.random() * 300000) + 20000,
     listingStatus: blockNumber % 3 === 0 ? "listed" : blockNumber % 5 === 0 ? "has_offer" : "unlisted",

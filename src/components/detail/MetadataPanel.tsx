@@ -54,18 +54,12 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
       rawValue: String(bitmap.genesisHeight),
       copyable: false 
     },
-    { 
-      label: "Sat Number", 
-      value: formatNumber(bitmap.sat),
-      rawValue: String(bitmap.sat),
-      copyable: false 
-    },
-    { 
-      label: "Minted At", 
-      value: new Date(bitmap.mintedAt).toLocaleDateString(),
-      rawValue: new Date(bitmap.mintedAt).toLocaleDateString(),
-      copyable: false 
-    },
+    ...(bitmap.childrenCount !== undefined ? [{
+      label: "Children",
+      value: `${bitmap.childrenCount} ${bitmap.childrenCount === 1 ? 'child' : 'children'}`,
+      rawValue: String(bitmap.childrenCount),
+      copyable: false
+    }] : []),
   ];
 
   const allProperties = [...keyProperties, ...extendedProperties];

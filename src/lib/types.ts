@@ -3,20 +3,29 @@ export type RarityTier = "common" | "uncommon" | "rare" | "epic" | "legendary";
 export type EventType = "sale" | "listing" | "transfer" | "offer";
 export type ListingStatus = "listed" | "has_offer" | "unlisted";
 
+/**
+ * Trait from bitmap-index backend
+ * Examples: "punk", "nakamoto", "palindrome", "billionaire", etc.
+ */
+export type Trait = string;
+
 export interface Bitmap {
   id: string; // e.g. "420000.bitmap"
   blockNumber: number;
   inscriptionId: string;
+  inscriptionNumber?: number;
   owner: string;
   genesisHeight: number;
   bitmapType: BitmapType;
   rarity: RarityTier;
+  traits: Trait[];
+  childrenCount?: number;
   price?: number; // in sats
   lastSalePrice?: number; // in sats
   listingStatus: ListingStatus;
-  mintedAt: string; // ISO date
+  mintedAt?: string; // ISO date - deprecated, optional
   txid: string;
-  sat: number;
+  sat?: number; // deprecated, optional
 }
 
 export interface CollectionStats {
