@@ -15,12 +15,30 @@ import {
   MOCK_ANALYTICS,
   makeMockBitmap,
 } from "./mock-data";
+import { headers } from "next/headers";
 
 const BIS_BASE = "https://api.bestinslot.xyz/v3";
 const API_KEY = process.env.BESTINSLOT_API_KEY;
 
 // Bitmap-index backend API (our own backend)
 const BITMAP_INDEX_BASE = process.env.BITMAP_INDEX_API_BASE || "http://localhost:3002";
+
+/**
+ * Get the base URL for API calls in server components.
+ * Uses the host header to construct the URL.
+ */
+async function getBaseUrl(): Promise<string> {
+  // In production, use the backend directly if configured
+  if (process.env.BITMAP_INDEX_API_BASE) {
+    return process.env.BITMAP_INDEX_API_BASE;
+  }
+  
+  // Otherwise, use the current host (for local proxy)
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  return `${protocol}://${host}`;
+}
 
 /**
  * Response from GET /bitmap/:block_height/details
@@ -44,7 +62,9 @@ export async function getBitmapDetails(
   blockHeight: number
 ): Promise<BitmapDetailsResponse | null> {
   try {
-    const url = `${BITMAP_INDEX_BASE}/api/bitmap/${blockHeight}/details`;
+    // Use local proxy to avoid CORS and reachability issues
+    const baseUrl = await getBaseUrl();
+    const url = `${baseUrl}/api/bitmap/${blockHeight}/details`;
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
       next: { revalidate: 60 },
@@ -193,7 +213,9 @@ export async function getPortfolio(
   page = 0,
   limit = 24
 ): Promise<PortfolioResponse> {
-  const url = `${BITMAP_INDEX_BASE}/api/portfolio/${address}?page=${page}&limit=${limit}`;
+  // Use local proxy to avoid CORS and reachability issues
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}/api/portfolio/${address}?page=${page}&limit=${limit}`;
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     next: { revalidate: 60 },
