@@ -323,7 +323,7 @@ export default function WebGLBitmapRenderer({
     sharedRef.current = shared;
 
     // Worker
-    const worker = new Worker("/bitmap-worker.js");
+    const worker = new Worker("/bitmap-worker.js", { type: "module" });
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent) => {
