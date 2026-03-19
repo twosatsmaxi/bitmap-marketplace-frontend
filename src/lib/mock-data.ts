@@ -76,6 +76,13 @@ export const MOCK_BITMAPS: Bitmap[] = [
   makeMockBitmap(88888, { price: 450000, listingStatus: "listed", rarity: "uncommon" }),
   makeMockBitmap(42000, { price: 220000, listingStatus: "listed" }),
   makeMockBitmap(7, { price: 25000000, listingStatus: "listed", rarity: "legendary" }),
+  // High-value listings (> 0.1 BTC) for "More from this Pattern"
+  makeMockBitmap(81, { price: 35000000, listingStatus: "listed", rarity: "legendary" }),
+  makeMockBitmap(2016, { price: 15000000, listingStatus: "listed", rarity: "epic" }),
+  makeMockBitmap(888888, { price: 12000000, listingStatus: "listed" }),
+  makeMockBitmap(50000, { price: 45000000, listingStatus: "listed", rarity: "rare" }),
+  makeMockBitmap(333, { price: 18000000, listingStatus: "listed", rarity: "legendary" }),
+  makeMockBitmap(1008, { price: 22000000, listingStatus: "listed", rarity: "epic" }),
 ];
 
 export const MOCK_STATS: CollectionStats = {

@@ -1,7 +1,6 @@
 "use client";
 
 import type { Bitmap } from "@/lib/types";
-import PriceDisplay from "@/components/ui/PriceDisplay";
 import { Wallet, Tag } from "lucide-react";
 
 interface MobileActionBarProps {
@@ -14,14 +13,6 @@ export default function MobileActionBar({ bitmap }: MobileActionBarProps) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] px-4 py-3 backdrop-blur-md safe-area-inset-bottom md:hidden">
       <div className="flex items-center gap-4">
-        {/* Price Info */}
-        <div className="flex-1 min-w-0">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-            {displayPrice !== undefined ? priceLabel : "Not listed"}
-          </span>
-          <PriceDisplay price={displayPrice} size="lg" />
-        </div>
-
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {bitmap.listingStatus === "listed" ? (

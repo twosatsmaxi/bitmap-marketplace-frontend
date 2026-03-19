@@ -1,7 +1,6 @@
 "use client";
 
 import type { Bitmap } from "@/lib/types";
-import PriceDisplay from "@/components/ui/PriceDisplay";
 import StatusPill from "@/components/ui/StatusPill";
 import RarityBadge from "@/components/ui/RarityBadge";
 import { Wallet, Tag, ArrowRightLeft } from "lucide-react";

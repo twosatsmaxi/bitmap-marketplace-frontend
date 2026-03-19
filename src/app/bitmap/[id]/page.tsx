@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getBitmap, getBitmapPriceHistory, getBitmapDetails } from "@/lib/api";
+import { MOCK_BITMAPS } from "@/lib/mock-data";
 import type { Bitmap } from "@/lib/types";
 import MetadataPanel from "@/components/detail/MetadataPanel";
 import ActionPanel from "@/components/detail/ActionPanel";
@@ -59,14 +60,14 @@ export default async function BitmapDetailPage({ params }: PageProps) {
   // Merge real data from backend with base bitmap
   const bitmap = mergeBitmapData(baseBitmap, details);
 
-  // Generate 4 random block numbers (excluding current) for "More from this Pattern"
-  const relatedBlocks = Array.from({ length: 4 }, () => {
-    let n;
-    do {
-      n = Math.floor(Math.random() * 850000) + 1;
-    } while (n === bitmap.blockNumber);
-    return n;
-  });
+  // Get 4 random listed bitmaps with price > 0.1 BTC (10M sats) for "More from this Pattern"
+  const MIN_PRICE_SATS = 10_000_000; // 0.1 BTC
+  const highValueListings = MOCK_BITMAPS.filter(
+    (b) => b.listingStatus === "listed" && b.price && b.price >= MIN_PRICE_SATS && b.blockNumber !== bitmap.blockNumber
+  );
+  const relatedBitmaps = highValueListings
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-bg pb-24 md:pb-0">
@@ -131,19 +132,24 @@ export default async function BitmapDetailPage({ params }: PageProps) {
           More from this Pattern
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {relatedBlocks.map((blockNum) => (
+          {relatedBitmaps.map((related) => (
             <Link
-              key={blockNum}
-              href={`/bitmap/${blockNum}.bitmap`}
+              key={related.blockNumber}
+              href={`/bitmap/${related.blockNumber}.bitmap`}
               className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
             >
-              <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
+              <div className="flex items-center justify-between px-2.5 py-1.5 md:px-3 md:py-2">
                 <span className="font-mono text-[10px] md:text-xs font-bold text-[#f7a23b]">
-                  {blockNum}.bitmap
+                  {related.blockNumber}.bitmap
                 </span>
+                {related.price && (
+                  <span className="font-mono text-[9px] text-zinc-400">
+                    {(related.price / 100_000_000).toFixed(2)} BTC
+                  </span>
+                )}
               </div>
               <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
-                <BitmapPreview height={blockNum} />
+                <BitmapPreview height={related.blockNumber} />
               </div>
             </Link>
           ))}
