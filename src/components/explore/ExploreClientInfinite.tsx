@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { cn, abbreviateNumber } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
+import { prefetchBlocks } from "./blockDataService";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;
@@ -286,8 +287,11 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     return lastPage.hasMore ?? lastPage.heights.length === GRID_SIZE;
   }, [activeFilter, anchorHeight, normalPageCount, latestBlock, data]);
 
-  // Load meta for new blocks using batch fetching
+  // Load meta for new blocks using batch fetching + prefetch block data
   useEffect(() => {
+    // Prefetch binary data for visible blocks
+    prefetchBlocks(allHeights);
+    
     const heightsMissing = allHeights.filter((h) => !blockMeta.has(h));
     if (heightsMissing.length === 0) return;
 
@@ -458,9 +462,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
             <div className="hidden sm:block">
               <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
             </div>
-            <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em] text-zinc-400">
-              Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
-            </span>
+
           </div>
 
           <div className="sm:hidden">
