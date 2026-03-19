@@ -202,17 +202,18 @@ let _offscreen = null;
 let _ctx = null;
 
 let wasmInitPromise = null;
-async function initWasm() {
-  try {
-    const wasmModule = await import('./wasm/pkg/wasm.js');
-    await wasmModule.default({ module_or_path: './wasm/pkg/wasm_bg.wasm' });
-    return { ready: true, module: wasmModule };
-  } catch (e) {
-    console.error('[Worker] Failed to load WASM module', e);
-    return { ready: false, module: null };
-  }
+try {
+  importScripts('./wasm/pkg/wasm.js');
+  wasmInitPromise = wasm_bindgen({ module_or_path: './wasm/pkg/wasm_bg.wasm' })
+    .then(() => true)
+    .catch((e) => {
+      console.error('[Worker] WASM init failed', e);
+      return false;
+    });
+} catch (e) {
+  console.error('[Worker] Failed to load WASM script', e);
+  wasmInitPromise = Promise.resolve(false);
 }
-wasmInitPromise = initWasm();
 
 self.onmessage = async function(e) {
   const { type } = e.data;
@@ -225,16 +226,16 @@ self.onmessage = async function(e) {
       _ctx = _offscreen.getContext('2d');
     }
 
-    const wasmResult = await wasmInitPromise;
+    const wasmReady = await wasmInitPromise;
     const bytes = new Uint8Array(buffer);
     
     let layoutWidth = 0;
     let usedHeight = 0;
     let squares = [];
 
-    if (wasmResult.ready && wasmResult.module) {
+    if (wasmReady) {
       const start = performance.now();
-      const results = wasmResult.module.layout_block(bytes);
+      const results = wasm_bindgen.layout_block(bytes);
       const end = performance.now();
       console.log(`[Worker] layoutBlock WASM took ${(end - start).toFixed(2)}ms for ${bytes.length} txs`);
       
