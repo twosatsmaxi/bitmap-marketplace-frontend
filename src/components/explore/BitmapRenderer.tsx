@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { drawBitfeedVacuum } from "./renderFunctions";
-import { waitForBlockData } from "./blockDataService";
+import { waitForBlockData, setBlockData } from "./blockDataService";
 const RENDER_API = "";
 
 interface BitmapRendererProps {

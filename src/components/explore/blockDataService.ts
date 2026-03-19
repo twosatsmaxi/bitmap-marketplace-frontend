@@ -135,6 +135,14 @@ export function getBlockData(height: number): ArrayBuffer | undefined {
 }
 
 /**
+ * Store block data in cache (used after individual fetch).
+ */
+export function setBlockData(height: number, buffer: ArrayBuffer): void {
+  blockDataCache.set(height, { buffer, timestamp: Date.now() });
+  evictCacheIfNeeded();
+}
+
+/**
  * Wait for block data — checks cache first, then waits for any in-flight prefetch,
  * then returns undefined if not available.
  */

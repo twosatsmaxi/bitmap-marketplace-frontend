@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
-import { waitForBlockData } from "./blockDataService";
+import { waitForBlockData, setBlockData } from "./blockDataService";
 const RENDER_API = "";
 const MAX_INSTANCES = 8192;
 
@@ -496,6 +496,9 @@ export default function WebGLBitmapRenderer({
           const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           buffer = await res.arrayBuffer();
+          // Cache a copy for remounts (e.g., when toggling 3D view)
+          // Note: we must cache before transferring to worker
+          setBlockData(height, buffer.slice(0));
         }
         
         if (cancelled) return;
