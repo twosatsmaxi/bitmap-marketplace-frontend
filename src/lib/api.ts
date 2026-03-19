@@ -192,6 +192,11 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 // Portfolio
 // ---------------------------------------------------------------------------
 
+export interface TraitStat {
+  name: string;
+  count: number;
+}
+
 export interface PortfolioBitmapItem {
   block_height: number;
   inscription_id: string | null;
@@ -204,6 +209,7 @@ export interface PortfolioBitmapItem {
 export interface PortfolioResponse {
   address: string;
   bitmaps: PortfolioBitmapItem[];
+  traits: TraitStat[];
   total: number;
   page: number;
   has_more: boolean;
@@ -212,11 +218,14 @@ export interface PortfolioResponse {
 export async function getPortfolio(
   address: string,
   page = 0,
-  limit = 24
+  limit = 24,
+  traitFilter?: string
 ): Promise<PortfolioResponse> {
   // Use local proxy to avoid CORS and reachability issues
   const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}/api/portfolio/${address}?page=${page}&limit=${limit}`;
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (traitFilter) params.set('trait_filter', traitFilter);
+  const url = `${baseUrl}/api/portfolio/${address}?${params}`;
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     next: { revalidate: 60 },

@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo, useState, useEffect } from "react";
 import useSWRInfinite from "swr/infinite";
-import { Box, Square } from "lucide-react";
+import { Box, Square, X } from "lucide-react";
 import BlockCard from "@/components/explore/BlockCard";
 import InfiniteScrollTrigger from "@/components/explore/InfiniteScrollTrigger";
 import type { BlockMeta } from "@/components/explore/types";
-import type { PortfolioResponse } from "@/lib/api";
+import type { PortfolioResponse, TraitStat } from "@/lib/api";
 import { use3DPreference } from "@/hooks/use3DPreference";
 import { cn } from "@/lib/utils";
 
@@ -38,16 +38,51 @@ async function fetchMeta(height: number): Promise<BlockMeta | null> {
   }
 }
 
+// Trait pill component
+function TraitPill({ 
+  trait, 
+  isActive, 
+  onClick 
+}: { 
+  trait: TraitStat; 
+  isActive: boolean; 
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-xs transition-all",
+        "border hover:scale-105 active:scale-95",
+        isActive
+          ? "bg-primary text-black border-primary font-bold"
+          : "bg-[rgba(120,72,18,0.2)] text-primary border-[rgba(120,72,18,0.4)] hover:border-primary"
+      )}
+    >
+      <span className="capitalize">{trait.name.replace(/_/g, ' ')}</span>
+      <span className={cn(
+        "px-1.5 py-0.5 rounded text-[10px]",
+        isActive ? "bg-black/20" : "bg-black/30"
+      )}>
+        {trait.count}
+      </span>
+    </button>
+  );
+}
+
 export default function PortfolioGrid({ address, initialData }: PortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
   const [isometric, toggle3D] = use3DPreference();
+  const [activeTrait, setActiveTrait] = useState<string | null>(null);
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PortfolioResponse | null): string | null => {
       if (previousPageData && !previousPageData.has_more) return null;
-      return `/api/portfolio/${address}?page=${pageIndex}&limit=${PAGE_SIZE}`;
+      const params = new URLSearchParams({ page: String(pageIndex), limit: String(PAGE_SIZE) });
+      if (activeTrait) params.set('trait_filter', activeTrait);
+      return `/api/portfolio/${address}?${params}`;
     },
-    [address]
+    [address, activeTrait]
   );
 
   const fetcher = async (url: string): Promise<PortfolioResponse> => {
@@ -71,6 +106,12 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
   const allBitmaps = useMemo(() => {
     if (!data) return [];
     return data.flatMap((page) => page.bitmaps);
+  }, [data]);
+
+  // Get traits from first page (they're the same for all pages)
+  const traits = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    return data[0].traits || [];
   }, [data]);
 
   const heights = useMemo(() => allBitmaps.map((b) => b.block_height), [allBitmaps]);
@@ -132,8 +173,44 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
 
   const isLoading = !data && !error;
 
+  const handleTraitClick = (traitName: string) => {
+    setActiveTrait(current => current === traitName ? null : traitName);
+  };
+
+  const clearFilter = () => setActiveTrait(null);
+
   return (
     <>
+      {/* Trait Filter Pills */}
+      {traits.length > 0 && (
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-mono text-xs uppercase tracking-wider text-zinc-500">
+              Traits
+            </h3>
+            {activeTrait && (
+              <button
+                onClick={clearFilter}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {traits.map((trait) => (
+              <TraitPill
+                key={trait.name}
+                trait={trait}
+                isActive={activeTrait === trait.name}
+                onClick={() => handleTraitClick(trait.name)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {heights.map((height, index) => (
