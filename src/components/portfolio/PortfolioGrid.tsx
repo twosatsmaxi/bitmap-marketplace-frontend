@@ -2,10 +2,13 @@
 
 import { useCallback, useMemo, useState, useEffect } from "react";
 import useSWRInfinite from "swr/infinite";
+import { Box, Square } from "lucide-react";
 import BlockCard from "@/components/explore/BlockCard";
 import InfiniteScrollTrigger from "@/components/explore/InfiniteScrollTrigger";
 import type { BlockMeta } from "@/components/explore/types";
 import type { PortfolioResponse } from "@/lib/api";
+import { use3DPreference } from "@/hooks/use3DPreference";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
 const RENDER_API = "";
@@ -37,6 +40,7 @@ async function fetchMeta(height: number): Promise<BlockMeta | null> {
 
 export default function PortfolioGrid({ address, initialData }: PortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
+  const [isometric, toggle3D] = use3DPreference();
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PortfolioResponse | null): string | null => {
@@ -138,6 +142,7 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
             height={height}
             meta={blockMeta.get(height)}
             index={index}
+            isometric={isometric}
           />
         ))}
 
@@ -174,6 +179,25 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
           </p>
         </div>
       )}
+
+      {/* Floating 3D Toggle */}
+      <button
+        onClick={toggle3D}
+        className={cn(
+          "fixed bottom-4 right-4 z-50 flex items-center justify-center w-10 h-10 rounded-lg border transition-all duration-200 shadow-lg",
+          "bg-bg/90 backdrop-blur-sm border-[rgba(255,255,255,0.1)] hover:border-[rgba(247,162,59,0.5)]",
+          isometric && "border-[rgba(247,162,59,0.6)] bg-[rgba(247,162,59,0.15)] text-primary shadow-[0_0_15px_rgba(247,162,59,0.3)]"
+        )}
+        aria-label={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+        title={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+      >
+        {/* Show the icon of what you'll get when clicked */}
+        {isometric ? (
+          <Square className="h-5 w-5 text-primary" strokeWidth={2} />
+        ) : (
+          <Box className="h-5 w-5 text-primary" strokeWidth={2} />
+        )}
+      </button>
     </>
   );
 }
