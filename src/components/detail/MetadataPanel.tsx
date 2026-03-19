@@ -3,7 +3,7 @@
 import type { Bitmap } from "@/lib/types";
 import { formatNumber, truncateAddr, truncateInscription } from "@/lib/utils";
 import { useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
 import Link from "next/link";
@@ -56,6 +56,33 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
               {hiddenCount}
             </button>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  // Children section component with ordinals.com links
+  const ChildrenSection = () => {
+    if (!bitmap.children || bitmap.children.length === 0) return null;
+
+    return (
+      <div className="flex items-start justify-between text-sm py-1">
+        <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500 pt-0.5">
+          Children
+        </span>
+        <div className="flex flex-col items-end gap-1.5 max-w-[60%]">
+          {bitmap.children.map((childId, idx) => (
+            <a
+              key={idx}
+              href={`https://ordinals.com/content/${childId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              {truncateInscription(childId)}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ))}
         </div>
       </div>
     );
@@ -132,6 +159,7 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
           </div>
         ))}
         {bitmap.traits && bitmap.traits.length > 0 && <TraitsSection />}
+        {bitmap.children && bitmap.children.length > 0 && <ChildrenSection />}
       </div>
 
       {/* Mobile: Show More/Less for extended properties */}

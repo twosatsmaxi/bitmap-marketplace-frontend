@@ -34,6 +34,7 @@ function mergeBitmapData(
     genesisHeight: details.genesis_height,
     traits: details.traits,
     childrenCount: details.children_count,
+    children: details.children,
   };
 }
 

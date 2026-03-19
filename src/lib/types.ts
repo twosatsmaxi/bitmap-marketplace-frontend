@@ -20,6 +20,7 @@ export interface Bitmap {
   rarity: RarityTier;
   traits: Trait[];
   childrenCount?: number;
+  children?: string[]; // Child inscription IDs
   price?: number; // in sats
   lastSalePrice?: number; // in sats
   listingStatus: ListingStatus;
