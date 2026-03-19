@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
 import { Zap, Box } from "lucide-react";
@@ -112,6 +112,9 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   // Normal mode: track how many "pages" of blocks to show
   const [normalPageCount, setNormalPageCount] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Filter mode: track current page for navigation
+  const [visiblePageIndex, setVisiblePageIndex] = useState(0);
 
   // Initialize anchor from URL or default (only after mount to avoid hydration mismatch)
   const [anchorHeight, setAnchorHeight] = useState(() => {
@@ -280,6 +283,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   useEffect(() => {
     setBlockMeta(new Map());
     setNormalPageCount(1);
+    setVisiblePageIndex(0);
   }, [activeFilter, anchorHeight]);
 
   // Reset loadingMore when new content arrives
@@ -304,6 +308,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
+    setVisiblePageIndex(0);
     const newAnchor = Math.max(0, Math.min(target, latestBlock));
     setAnchorHeight(newAnchor);
     setNormalPageCount(1);
@@ -325,6 +330,34 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const isLoading = activeFilter && !data && !error;
   const loadedCount = allHeights.length;
   const totalCount = data?.[0]?.total;
+  const totalPages = totalCount ? Math.ceil(totalCount / GRID_SIZE) : 0;
+
+  // Track visible page based on scroll position (for filter mode)
+  const gridRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!activeFilter || !gridRef.current) return;
+    
+    const grid = gridRef.current;
+    const cards = grid.querySelectorAll('[data-block-index]');
+    if (cards.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute('data-block-index') || '0', 10);
+            const pageIndex = Math.floor(index / GRID_SIZE);
+            setVisiblePageIndex(pageIndex);
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -40% 0px', threshold: 0 }
+    );
+
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [activeFilter, blocks.length]);
 
   // Prevent hydration mismatch by showing skeleton until mounted
   if (!mounted) {
@@ -371,11 +404,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
           <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
             Every Bitcoin block is a bitmap. be the bitmap 🟧
-            {totalCount !== undefined && activeFilter && (
-              <span className="ml-2 text-primary">
-                ({loadedCount.toLocaleString()} / {totalCount.toLocaleString()})
-              </span>
-            )}
           </p>
         </div>
       </div>
@@ -432,17 +460,40 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         />
       </div>
 
+      {/* Sticky Navigation Bar */}
+      <div className="sticky top-[var(--header-total)] z-30 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-bg/95 backdrop-blur-sm border-y border-[rgba(255,255,255,0.06)]">
+        <div className="text-center font-mono text-xs">
+          {activeFilter ? (
+            <span className="text-zinc-400">
+              <span className="text-primary font-bold">{loadedCount.toLocaleString()}</span>
+              <span className="text-zinc-600 mx-1.5">/</span>
+              <span className="text-zinc-500">{totalCount?.toLocaleString() ?? '...'}</span>
+              {totalPages > 0 && (
+                <span className="text-zinc-600 ml-3">Pg {visiblePageIndex + 1}</span>
+              )}
+            </span>
+          ) : (
+            <span>
+              <span className="text-primary font-bold">{anchorHeight.toLocaleString()}</span>
+              <span className="text-zinc-600 mx-1.5">–</span>
+              <span className="text-zinc-400">{Math.min(anchorHeight + allHeights.length - 1, latestBlock).toLocaleString()}</span>
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        {blocks.map((b) => (
-          <BlockCard
-            key={b.height}
-            height={b.height}
-            meta={b.meta}
-            listingStatus={b.listingStatus}
-            price={b.price}
-            isometric={isometric}
-          />
+      <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+        {blocks.map((b, index) => (
+          <div key={b.height} data-block-index={index}>
+            <BlockCard
+              height={b.height}
+              meta={b.meta}
+              listingStatus={b.listingStatus}
+              price={b.price}
+              isometric={isometric}
+            />
+          </div>
         ))}
         
         {/* Skeleton loaders while loading */}
