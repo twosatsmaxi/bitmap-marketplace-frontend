@@ -9,23 +9,7 @@ import { Wallet, Tag, ArrowRightLeft } from "lucide-react";
 export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
   return (
     <div className="br-card px-5 py-5">
-      {/* Price Section */}
-      <div className="mb-6 flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-black/55 p-4">
-        <div>
-          <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-            Current Price
-          </span>
-          <PriceDisplay price={bitmap.price} size="lg" />
-        </div>
-        {bitmap.lastSalePrice && (
-          <div className="border-l border-[rgba(255,255,255,0.08)] pl-4 text-right">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Last Sale
-            </span>
-            <PriceDisplay price={bitmap.lastSalePrice} size="md" className="text-text-secondary" />
-          </div>
-        )}
-      </div>
+
 
       {/* Action Buttons */}
       <div className="flex flex-col gap-3">

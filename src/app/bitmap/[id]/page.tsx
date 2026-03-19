@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DetailCanvas from "@/components/detail/DetailCanvas";
 import PriceHistoryChart from "@/components/detail/PriceHistoryChart";
+import BitmapPreview from "@/components/detail/BitmapPreview";
 
 export const revalidate = 60;
 
@@ -57,6 +58,15 @@ export default async function BitmapDetailPage({ params }: PageProps) {
 
   // Merge real data from backend with base bitmap
   const bitmap = mergeBitmapData(baseBitmap, details);
+
+  // Generate 4 random block numbers (excluding current) for "More from this Pattern"
+  const relatedBlocks = Array.from({ length: 4 }, () => {
+    let n;
+    do {
+      n = Math.floor(Math.random() * 850000) + 1;
+    } while (n === bitmap.blockNumber);
+    return n;
+  });
 
   return (
     <div className="min-h-screen bg-bg pb-24 md:pb-0">
@@ -115,18 +125,28 @@ export default async function BitmapDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* More from this Pattern - Coming Soon */}
+      {/* More from this Pattern */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 mt-8 md:mt-16">
-        <div className="flex items-center gap-3 mb-4 md:mb-6">
-          <h2 className="font-mono text-lg md:text-xl font-bold uppercase text-primary">
-            More from this Pattern
-          </h2>
-          <span className="px-2 py-1 pixel-cut-sm text-[10px] uppercase font-mono tracking-[0.15em] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30">
-            Soon
-          </span>
-        </div>
-        <div className="h-[200px] flex items-center justify-center border border-dashed border-zinc-800 bg-zinc-900/30">
-          <span className="text-zinc-600 font-mono text-sm tracking-wider">Pattern recommendations loading...</span>
+        <h2 className="font-mono text-lg md:text-xl font-bold uppercase text-primary mb-4 md:mb-6">
+          More from this Pattern
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {relatedBlocks.map((blockNum) => (
+            <Link
+              key={blockNum}
+              href={`/bitmap/${blockNum}.bitmap`}
+              className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)]"
+            >
+              <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
+                <span className="font-mono text-[10px] md:text-xs font-bold text-[#f7a23b]">
+                  {blockNum}.bitmap
+                </span>
+              </div>
+              <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+                <BitmapPreview height={blockNum} />
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 

@@ -9,9 +9,7 @@ interface MobileActionBarProps {
 }
 
 export default function MobileActionBar({ bitmap }: MobileActionBarProps) {
-  // Determine what price to show
-  const displayPrice = bitmap.listingStatus === "listed" ? bitmap.price : bitmap.lastSalePrice;
-  const priceLabel = bitmap.listingStatus === "listed" ? "Listed for" : "Last sale";
+
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] px-4 py-3 backdrop-blur-md safe-area-inset-bottom md:hidden">
