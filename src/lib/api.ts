@@ -44,7 +44,7 @@ export async function getBitmapDetails(
   blockHeight: number
 ): Promise<BitmapDetailsResponse | null> {
   try {
-    const url = `${BITMAP_INDEX_BASE}/bitmap/${blockHeight}/details`;
+    const url = `${BITMAP_INDEX_BASE}/api/bitmap/${blockHeight}/details`;
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
       next: { revalidate: 60 },
