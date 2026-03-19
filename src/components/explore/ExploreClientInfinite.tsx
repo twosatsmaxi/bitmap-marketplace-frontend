@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { cn, abbreviateNumber } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
+import { prefetchBlocks } from "./blockDataService";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;
@@ -86,6 +87,64 @@ async function fetchMeta(height: number): Promise<BlockMeta | null> {
     metaCache.set(height, null);
     return null;
   }
+}
+
+async function fetchMetaBatch(heights: number[]): Promise<Map<number, BlockMeta>> {
+  if (heights.length === 0) return new Map();
+  
+  // Check cache first
+  const result = new Map<number, BlockMeta>();
+  const toFetch: number[] = [];
+  
+  for (const h of heights) {
+    const cached = metaCache.get(h);
+    if (cached) {
+      result.set(h, cached);
+    } else if (!metaCache.has(h)) {
+      toFetch.push(h);
+    }
+  }
+  
+  if (toFetch.length === 0) return result;
+  
+  try {
+    const heightsParam = toFetch.join(",");
+    const res = await fetch(`${RENDER_API}/api/explore/blocks/meta/batch?heights=${encodeURIComponent(heightsParam)}`);
+    
+    if (!res.ok) {
+      // Fall back to individual fetches on batch failure
+      const individualResults = await Promise.all(
+        toFetch.map(async (height) => {
+          const meta = await fetchMeta(height);
+          return { height, meta };
+        })
+      );
+      individualResults.forEach(({ height, meta }) => {
+        if (meta) result.set(height, meta);
+      });
+      return result;
+    }
+    
+    const data: BlockMeta[] = await res.json();
+    data.forEach((meta) => {
+      metaCache.set(meta.height, meta);
+      result.set(meta.height, meta);
+    });
+    evictMetaCache();
+  } catch {
+    // Fall back to individual fetches
+    const individualResults = await Promise.all(
+      toFetch.map(async (height) => {
+        const meta = await fetchMeta(height);
+        return { height, meta };
+      })
+    );
+    individualResults.forEach(({ height, meta }) => {
+      if (meta) result.set(height, meta);
+    });
+  }
+  
+  return result;
 }
 
 function buildHeights(anchor: number, latest: number, count: number): number[] {
@@ -228,7 +287,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     return lastPage.hasMore ?? lastPage.heights.length === GRID_SIZE;
   }, [activeFilter, anchorHeight, normalPageCount, latestBlock, data]);
 
-  // Load meta for new blocks
+  // Load meta for new blocks using batch fetching + prefetch block data in parallel
   useEffect(() => {
     const heightsMissing = allHeights.filter((h) => !blockMeta.has(h));
     if (heightsMissing.length === 0) return;
@@ -254,26 +313,25 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
     let cancelled = false;
 
-    async function loadMeta() {
-      const results = await Promise.all(
-        needsFetch.map(async (height) => {
-          const meta = await fetchMeta(height);
-          return { height, meta };
-        })
-      );
+    async function loadMetaAndPrefetchBlocks() {
+      // Parallel batch fetching: meta + block data prefetch
+      const [metaResults] = await Promise.all([
+        fetchMetaBatch(needsFetch),
+        prefetchBlocks(needsFetch), // Prefetch block data in parallel
+      ]);
 
       if (cancelled) return;
 
       setBlockMeta((prev) => {
         const next = new Map(prev);
-        results.forEach(({ height, meta }) => {
-          if (meta) next.set(height, meta);
+        metaResults.forEach((meta, height) => {
+          next.set(height, meta);
         });
         return next;
       });
     }
 
-    loadMeta();
+    loadMetaAndPrefetchBlocks();
 
     return () => { cancelled = true; };
   }, [allHeights, blockMeta]);
