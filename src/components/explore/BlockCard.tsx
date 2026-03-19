@@ -26,11 +26,12 @@ interface BlockCardProps {
 }
 
 function formatDate(ts: number) {
-  return new Date(ts * 1000).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const date = new Date(ts * 1000);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getUTCMonth()];
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear();
+  return `${month} ${day}, ${year}`;
 }
 
 function formatSize(bytes: number) {
@@ -302,7 +303,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
             )}
             {meta.tx_count > 0 && (
               <span className="font-mono text-[9px] md:text-[10px] text-[rgba(255,255,255,0.4)]">
-                {meta.tx_count.toLocaleString()} txs
+                {meta.tx_count.toLocaleString("en-US")} txs
               </span>
             )}
             {meta.size > 0 && (
