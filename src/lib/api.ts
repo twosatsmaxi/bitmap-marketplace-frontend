@@ -19,6 +19,44 @@ import {
 const BIS_BASE = "https://api.bestinslot.xyz/v3";
 const API_KEY = process.env.BESTINSLOT_API_KEY;
 
+// Bitmap-index backend API (our own backend)
+const BITMAP_INDEX_BASE = process.env.BITMAP_INDEX_API_BASE || "http://localhost:3002";
+
+/**
+ * Response from GET /bitmap/:block_height/details
+ * Fetches real bitmap data from our backend (which queries Ordinal API)
+ */
+export interface BitmapDetailsResponse {
+  block_height: number;
+  inscription_id: string;
+  inscription_number: number;
+  owner: string;
+  traits: string[];
+  children_count: number;
+  genesis_height: number;
+}
+
+/**
+ * Fetch bitmap details from bitmap-index backend
+ * Combines DB data (inscription_id, traits) with Ordinal API data (owner, children)
+ */
+export async function getBitmapDetails(
+  blockHeight: number
+): Promise<BitmapDetailsResponse | null> {
+  try {
+    const url = `${BITMAP_INDEX_BASE}/bitmap/${blockHeight}/details`;
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) throw new Error(`Bitmap index API error: ${res.status}`);
+    return res.json() as Promise<BitmapDetailsResponse>;
+  } catch (error) {
+    console.error("Failed to fetch bitmap details:", error);
+    return null;
+  }
+}
+
 async function bis<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   if (!API_KEY || API_KEY === "your_key_here") {
     throw new Error("No API key configured");

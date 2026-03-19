@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getBitmap, getBitmapPriceHistory, getRelatedBitmaps } from "@/lib/api";
+import { getBitmap, getBitmapPriceHistory, getRelatedBitmaps, getBitmapDetails } from "@/lib/api";
+import type { Bitmap } from "@/lib/types";
 import MetadataPanel from "@/components/detail/MetadataPanel";
 import ActionPanel from "@/components/detail/ActionPanel";
 import PriceHistoryChart from "@/components/detail/PriceHistoryChart";
@@ -15,18 +16,47 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Merge real bitmap details from backend with base bitmap data
+ * Preserves backward compatibility with existing components
+ */
+function mergeBitmapData(
+  baseBitmap: Bitmap,
+  details: Awaited<ReturnType<typeof getBitmapDetails>>
+): Bitmap {
+  if (!details) return baseBitmap;
+
+  return {
+    ...baseBitmap,
+    inscriptionId: details.inscription_id,
+    inscriptionNumber: details.inscription_number,
+    owner: details.owner,
+    genesisHeight: details.genesis_height,
+    traits: details.traits,
+    childrenCount: details.children_count,
+  };
+}
+
 export default async function BitmapDetailPage({ params }: PageProps) {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
 
-  const [bitmap, priceHistory] = await Promise.all([
+  // Extract block number from ID (e.g., "840001.bitmap" -> 840001)
+  const bitmapMatch = decodedId.match(/^(\d+)\.bitmap$/);
+  const blockNum = bitmapMatch ? Number(bitmapMatch[1]) : NaN;
+
+  const [baseBitmap, priceHistory, details] = await Promise.all([
     getBitmap(decodedId),
     getBitmapPriceHistory(decodedId),
+    !isNaN(blockNum) ? getBitmapDetails(blockNum) : null,
   ]);
 
-  if (!bitmap) {
+  if (!baseBitmap) {
     notFound();
   }
+
+  // Merge real data from backend with base bitmap
+  const bitmap = mergeBitmapData(baseBitmap, details);
 
   const relatedBitmaps = await getRelatedBitmaps(bitmap.bitmapType);
 

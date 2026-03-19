@@ -14,6 +14,14 @@ interface MetadataPanelProps {
 export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
   const [showAllProps, setShowAllProps] = useState(false);
 
+  // Format traits for display - convert snake_case to Title Case
+  const formatTrait = (trait: string): string => {
+    return trait
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   // Key properties always visible
   const keyProperties = [
     { 
@@ -22,16 +30,27 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
       rawValue: `${bitmap.blockNumber}.bitmap`,
       copyable: true 
     },
-    { 
-      label: "Pattern", 
-      value: bitmap.bitmapType.charAt(0).toUpperCase() + bitmap.bitmapType.slice(1),
-      copyable: false 
-    },
-    { 
-      label: "Rarity", 
-      value: bitmap.rarity.charAt(0).toUpperCase() + bitmap.rarity.slice(1),
-      copyable: false 
-    },
+    // Show traits if available, otherwise fall back to Pattern/Rarity
+    ...(bitmap.traits && bitmap.traits.length > 0
+      ? bitmap.traits.map(trait => ({
+          label: "Trait",
+          value: formatTrait(trait),
+          rawValue: trait,
+          copyable: false
+        }))
+      : [
+          { 
+            label: "Pattern", 
+            value: bitmap.bitmapType.charAt(0).toUpperCase() + bitmap.bitmapType.slice(1),
+            copyable: false 
+          },
+          { 
+            label: "Rarity", 
+            value: bitmap.rarity.charAt(0).toUpperCase() + bitmap.rarity.slice(1),
+            copyable: false 
+          },
+        ]
+    ),
   ];
 
   // Extended properties (collapsible on mobile)
