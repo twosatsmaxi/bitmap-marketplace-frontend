@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
 
@@ -145,12 +145,8 @@ export default function WebGLBitmapRenderer({
   skipEntryAnimationRef.current = skipEntryAnimation;
   
   // DPR-scaled size for crisp rendering on high-density displays
-  // Start with canvasSize for SSR hydration consistency, then update to actual DPR
-  const [scaledSize, setScaledSize] = useState(canvasSize);
-  useEffect(() => {
-    const dpr = window.devicePixelRatio || 1;
-    setScaledSize(Math.round(canvasSize * dpr));
-  }, [canvasSize]);
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const scaledSize = Math.round(canvasSize * dpr);
 
   // Scroll-triggered animation refs
   const pendingAnimationRef = useRef<{
