@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import ExploreClient from "@/components/explore/ExploreClient";
+import ExploreClientInfinite from "@/components/explore/ExploreClientInfinite";
 
 export const metadata: Metadata = {
   title: "Bitmap Explorer — Bitmap Marketplace",
@@ -27,7 +27,7 @@ export default async function HomePage() {
 
   return (
     <Suspense fallback={null}>
-      <ExploreClient latestBlock={latestBlock} />
+      <ExploreClientInfinite latestBlock={latestBlock} />
     </Suspense>
   );
 }

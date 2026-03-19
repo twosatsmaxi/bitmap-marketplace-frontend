@@ -143,9 +143,10 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
         try {
           const res = await fetch(`/api/explore/blocks?filter=${activeFilter}&page=${filterPage}&limit=${GRID_SIZE}`);
           const data = await res.json();
-          const heights: number[] = data.heights;
+          const heights: number[] = data.heights ?? [];
           const total = data.total ?? 0;
-          setHasMore(data.hasMore ?? filterPage * GRID_SIZE + heights.length < total);
+          const calculatedHasMore = filterPage * GRID_SIZE + heights.length < total;
+          setHasMore(data.hasMore ?? calculatedHasMore);
           setTotalPages(Math.ceil(total / GRID_SIZE));
 
           const newBlocks = heights.map(h => ({ height: h, status: "idle" as const }));
