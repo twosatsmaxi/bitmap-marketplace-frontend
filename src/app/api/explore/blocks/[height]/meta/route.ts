@@ -20,7 +20,7 @@ export async function GET(
     }
     const data = await res.json();
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, max-age=60" },
+      headers: { "Cache-Control": "public, max-age=2592000, immutable" },  // 30 days
     });
   } catch {
     return NextResponse.json(
