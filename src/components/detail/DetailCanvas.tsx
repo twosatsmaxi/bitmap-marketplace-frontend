@@ -6,6 +6,7 @@ import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
 import { RefreshCw, Box } from "lucide-react";
+import { use3DPreference } from "@/hooks/use3DPreference";
 
 const supportsWebGL2 =
   typeof document !== "undefined" &&
@@ -18,7 +19,7 @@ interface DetailCanvasProps {
 export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [retryKey, setRetryKey] = useState(0);
-  const [isometric, setIsometric] = useState(false);
+  const [isometric, toggle3D] = use3DPreference();
 
   const handleRetry = useCallback(() => {
     setStatus("idle");
@@ -79,7 +80,7 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
         {status === "done" && supportsWebGL2 && (
           <div className="absolute right-2 top-2 md:right-3 md:top-3">
             <button
-              onClick={() => setIsometric((v) => !v)}
+              onClick={toggle3D}
               className={cn(
                 "br-btn flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors bg-[rgba(13,17,23,0.8)] backdrop-blur-sm",
                 isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.12)] text-primary"

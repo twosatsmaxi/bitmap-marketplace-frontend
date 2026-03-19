@@ -13,6 +13,7 @@ import type {
   InterestingBlock,
 } from "./types";
 import { cn } from "@/lib/utils";
+import { use3DPreference } from "@/hooks/use3DPreference";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;  // Divisible by 2, 3, and 4 for clean grid rows
@@ -119,7 +120,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [activeFilter, filterPage, pathname, router, searchParams]);
 
-  const [isometric, setIsometric] = useState(false);
+  const [isometric, toggle3D] = use3DPreference();
   const [blocks, setBlocks] = useState<BlockRendered[]>([]);
 
   // Fetch meta for blocks
@@ -268,7 +269,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
             {/* 3D isometric toggle */}
             <button
-              onClick={() => setIsometric((v) => !v)}
+              onClick={toggle3D}
               className={cn(
                 "br-btn flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-2 transition-colors",
                 isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"

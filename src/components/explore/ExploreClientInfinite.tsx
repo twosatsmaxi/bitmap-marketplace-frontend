@@ -15,6 +15,7 @@ import type {
   InterestingBlock,
 } from "./types";
 import { cn } from "@/lib/utils";
+import { use3DPreference } from "@/hooks/use3DPreference";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;
@@ -105,7 +106,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const urlFilter = searchParams.get("filter");
 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [isometric, setIsometric] = useState(false);
+  const [isometric, toggle3D] = use3DPreference();
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
   
   // Normal mode: track how many "pages" of blocks to show
@@ -411,7 +412,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
           {/* Right: 3D toggle */}
           <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
             <button
-              onClick={() => setIsometric((v) => !v)}
+              onClick={toggle3D}
               className={cn(
                 "br-btn flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-2 transition-colors",
                 isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"
