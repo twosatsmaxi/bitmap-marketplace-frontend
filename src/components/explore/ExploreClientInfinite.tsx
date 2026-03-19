@@ -89,22 +89,43 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  
+  // Prevent hydration mismatch - wait for mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const urlFilter = searchParams.get("filter");
 
-  const [activeFilter, setActiveFilter] = useState<string | null>(urlFilter);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [isometric, setIsometric] = useState(false);
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
   
   // Normal mode: track how many "pages" of blocks to show
   const [normalPageCount, setNormalPageCount] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // Initialize anchor from URL or default
+  // Initialize anchor from URL or default (only after mount to avoid hydration mismatch)
   const [anchorHeight, setAnchorHeight] = useState(() => {
     const halvingIV = 840_000;
-    const saved = savedAnchorHeight ?? halvingIV;
-    return Math.max(0, Math.min(saved, latestBlock));
+    return Math.max(0, Math.min(halvingIV, latestBlock));
   });
+  
+  // Sync with URL after mount
+  useEffect(() => {
+    if (urlFilter) {
+      setActiveFilter(urlFilter);
+    }
+    // Check for anchor in URL
+    const urlAnchor = searchParams.get("anchor");
+    if (urlAnchor) {
+      const parsed = parseInt(urlAnchor, 10);
+      if (!isNaN(parsed)) {
+        setAnchorHeight(Math.max(0, Math.min(parsed, latestBlock)));
+      }
+    } else if (savedAnchorHeight !== null) {
+      setAnchorHeight(Math.max(0, Math.min(savedAnchorHeight, latestBlock)));
+    }
+  }, [urlFilter, searchParams, latestBlock]);
 
   // Persist state
   useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
@@ -232,17 +253,25 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     setNormalPageCount(1);
   }, [activeFilter, anchorHeight]);
 
+  // Reset loadingMore when new content arrives
+  useEffect(() => {
+    setLoadingMore(false);
+  }, [allHeights.length]);
+
   const loadMore = useCallback(() => {
-    if (isValidating) return;
-    
+    if (isValidating || loadingMore) return;
+
     if (activeFilter) {
       // Filter mode: use SWR
       if (hasMore) setSize((s) => s + 1);
     } else {
       // Normal mode: just increase page count
-      if (hasMore) setNormalPageCount((p) => p + 1);
+      if (hasMore) {
+        setLoadingMore(true);
+        setNormalPageCount((p) => p + 1);
+      }
     }
-  }, [isValidating, activeFilter, hasMore, setSize]);
+  }, [isValidating, loadingMore, activeFilter, hasMore, setSize]);
 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
@@ -260,12 +289,35 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     }
     setBlockMeta(new Map());
     setNormalPageCount(1);
-    mutate(undefined, { revalidate: true });
+    setSize(0); // Reset SWR page count
+    mutate(undefined, { revalidate: false });
   };
 
   const isLoading = activeFilter && !data && !error;
   const loadedCount = allHeights.length;
   const totalCount = data?.[0]?.total;
+
+  // Prevent hydration mismatch by showing skeleton until mounted
+  if (!mounted) {
+    return (
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
+        <div className="br-card p-3 md:p-5">
+          <div className="flex items-center gap-4">
+            <div className="h-8 w-48 bg-primary/10 rounded animate-pulse" />
+            <div className="ml-auto h-6 w-24 bg-primary/10 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          {Array.from({ length: GRID_SIZE }).map((_, i) => (
+            <div
+              key={`skeleton-${i}`}
+              className="aspect-square border border-[rgba(120,72,18,0.3)] bg-black/20 animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
@@ -387,7 +439,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       <InfiniteScrollTrigger
         onIntersect={loadMore}
         hasMore={hasMore}
-        isLoading={isValidating || (activeFilter === null && isLoading)}
+        isLoading={isValidating || loadingMore}
       />
 
       {error && (

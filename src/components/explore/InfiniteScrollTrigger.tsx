@@ -21,6 +21,9 @@ export default function InfiniteScrollTrigger({
   useEffect(() => {
     if (!hasMore || isLoading) return;
 
+    // Reset trigger flag each time the effect re-runs (deps changed = new page loaded or loading finished)
+    hasTriggered.current = false;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !hasTriggered.current) {
@@ -37,13 +40,6 @@ export default function InfiniteScrollTrigger({
 
     return () => observer.disconnect();
   }, [onIntersect, hasMore, isLoading, rootMargin]);
-
-  // Reset trigger when loading completes
-  useEffect(() => {
-    if (!isLoading) {
-      hasTriggered.current = false;
-    }
-  }, [isLoading]);
 
   if (!hasMore) return null;
 
