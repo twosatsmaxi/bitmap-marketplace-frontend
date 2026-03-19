@@ -51,6 +51,7 @@ export interface BitmapDetailsResponse {
   owner: string;
   traits: string[];
   children_count: number;
+  children: string[];
   genesis_height: number;
 }
 
