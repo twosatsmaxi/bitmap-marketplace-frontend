@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Zap, ChevronLeft, ChevronRight, Box } from "lucide-react";
+import useSWRInfinite from "swr/infinite";
+import { Zap, Box } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
 import CollectionFilterPanel from "./CollectionFilterPanel";
+import InfiniteScrollTrigger from "./InfiniteScrollTrigger";
 import type {
   BlockMeta,
   BlockRendered,
@@ -15,7 +17,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const RENDER_API = "";
-const GRID_SIZE = 12;  // Divisible by 2, 3, and 4 for clean grid rows
+const GRID_SIZE = 12;
 
 const INTERESTING_BLOCKS: InterestingBlock[] = [
   { label: "Genesis", height: 0 },
@@ -32,31 +34,32 @@ interface CategorizedFilterMeta extends CollectionFilterMeta {
 }
 
 const COLLECTION_FILTER_LAYOUT: CategorizedFilterMeta[] = [
-  // Row 1: Historical/Early Bitcoin
   { id: "pizza", label: "Pizza Block", priority: 1, highlight: "The 10,000 BTC Pizza Transaction", category: "historical" },
   { id: "patoshi", label: "Patoshi", priority: 2, highlight: "Early Patoshi Pattern Miner Blocks", category: "historical" },
   { id: "nakamoto", label: "Nakamoto", priority: 3, highlight: "Blocks Mined by Satoshi Nakamoto", category: "historical" },
-  // Row 2: Punk variants
   { id: "punks", label: "Punks", priority: 4, highlight: "Blocks Rendered as Pixel Avatars", category: "punk" },
   { id: "perfect-punk", label: "Perfect Punk", priority: 5, highlight: "Flawlessly Formed Avatar Patterns", category: "punk" },
   { id: "pristine-punk", label: "Pristine Punk", priority: 6, highlight: "Highest Fidelity Avatar Rendering", category: "punk" },
-  // Row 3: Numeric patterns
   { id: "same-digits", label: "Same Digits", priority: 7, highlight: "Block Height with Identical Digits", category: "numeric" },
   { id: "palindrome", label: "Palindrome", priority: 8, highlight: "Block Height Reads Same Backwards", category: "numeric" },
   { id: "sub-100k", label: "Sub 100k", priority: 9, highlight: "First 100,000 Historic Blocks", category: "numeric" },
   { id: "billionaire", label: "Billionaire", priority: 10, highlight: "Blocks with Massive BTC Activity", category: "numeric" },
 ];
 
-
-// Module-level meta cache to avoid refetching
+// Module-level meta cache
 const metaCache = new Map<number, BlockMeta>();
 
-// Persist navigation state across remounts (e.g. back from detail page)
+// Persist navigation state
 let savedAnchorHeight: number | null = null;
 
-// Sanitize saved value to ensure it's never negative
 if (savedAnchorHeight !== null && savedAnchorHeight < 0) {
   savedAnchorHeight = null;
+}
+
+interface FetchResponse {
+  heights: number[];
+  total?: number;
+  hasMore?: boolean;
 }
 
 async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
@@ -72,142 +75,180 @@ async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
   }
 }
 
-function buildHeights(anchor: number, latest: number): number[] {
-  return Array.from({ length: GRID_SIZE }, (_, i) =>
-    Math.min(Math.max(anchor + i, 0), latest)
-  );
-}
-
-export default function ExploreClient({ latestBlock }: { latestBlock: number }) {
+export default function ExploreClientInfinite({ latestBlock }: { latestBlock: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Initialize from URL or default
   const urlFilter = searchParams.get("filter");
-  const urlFilterPage = parseInt(searchParams.get("page") || "0", 10);
+  const urlAnchor = searchParams.get("anchor");
 
   const [activeFilter, setActiveFilter] = useState<string | null>(urlFilter);
-  const [filterPage, setFilterPage] = useState(urlFilterPage);
-  const [hasMore, setHasMore] = useState(false);
-  const [totalPages, setTotalPages] = useState(0);
+  const [isometric, setIsometric] = useState(false);
+  const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
 
+  // Initialize anchor from URL or default
   const [anchorHeight, setAnchorHeight] = useState(() => {
-    // Default to Halving IV (840,000) on first load, fallback to latest blocks if saved
     const halvingIV = 840_000;
+    if (urlAnchor) {
+      const parsed = parseInt(urlAnchor, 10);
+      if (!isNaN(parsed)) return Math.max(0, Math.min(parsed, latestBlock));
+    }
     const saved = savedAnchorHeight ?? halvingIV;
-    // Clamp saved value to valid range
     return Math.max(0, Math.min(saved, latestBlock));
   });
 
-  // Sync navigation state to module-level for persistence across remounts
+  // Persist state
   useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
 
-  // Sync filter to URL
+  // Sync to URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (activeFilter) {
       params.set("filter", activeFilter);
+      params.delete("anchor");
     } else {
       params.delete("filter");
-    }
-    if (filterPage > 0) {
-      params.set("page", filterPage.toString());
-    } else {
-      params.delete("page");
+      params.set("anchor", anchorHeight.toString());
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [activeFilter, filterPage, pathname, router, searchParams]);
+  }, [activeFilter, anchorHeight, pathname, router, searchParams]);
 
-  const [isometric, setIsometric] = useState(false);
-  const [blocks, setBlocks] = useState<BlockRendered[]>([]);
-
-  // Fetch meta for blocks
-  const loadMeta = useCallback(
-    async (heights: number[]) => {
-      const results = await Promise.all(heights.map(fetchMeta));
-      setBlocks((prev) =>
-        prev.map((b, i) => ({
-          ...b,
-          meta: results[i] ?? b.meta,
-        }))
-      );
+  // SWR Infinite fetcher
+  const getKey = useCallback(
+    (pageIndex: number, previousPageData: FetchResponse | null): string | null => {
+      if (activeFilter) {
+        // Filter mode: stop if no more data
+        if (previousPageData && !previousPageData.hasMore) return null;
+        return `/api/explore/blocks?filter=${activeFilter}&page=${pageIndex}&limit=${GRID_SIZE}`;
+      } else {
+        // Normal mode: sequential blocks
+        const startHeight = anchorHeight + pageIndex * GRID_SIZE;
+        if (startHeight > latestBlock) return null;
+        return `/api/explore/blocks?start=${startHeight}&limit=${GRID_SIZE}`;
+      }
     },
-    []
+    [activeFilter, anchorHeight, latestBlock]
   );
 
-  // Rebuild block list when anchor or filter changes
+  const fetcher = async (url: string): Promise<FetchResponse> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  };
+
+  const {
+    data,
+    error,
+    size,
+    setSize,
+    isValidating,
+    mutate,
+  } = useSWRInfinite<FetchResponse>(getKey, fetcher, {
+    revalidateFirstPage: false,
+    revalidateOnFocus: false,
+    parallel: false,
+  });
+
+  // Flatten all pages
+  const allHeights = useMemo(() => {
+    if (!data) return [];
+    return data.flatMap((page) => page.heights);
+  }, [data]);
+
+  // Build blocks with meta
+  const blocks: BlockRendered[] = useMemo(() => {
+    return allHeights.map((height) => ({
+      height,
+      status: "idle" as const,
+      meta: blockMeta.get(height),
+    }));
+  }, [allHeights, blockMeta]);
+
+  // Check if more data available
+  const hasMore = useMemo(() => {
+    if (!data || data.length === 0) return true;
+    const lastPage = data[data.length - 1];
+    return lastPage.hasMore ?? lastPage.heights.length === GRID_SIZE;
+  }, [data]);
+
+  // Load meta for new blocks
   useEffect(() => {
-    async function updateBlocks() {
-      if (activeFilter) {
-        try {
-          const res = await fetch(`/api/explore/blocks?filter=${activeFilter}&page=${filterPage}&limit=${GRID_SIZE}`);
-          const data = await res.json();
-          const heights: number[] = data.heights ?? [];
-          const total = data.total ?? 0;
-          const calculatedHasMore = filterPage * GRID_SIZE + heights.length < total;
-          setHasMore(data.hasMore ?? calculatedHasMore);
-          setTotalPages(Math.ceil(total / GRID_SIZE));
+    const heightsNeedingMeta = allHeights.filter((h) => !blockMeta.has(h) && !metaCache.has(h));
+    if (heightsNeedingMeta.length === 0) return;
 
-          const newBlocks = heights.map(h => ({ height: h, status: "idle" as const }));
-          setBlocks(newBlocks);
-          loadMeta(heights);
-        } catch (err) {
-          console.error("Filter fetch failed", err);
-        }
-      } else {
-        const heights = buildHeights(anchorHeight, latestBlock);
-        setBlocks(heights.map((h) => ({ height: h, status: "idle" })));
-        loadMeta(heights);
-        setHasMore(anchorHeight + GRID_SIZE <= latestBlock);
-      }
+    let cancelled = false;
+
+    async function loadMeta() {
+      const results = await Promise.all(
+        heightsNeedingMeta.map(async (height) => {
+          const meta = await fetchMeta(height);
+          return { height, meta };
+        })
+      );
+
+      if (cancelled) return;
+
+      setBlockMeta((prev) => {
+        const next = new Map(prev);
+        results.forEach(({ height, meta }) => {
+          if (meta) next.set(height, meta);
+        });
+        return next;
+      });
     }
 
-    updateBlocks();
-  }, [anchorHeight, latestBlock, loadMeta, activeFilter, filterPage]);
+    loadMeta();
 
-  const goPrev = () => {
-    if (activeFilter) {
-      setFilterPage(p => Math.max(p - 1, 0));
-    } else {
-      setAnchorHeight((a) => Math.max(a - GRID_SIZE, 0));
-    }
-  };
+    return () => { cancelled = true; };
+  }, [allHeights, blockMeta]);
 
-  const goNext = () => {
-    if (activeFilter) {
-      if (hasMore) setFilterPage(p => p + 1);
-    } else {
-      setAnchorHeight((a) => Math.min(a + GRID_SIZE, latestBlock));
+  // Reset when filter or anchor changes
+  useEffect(() => {
+    setBlockMeta(new Map());
+  }, [activeFilter, anchorHeight]);
+
+  // Throttled load more to prevent rate limiting
+  const loadMore = useCallback(() => {
+    if (!isValidating && hasMore) {
+      setSize((s) => s + 1);
     }
-  };
+  }, [isValidating, hasMore, setSize]);
+
+  // Debug: log when loading state changes
+  useEffect(() => {
+    if (isValidating) {
+      console.log(`[Explore] Loading page ${size}, total loaded: ${allHeights.length}`);
+    }
+  }, [isValidating, size, allHeights.length]);
 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
-    setFilterPage(0);
-    // Show entered block first (no centering), clamped to valid range
-    setAnchorHeight(Math.max(0, Math.min(target, latestBlock)));
+    const newAnchor = Math.max(0, Math.min(target, latestBlock));
+    setAnchorHeight(newAnchor);
+    setBlockMeta(new Map());
+    mutate(undefined, { revalidate: true });
   };
 
   const toggleFilter = (id: string) => {
     if (activeFilter === id) {
       setActiveFilter(null);
-      setFilterPage(0);
     } else {
       setActiveFilter(id);
-      setFilterPage(0);
     }
+    setBlockMeta(new Map());
+    mutate(undefined, { revalidate: true });
   };
 
-  const rangeEnd = Math.min(anchorHeight + GRID_SIZE - 1, latestBlock);
+  const isLoading = !data && !error;
+  const loadedCount = allHeights.length;
+  const totalCount = data?.[0]?.total;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
-
       {/* Header panel */}
       <div className="br-card p-3 md:p-5">
         <div className="flex flex-col gap-2 md:gap-3">
-          {/* Top row: Title + search + tip */}
           <div className="flex items-center gap-2 md:gap-4">
             <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
               Bitmap Explorer
@@ -220,14 +261,17 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             </span>
           </div>
 
-          {/* Mobile Search */}
           <div className="sm:hidden">
             <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
           </div>
 
-          {/* Subtitle below */}
           <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
             Every Bitcoin block is a bitmap. be the bitmap 🟧
+            {totalCount !== undefined && activeFilter && (
+              <span className="ml-2 text-primary">
+                ({loadedCount.toLocaleString()} / {totalCount.toLocaleString()})
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -237,7 +281,6 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
         <div className="flex items-center gap-2 md:gap-3">
           {/* Left: Legendary scrollable section */}
           <div className="flex flex-1 items-center gap-2 md:gap-3 min-w-0">
-            {/* Legendary Icon - Only show icon on mobile */}
             <div className="flex flex-shrink-0 items-center justify-center w-9 h-9 md:w-auto md:h-auto rounded-md border border-[rgba(247,147,26,0.3)] bg-[rgba(247,147,26,0.1)] md:px-3 md:py-2">
               <Zap className="h-4 w-4 text-primary" fill="currentColor" />
               <span className="hidden md:inline font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary ml-2">
@@ -245,9 +288,7 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
               </span>
             </div>
 
-            {/* Scrollable Buttons */}
             <div className="relative flex-1 overflow-hidden">
-              {/* Right Fade Gradient */}
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-l from-[rgba(9,9,11,1)] to-transparent" />
               
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pr-6">
@@ -264,9 +305,8 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             </div>
           </div>
 
-          {/* Right: 3D toggle + PREV/NEXT navigation */}
+          {/* Right: 3D toggle */}
           <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
-            {/* 3D isometric toggle */}
             <button
               onClick={() => setIsometric((v) => !v)}
               className={cn(
@@ -277,59 +317,6 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             >
               <Box className="h-4 w-4" />
               <span className="hidden md:inline ml-1.5 text-xs">3D</span>
-            </button>
-          </div>
-          <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
-            {/* Mobile: Icon only buttons */}
-            <button
-              onClick={goPrev}
-              disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-              className="br-btn flex md:hidden items-center justify-center w-9 h-9 p-0 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            {/* Desktop: Text + Icon buttons */}
-            <button
-              onClick={goPrev}
-              disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-              className="br-btn hidden md:flex items-center gap-1.5 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40 text-xs"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Prev
-            </button>
-
-            {/* Page indicator */}
-            <div className="flex min-w-[60px] md:min-w-[120px] items-center justify-center gap-2 font-mono text-[10px] md:text-[11px] text-zinc-500">
-              {activeFilter ? (
-                <span>Page {filterPage + 1}{totalPages > 0 && ` / ${totalPages}`}</span>
-              ) : (
-                <>
-                  <span className="md:hidden">{anchorHeight.toLocaleString()}</span>
-                  <span className="hidden md:inline">{anchorHeight.toLocaleString()} – {rangeEnd.toLocaleString()}</span>
-                </>
-              )}
-            </div>
-
-            {/* Mobile: Icon only button */}
-            <button
-              onClick={goNext}
-              disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-              className="br-btn flex md:hidden items-center justify-center w-9 h-9 p-0 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Next page"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
-            {/* Desktop: Text + Icon button */}
-            <button
-              onClick={goNext}
-              disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-              className="br-btn hidden md:flex items-center gap-1.5 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-40 text-xs"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -353,32 +340,40 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
             isometric={isometric}
           />
         ))}
-        {blocks.length === 0 && (
+        
+        {/* Skeleton loaders while loading */}
+        {isLoading && (
+          Array.from({ length: GRID_SIZE }).map((_, i) => (
+            <div
+              key={`skeleton-${i}`}
+              className="aspect-square border border-[rgba(120,72,18,0.3)] bg-black/20 animate-pulse"
+            />
+          ))
+        )}
+
+        {blocks.length === 0 && !isLoading && (
           <div className="col-span-full py-16 md:py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
             <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
-              No matching bitmaps found for this page
+              No matching bitmaps found
             </p>
           </div>
         )}
       </div>
 
-      {/* Bottom navigation */}
-      <div className="flex items-center justify-between pt-2">
-        <button
-          onClick={goPrev}
-          disabled={activeFilter ? filterPage === 0 : anchorHeight === 0}
-          className="font-mono text-xs text-zinc-500 transition-colors hover:text-primary disabled:opacity-40"
-        >
-          ← Older
-        </button>
-        <button
-          onClick={goNext}
-          disabled={activeFilter ? !hasMore : anchorHeight + GRID_SIZE > latestBlock}
-          className="font-mono text-xs text-zinc-500 transition-colors hover:text-primary disabled:opacity-40"
-        >
-          Newer →
-        </button>
-      </div>
+      {/* Infinite scroll trigger */}
+      <InfiniteScrollTrigger
+        onIntersect={loadMore}
+        hasMore={hasMore}
+        isLoading={isValidating}
+      />
+
+      {error && (
+        <div className="text-center py-4">
+          <p className="font-mono text-sm text-red-400">
+            Failed to load bitmaps. <button onClick={() => mutate()} className="underline hover:text-red-300">Retry</button>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
