@@ -3,7 +3,7 @@
 import type { Bitmap } from "@/lib/types";
 import { formatNumber, truncateAddr, truncateInscription } from "@/lib/utils";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
 
@@ -13,6 +13,7 @@ interface MetadataPanelProps {
 
 export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
   const [showAllProps, setShowAllProps] = useState(false);
+  const [showAllTraits, setShowAllTraits] = useState(false);
 
   // Format traits for display - convert snake_case to Title Case
   const formatTrait = (trait: string): string => {
@@ -20,6 +21,43 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  // Traits section component
+  const TraitsSection = () => {
+    if (!bitmap.traits || bitmap.traits.length === 0) return null;
+    
+    const traits = bitmap.traits.map(formatTrait);
+    const hasMore = traits.length > 2;
+    const visibleTraits = showAllTraits ? traits : traits.slice(0, 2);
+    const hiddenCount = traits.length - 2;
+
+    return (
+      <div className="flex items-start justify-between text-sm py-1">
+        <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500 pt-0.5">
+          Traits
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5 justify-end max-w-[60%]">
+          {visibleTraits.map((trait, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center rounded-md bg-[rgba(120,72,18,0.2)] px-2 py-0.5 font-mono text-xs text-primary"
+            >
+              {trait}
+            </span>
+          ))}
+          {hasMore && !showAllTraits && (
+            <button
+              onClick={() => setShowAllTraits(true)}
+              className="inline-flex items-center gap-0.5 rounded-md bg-[rgba(255,255,255,0.1)] px-2 py-0.5 font-mono text-xs text-zinc-400 transition-colors hover:text-zinc-200 hover:bg-[rgba(255,255,255,0.15)]"
+            >
+              <Plus className="h-3 w-3" />
+              {hiddenCount}
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Key properties always visible
@@ -30,27 +68,6 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
       rawValue: `${bitmap.blockNumber}.bitmap`,
       copyable: true 
     },
-    // Show traits if available, otherwise fall back to Pattern/Rarity
-    ...(bitmap.traits && bitmap.traits.length > 0
-      ? bitmap.traits.map(trait => ({
-          label: "Trait",
-          value: formatTrait(trait),
-          rawValue: trait,
-          copyable: false
-        }))
-      : [
-          { 
-            label: "Pattern", 
-            value: bitmap.bitmapType.charAt(0).toUpperCase() + bitmap.bitmapType.slice(1),
-            copyable: false 
-          },
-          { 
-            label: "Rarity", 
-            value: bitmap.rarity.charAt(0).toUpperCase() + bitmap.rarity.slice(1),
-            copyable: false 
-          },
-        ]
-    ),
   ];
 
   // Extended properties (collapsible on mobile)
@@ -106,6 +123,7 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
             </div>
           </div>
         ))}
+        {bitmap.traits && bitmap.traits.length > 0 && <TraitsSection />}
       </div>
 
       {/* Mobile: Show More/Less for extended properties */}
