@@ -167,6 +167,42 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------
+
+export interface PortfolioBitmapItem {
+  block_height: number;
+  inscription_id: string | null;
+  inscription_num: number | null;
+  tx_count: number | null;
+  block_timestamp: string | null;
+  traits: string[];
+}
+
+export interface PortfolioResponse {
+  address: string;
+  bitmaps: PortfolioBitmapItem[];
+  total: number;
+  page: number;
+  has_more: boolean;
+}
+
+export async function getPortfolio(
+  address: string,
+  page = 0,
+  limit = 24
+): Promise<PortfolioResponse> {
+  const url = `${BITMAP_INDEX_BASE}/api/portfolio/${address}?page=${page}&limit=${limit}`;
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    next: { revalidate: 60 },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`Portfolio API error: ${res.status}`);
+  return res.json() as Promise<PortfolioResponse>;
+}
+
 export async function getRelatedBitmaps(bitmapType: string): Promise<Bitmap[]> {
   try {
     const data = await bis<{ data: Bitmap[] }>("/collection/inscriptions", {
