@@ -138,6 +138,31 @@ export function getBlockData(height: number): ArrayBuffer | undefined {
 }
 
 /**
+ * Wait for block data — checks cache, waits for any in-flight prefetch,
+ * then falls back to individual fetch only if no prefetch is pending.
+ */
+export async function waitForBlockData(height: number): Promise<ArrayBuffer | undefined> {
+  // Check cache first
+  const cached = getBlockData(height);
+  if (cached) return cached;
+
+  // Wait for any in-flight prefetch that includes this height
+  for (const promise of inFlightRequests.values()) {
+    try {
+      const result = await promise;
+      if (result.has(height)) {
+        return getBlockData(height);
+      }
+    } catch {
+      // prefetch failed, continue
+    }
+  }
+
+  // Check cache again after prefetches resolved
+  return getBlockData(height);
+}
+
+/**
  * Clear the block data cache (useful for testing or memory pressure).
  */
 export function clearBlockDataCache(): void {

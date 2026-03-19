@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const url = `${RENDER_API}/api/block/meta/batch?heights=${encodeURIComponent(heightsParam)}`;
+  const url = `${RENDER_API}/api/blocks/meta/batch?heights=${encodeURIComponent(heightsParam)}`;
 
   try {
     const res = await fetch(url);
