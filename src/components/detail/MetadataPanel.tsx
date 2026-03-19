@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
+import Link from "next/link";
 
 interface MetadataPanelProps {
   bitmap: Bitmap;
@@ -80,7 +81,14 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
     },
     { 
       label: "Owner", 
-      value: truncateAddr(bitmap.owner),
+      value: bitmap.owner ? (
+        <Link
+          href={`/portfolio/${bitmap.owner}`}
+          className="text-primary hover:underline"
+        >
+          {truncateAddr(bitmap.owner)}
+        </Link>
+      ) : null,
       rawValue: bitmap.owner,
       copyable: true 
     },
