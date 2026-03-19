@@ -5,7 +5,7 @@ import WebGLBitmapRenderer from "@/components/explore/WebGLBitmapRenderer";
 import BitmapRenderer from "@/components/explore/BitmapRenderer";
 import type { RenderStatus } from "@/components/explore/types";
 import { cn } from "@/lib/utils";
-import { RefreshCw, Box } from "lucide-react";
+import { RefreshCw, Box, Square } from "lucide-react";
 import { use3DPreference } from "@/hooks/use3DPreference";
 
 const supportsWebGL2 =
@@ -76,21 +76,25 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
           </div>
         )}
 
-        {/* Isometric toggle - top right corner */}
+        {/* 2D/3D Toggle - inside canvas */}
         {status === "done" && supportsWebGL2 && (
-          <div className="absolute right-2 top-2 md:right-3 md:top-3">
-            <button
-              onClick={toggle3D}
-              className={cn(
-                "br-btn flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors bg-[rgba(13,17,23,0.8)] backdrop-blur-sm",
-                isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.12)] text-primary"
-              )}
-              aria-label="Toggle 3D isometric view"
-            >
-              <Box className="w-3.5 h-3.5" />
-              3D
-            </button>
-          </div>
+          <button
+            onClick={toggle3D}
+            className={cn(
+              "absolute bottom-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-lg border transition-all duration-200",
+              "bg-[rgba(13,17,23,0.9)] backdrop-blur-sm border-[rgba(255,255,255,0.15)] hover:border-[rgba(247,162,59,0.6)]",
+              isometric && "border-[rgba(247,162,59,0.7)] bg-[rgba(247,162,59,0.2)] text-primary shadow-[0_0_12px_rgba(247,162,59,0.25)]"
+            )}
+            aria-label={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+            title={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+          >
+            {/* Show the icon of what you'll get when clicked */}
+            {isometric ? (
+              <Square className="h-4 w-4 text-primary" strokeWidth={2} />
+            ) : (
+              <Box className="h-4 w-4 text-primary" strokeWidth={2} />
+            )}
+          </button>
         )}
       </div>
     </div>

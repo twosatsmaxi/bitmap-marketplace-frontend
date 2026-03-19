@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
-import { Zap, Box } from "lucide-react";
+import { Zap, Box, Square } from "lucide-react";
 import BlockCard from "./BlockCard";
 import BlockSearch from "./BlockSearch";
 import CollectionFilterPanel from "./CollectionFilterPanel";
@@ -113,6 +113,9 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const [normalPageCount, setNormalPageCount] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // Filter mode: track current page for navigation
+  const [visiblePageIndex, setVisiblePageIndex] = useState(0);
+
   // Initialize anchor from URL or default (only after mount to avoid hydration mismatch)
   const [anchorHeight, setAnchorHeight] = useState(() => {
     const halvingIV = 840_000;
@@ -209,7 +212,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const blocks: BlockRendered[] = useMemo(() => {
     return allHeights.map((height) => ({
       height,
-      status: "idle" as const,
       meta: blockMeta.get(height),
     }));
   }, [allHeights, blockMeta]);
@@ -280,6 +282,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   useEffect(() => {
     setBlockMeta(new Map());
     setNormalPageCount(1);
+    setVisiblePageIndex(0);
   }, [activeFilter, anchorHeight]);
 
   // Reset loadingMore when new content arrives
@@ -304,6 +307,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
+    setVisiblePageIndex(0);
     const newAnchor = Math.max(0, Math.min(target, latestBlock));
     setAnchorHeight(newAnchor);
     setNormalPageCount(1);
@@ -325,6 +329,42 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const isLoading = activeFilter && !data && !error;
   const loadedCount = allHeights.length;
   const totalCount = data?.[0]?.total;
+  const totalPages = totalCount ? Math.ceil(totalCount / GRID_SIZE) : 0;
+
+  // Track visible page based on scroll position (for filter mode)
+  const gridRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!activeFilter || !gridRef.current) return;
+
+    const grid = gridRef.current;
+    const cards = grid.querySelectorAll('[data-block-index]');
+    if (cards.length === 0) return;
+
+    // Only observe the first card of each page instead of every card
+    const pageBoundaryCards: Element[] = [];
+    cards.forEach((card) => {
+      const index = parseInt(card.getAttribute('data-block-index') || '0', 10);
+      if (index % GRID_SIZE === 0) pageBoundaryCards.push(card);
+    });
+    if (pageBoundaryCards.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute('data-block-index') || '0', 10);
+            const pageIndex = Math.floor(index / GRID_SIZE);
+            setVisiblePageIndex((prev) => prev === pageIndex ? prev : pageIndex);
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -40% 0px', threshold: 0 }
+    );
+
+    pageBoundaryCards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, [activeFilter, allHeights.length]);
 
   // Prevent hydration mismatch by showing skeleton until mounted
   if (!mounted) {
@@ -371,11 +411,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
           <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
             Every Bitcoin block is a bitmap. be the bitmap 🟧
-            {totalCount !== undefined && activeFilter && (
-              <span className="ml-2 text-primary">
-                ({loadedCount.toLocaleString()} / {totalCount.toLocaleString()})
-              </span>
-            )}
           </p>
         </div>
       </div>
@@ -409,20 +444,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
             </div>
           </div>
 
-          {/* Right: 3D toggle */}
-          <div className="flex flex-shrink-0 items-center gap-1.5 md:gap-2">
-            <button
-              onClick={toggle3D}
-              className={cn(
-                "br-btn flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-2 transition-colors",
-                isometric && "border-[rgba(247,162,59,0.5)] bg-[rgba(247,162,59,0.08)] text-primary"
-              )}
-              aria-label="Toggle 3D isometric view"
-            >
-              <Box className="h-4 w-4" />
-              <span className="hidden md:inline ml-1.5 text-xs">3D</span>
-            </button>
-          </div>
         </div>
 
         <CollectionFilterPanel
@@ -432,17 +453,50 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         />
       </div>
 
+      {/* Sticky Navigation Bar */}
+      <div className="sticky top-[var(--header-total)] z-30 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-bg/95 backdrop-blur-sm border-y border-[rgba(255,255,255,0.06)]">
+        <div className="text-center font-mono text-xs">
+          {activeFilter ? (
+            <span className="text-zinc-400">
+              {/* Mobile: abbreviated counts */}
+              <span className="md:hidden">
+                <span className="text-primary font-bold">{loadedCount >= 1000 ? (loadedCount / 1000).toFixed(1) + 'K' : loadedCount}</span>
+                <span className="text-zinc-600 mx-1">/</span>
+                <span className="text-zinc-500">{totalCount ? (totalCount >= 1000 ? (totalCount / 1000).toFixed(0) + 'K' : totalCount) : '...'}</span>
+              </span>
+              {/* Desktop: full counts */}
+              <span className="hidden md:inline">
+                <span className="text-primary font-bold">{loadedCount.toLocaleString()}</span>
+                <span className="text-zinc-600 mx-1.5">/</span>
+                <span className="text-zinc-500">{totalCount?.toLocaleString() ?? '...'}</span>
+              </span>
+              {totalPages > 0 && (
+                <span className="text-zinc-600 ml-2 md:ml-3">Pg {visiblePageIndex + 1}</span>
+              )}
+            </span>
+          ) : (
+            <span className="text-primary font-bold">
+              {/* Mobile: abbreviated */}
+              <span className="md:hidden">{anchorHeight >= 1000 ? (anchorHeight / 1000).toFixed(anchorHeight >= 10000 ? 0 : 1) + 'K+' : anchorHeight}</span>
+              {/* Desktop: full number */}
+              <span className="hidden md:inline">{anchorHeight.toLocaleString()}+</span>
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        {blocks.map((b) => (
-          <BlockCard
-            key={b.height}
-            height={b.height}
-            meta={b.meta}
-            listingStatus={b.listingStatus}
-            price={b.price}
-            isometric={isometric}
-          />
+      <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+        {blocks.map((b, index) => (
+          <div key={b.height} data-block-index={index}>
+            <BlockCard
+              height={b.height}
+              meta={b.meta}
+              listingStatus={b.listingStatus}
+              price={b.price}
+              isometric={isometric}
+            />
+          </div>
         ))}
         
         {/* Skeleton loaders while loading */}
@@ -470,6 +524,25 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         hasMore={hasMore}
         isLoading={isValidating || loadingMore}
       />
+
+      {/* Floating 3D Toggle */}
+      <button
+        onClick={toggle3D}
+        className={cn(
+          "fixed bottom-4 right-4 z-50 flex items-center justify-center w-10 h-10 rounded-lg border transition-all duration-200 shadow-lg",
+          "bg-bg/90 backdrop-blur-sm border-[rgba(255,255,255,0.1)] hover:border-[rgba(247,162,59,0.5)]",
+          isometric && "border-[rgba(247,162,59,0.6)] bg-[rgba(247,162,59,0.15)] text-primary shadow-[0_0_15px_rgba(247,162,59,0.3)]"
+        )}
+        aria-label={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+        title={isometric ? "Switch to 2D view" : "Switch to 3D view"}
+      >
+        {/* Show the icon of what you'll get when clicked */}
+        {isometric ? (
+          <Square className="h-5 w-5 text-primary" strokeWidth={2} />
+        ) : (
+          <Box className="h-5 w-5 text-primary" strokeWidth={2} />
+        )}
+      </button>
 
       {error && (
         <div className="text-center py-4">
