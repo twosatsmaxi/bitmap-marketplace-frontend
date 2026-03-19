@@ -50,7 +50,7 @@ export interface CollectionFilterMeta extends FilterCategory {
 
 export interface BlockRendered {
   height: number;
-  status: RenderStatus;
+  status?: RenderStatus;
   meta?: BlockMeta;
   listingStatus?: "listed" | "has_offer" | "unlisted";
   price?: number;
