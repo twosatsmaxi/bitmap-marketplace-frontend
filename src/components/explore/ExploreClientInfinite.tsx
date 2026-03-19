@@ -145,8 +145,8 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const getKey = useCallback(
     (pageIndex: number, previousPageData: FetchResponse | null): string | null => {
       if (!activeFilter) return null; // No API calls in normal mode
-      // Stop if no more data
-      if (previousPageData && !previousPageData.hasMore) return null;
+      // Stop if API explicitly says no more data, or returned fewer than requested
+      if (previousPageData && (previousPageData.hasMore === false || previousPageData.heights.length < GRID_SIZE)) return null;
       return `/api/explore/blocks?filter=${activeFilter}&page=${pageIndex}&limit=${GRID_SIZE}`;
     },
     [activeFilter]
