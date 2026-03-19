@@ -46,8 +46,8 @@ const COLLECTION_FILTER_LAYOUT: CategorizedFilterMeta[] = [
   { id: "billionaire", label: "Billionaire", priority: 10, highlight: "Blocks with Massive BTC Activity", category: "numeric" },
 ];
 
-// Module-level meta cache
-const metaCache = new Map<number, BlockMeta>();
+// Module-level meta cache (undefined = tried but failed)
+const metaCache = new Map<number, BlockMeta | null>();
 
 // Persist navigation state
 let savedAnchorHeight: number | null = null;
@@ -62,17 +62,27 @@ interface FetchResponse {
   hasMore?: boolean;
 }
 
-async function fetchMeta(height: number): Promise<BlockMeta | undefined> {
-  if (metaCache.has(height)) return metaCache.get(height);
+async function fetchMeta(height: number): Promise<BlockMeta | null> {
+  if (metaCache.has(height)) return metaCache.get(height) ?? null;
   try {
     const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}/meta`);
-    if (!res.ok) return undefined;
+    if (!res.ok) {
+      metaCache.set(height, null); // Cache failures to prevent retry loops
+      return null;
+    }
     const data: BlockMeta = await res.json();
     metaCache.set(height, data);
     return data;
   } catch {
-    return undefined;
+    metaCache.set(height, null); // Cache failures to prevent retry loops
+    return null;
   }
+}
+
+function buildHeights(anchor: number, latest: number, count: number): number[] {
+  return Array.from({ length: count }, (_, i) =>
+    Math.min(Math.max(anchor + i, 0), latest)
+  );
 }
 
 export default function ExploreClientInfinite({ latestBlock }: { latestBlock: number }) {
@@ -81,19 +91,17 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const searchParams = useSearchParams();
 
   const urlFilter = searchParams.get("filter");
-  const urlAnchor = searchParams.get("anchor");
 
   const [activeFilter, setActiveFilter] = useState<string | null>(urlFilter);
   const [isometric, setIsometric] = useState(false);
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
+  
+  // Normal mode: track how many "pages" of blocks to show
+  const [normalPageCount, setNormalPageCount] = useState(1);
 
   // Initialize anchor from URL or default
   const [anchorHeight, setAnchorHeight] = useState(() => {
     const halvingIV = 840_000;
-    if (urlAnchor) {
-      const parsed = parseInt(urlAnchor, 10);
-      if (!isNaN(parsed)) return Math.max(0, Math.min(parsed, latestBlock));
-    }
     const saved = savedAnchorHeight ?? halvingIV;
     return Math.max(0, Math.min(saved, latestBlock));
   });
@@ -106,34 +114,26 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     const params = new URLSearchParams(searchParams.toString());
     if (activeFilter) {
       params.set("filter", activeFilter);
-      params.delete("anchor");
     } else {
       params.delete("filter");
-      params.set("anchor", anchorHeight.toString());
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [activeFilter, anchorHeight, pathname, router, searchParams]);
+  }, [activeFilter, pathname, router, searchParams]);
 
-  // SWR Infinite fetcher
+  // SWR Infinite fetcher - ONLY for filter mode
   const getKey = useCallback(
     (pageIndex: number, previousPageData: FetchResponse | null): string | null => {
-      if (activeFilter) {
-        // Filter mode: stop if no more data
-        if (previousPageData && !previousPageData.hasMore) return null;
-        return `/api/explore/blocks?filter=${activeFilter}&page=${pageIndex}&limit=${GRID_SIZE}`;
-      } else {
-        // Normal mode: sequential blocks
-        const startHeight = anchorHeight + pageIndex * GRID_SIZE;
-        if (startHeight > latestBlock) return null;
-        return `/api/explore/blocks?start=${startHeight}&limit=${GRID_SIZE}`;
-      }
+      if (!activeFilter) return null; // No API calls in normal mode
+      // Stop if no more data
+      if (previousPageData && !previousPageData.hasMore) return null;
+      return `/api/explore/blocks?filter=${activeFilter}&page=${pageIndex}&limit=${GRID_SIZE}`;
     },
-    [activeFilter, anchorHeight, latestBlock]
+    [activeFilter]
   );
 
   const fetcher = async (url: string): Promise<FetchResponse> => {
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch");
+    if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
     return res.json();
   };
 
@@ -148,13 +148,31 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     revalidateFirstPage: false,
     revalidateOnFocus: false,
     parallel: false,
+    errorRetryCount: 3,
+    onErrorRetry: (err, _key, _config, revalidate, { retryCount }) => {
+      // Don't retry on 429 (rate limited)
+      if (/\b429\b/.test(err.message)) return;
+      if (retryCount >= 3) return;
+      // Exponential backoff: 5s, 10s, 20s
+      setTimeout(() => revalidate({ retryCount }), Math.min(5000 * 2 ** retryCount, 30000));
+    },
   });
 
-  // Flatten all pages
-  const allHeights = useMemo(() => {
-    if (!data) return [];
+  // Generate heights for normal mode (no API calls)
+  const normalHeights = useMemo(() => {
+    if (activeFilter) return [];
+    const totalBlocks = normalPageCount * GRID_SIZE;
+    return buildHeights(anchorHeight, latestBlock, totalBlocks);
+  }, [activeFilter, anchorHeight, latestBlock, normalPageCount]);
+
+  // Flatten filter mode pages
+  const filterHeights = useMemo(() => {
+    if (!activeFilter || !data) return [];
     return data.flatMap((page) => page.heights);
-  }, [data]);
+  }, [activeFilter, data]);
+
+  // Use appropriate heights based on mode
+  const allHeights = activeFilter ? filterHeights : normalHeights;
 
   // Build blocks with meta
   const blocks: BlockRendered[] = useMemo(() => {
@@ -165,12 +183,17 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     }));
   }, [allHeights, blockMeta]);
 
-  // Check if more data available
+  // Check if more data available (filter mode only)
   const hasMore = useMemo(() => {
+    if (!activeFilter) {
+      // Normal mode: has more if we haven't reached latest block
+      const lastHeight = anchorHeight + normalPageCount * GRID_SIZE;
+      return lastHeight < latestBlock;
+    }
     if (!data || data.length === 0) return true;
     const lastPage = data[data.length - 1];
     return lastPage.hasMore ?? lastPage.heights.length === GRID_SIZE;
-  }, [data]);
+  }, [activeFilter, anchorHeight, normalPageCount, latestBlock, data]);
 
   // Load meta for new blocks
   useEffect(() => {
@@ -206,28 +229,27 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   // Reset when filter or anchor changes
   useEffect(() => {
     setBlockMeta(new Map());
+    setNormalPageCount(1);
   }, [activeFilter, anchorHeight]);
 
-  // Throttled load more to prevent rate limiting
   const loadMore = useCallback(() => {
-    if (!isValidating && hasMore) {
-      setSize((s) => s + 1);
+    if (isValidating) return;
+    
+    if (activeFilter) {
+      // Filter mode: use SWR
+      if (hasMore) setSize((s) => s + 1);
+    } else {
+      // Normal mode: just increase page count
+      if (hasMore) setNormalPageCount((p) => p + 1);
     }
-  }, [isValidating, hasMore, setSize]);
-
-  // Debug: log when loading state changes
-  useEffect(() => {
-    if (isValidating) {
-      console.log(`[Explore] Loading page ${size}, total loaded: ${allHeights.length}`);
-    }
-  }, [isValidating, size, allHeights.length]);
+  }, [isValidating, activeFilter, hasMore, setSize]);
 
   const jumpTo = (target: number) => {
     setActiveFilter(null);
     const newAnchor = Math.max(0, Math.min(target, latestBlock));
     setAnchorHeight(newAnchor);
+    setNormalPageCount(1);
     setBlockMeta(new Map());
-    mutate(undefined, { revalidate: true });
   };
 
   const toggleFilter = (id: string) => {
@@ -237,10 +259,11 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       setActiveFilter(id);
     }
     setBlockMeta(new Map());
+    setNormalPageCount(1);
     mutate(undefined, { revalidate: true });
   };
 
-  const isLoading = !data && !error;
+  const isLoading = activeFilter && !data && !error;
   const loadedCount = allHeights.length;
   const totalCount = data?.[0]?.total;
 
@@ -364,7 +387,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       <InfiniteScrollTrigger
         onIntersect={loadMore}
         hasMore={hasMore}
-        isLoading={isValidating}
+        isLoading={isValidating || (activeFilter === null && isLoading)}
       />
 
       {error && (
