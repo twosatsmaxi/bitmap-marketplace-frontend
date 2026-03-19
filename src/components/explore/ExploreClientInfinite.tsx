@@ -46,15 +46,12 @@ const COLLECTION_FILTER_LAYOUT: CategorizedFilterMeta[] = [
   { id: "billionaire", label: "Billionaire", priority: 10, highlight: "Blocks with Massive BTC Activity", category: "numeric" },
 ];
 
-// Module-level meta cache (undefined = tried but failed)
+// Module-level meta cache (null = tried but failed)
+const META_CACHE_MAX = 500;
 const metaCache = new Map<number, BlockMeta | null>();
 
 // Persist navigation state
 let savedAnchorHeight: number | null = null;
-
-if (savedAnchorHeight !== null && savedAnchorHeight < 0) {
-  savedAnchorHeight = null;
-}
 
 interface FetchResponse {
   heights: number[];
@@ -62,19 +59,30 @@ interface FetchResponse {
   hasMore?: boolean;
 }
 
+function evictMetaCache() {
+  if (metaCache.size <= META_CACHE_MAX) return;
+  const toDelete = metaCache.size - META_CACHE_MAX;
+  const keys = metaCache.keys();
+  for (let i = 0; i < toDelete; i++) {
+    const { value } = keys.next();
+    if (value !== undefined) metaCache.delete(value);
+  }
+}
+
 async function fetchMeta(height: number): Promise<BlockMeta | null> {
   if (metaCache.has(height)) return metaCache.get(height) ?? null;
   try {
     const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}/meta`);
     if (!res.ok) {
-      metaCache.set(height, null); // Cache failures to prevent retry loops
+      metaCache.set(height, null);
       return null;
     }
     const data: BlockMeta = await res.json();
     metaCache.set(height, data);
+    evictMetaCache();
     return data;
   } catch {
-    metaCache.set(height, null); // Cache failures to prevent retry loops
+    metaCache.set(height, null);
     return null;
   }
 }
@@ -130,9 +138,11 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   // Persist state
   useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
 
-  // Sync to URL
+  // Sync filter to URL (only when activeFilter changes)
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
+    const currentFilter = params.get("filter");
+    if (currentFilter === activeFilter) return;
     if (activeFilter) {
       params.set("filter", activeFilter);
     } else {
@@ -161,7 +171,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const {
     data,
     error,
-    size,
     setSize,
     isValidating,
     mutate,
@@ -218,14 +227,33 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   // Load meta for new blocks
   useEffect(() => {
-    const heightsNeedingMeta = allHeights.filter((h) => !blockMeta.has(h) && !metaCache.has(h));
-    if (heightsNeedingMeta.length === 0) return;
+    const heightsMissing = allHeights.filter((h) => !blockMeta.has(h));
+    if (heightsMissing.length === 0) return;
+
+    // Populate from module cache first
+    const fromCache: { height: number; meta: BlockMeta }[] = [];
+    const needsFetch: number[] = [];
+    for (const h of heightsMissing) {
+      const cached = metaCache.get(h);
+      if (cached) fromCache.push({ height: h, meta: cached });
+      else if (!metaCache.has(h)) needsFetch.push(h);
+    }
+
+    if (fromCache.length > 0) {
+      setBlockMeta((prev) => {
+        const next = new Map(prev);
+        fromCache.forEach(({ height, meta }) => next.set(height, meta));
+        return next;
+      });
+    }
+
+    if (needsFetch.length === 0) return;
 
     let cancelled = false;
 
     async function loadMeta() {
       const results = await Promise.all(
-        heightsNeedingMeta.map(async (height) => {
+        needsFetch.map(async (height) => {
           const meta = await fetchMeta(height);
           return { height, meta };
         })
