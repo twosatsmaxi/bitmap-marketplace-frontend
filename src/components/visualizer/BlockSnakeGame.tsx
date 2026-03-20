@@ -63,7 +63,7 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
   // Reusable objects to avoid garbage collection
   const targetPosRef = useRef(new THREE.Vector3());
   const cameraPosRef = useRef(new THREE.Vector3());
-  const offsetRef = useRef(new THREE.Vector3(0, 35, 0.1));
+  const offsetRef = useRef(new THREE.Vector3(8, 22, 8));
 
   // Calculate grid position from index
   const getTxPosition = useCallback((index: number): Position | null => {
@@ -147,11 +147,12 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
     const spacing = 2.5;
     spacingRef.current = spacing;
 
-    // Camera - top-down view for snake game
-    const camDist = Math.max(cols * spacing * 0.8, 30);
+    // Camera - angled top-down view for snake game
+    const camDist = Math.max(cols * spacing * 0.7, 28);
     const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, camDist, 0);
+    camera.position.set(camDist * 0.3, camDist * 0.8, camDist * 0.3);
     camera.lookAt(0, 0, 0);
+    camera.up.set(0, 1, 0);
     cameraRef.current = camera;
 
     // Renderer
@@ -386,8 +387,7 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
         targetPosRef.current.set(head.x * spacing, 0, head.z * spacing);
         cameraPosRef.current.copy(targetPosRef.current).add(offsetRef.current);
         
-        cameraRef.current.position.lerp(cameraPosRef.current, 0.04);
-        cameraRef.current.lookAt(targetPosRef.current);
+        cameraRef.current.position.lerp(cameraPosRef.current, 0.06);
       }
 
       renderer.render(scene, camera);
