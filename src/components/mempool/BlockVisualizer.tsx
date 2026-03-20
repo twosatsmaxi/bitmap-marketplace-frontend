@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -30,11 +30,11 @@ interface BlockVisualizerProps {
 // Color based on fee rate (fee per byte)
 function getTransactionColor(fee: number, size: number): number {
   const feeRate = fee / size;
-  if (feeRate < 10) return 0x7e4912;      // Low fee - dark
-  if (feeRate < 50) return 0xb87326;      // Medium-low
-  if (feeRate < 100) return 0xf7931a;     // Medium - orange
-  if (feeRate < 500) return 0xffc12a;     // High - yellow
-  return 0xffeb3b;                        // Very high - bright yellow
+  if (feeRate < 10) return 0x7e4912;
+  if (feeRate < 50) return 0xb87326;
+  if (feeRate < 100) return 0xf7931a;
+  if (feeRate < 500) return 0xffc12a;
+  return 0xffeb3b;
 }
 
 // Size based on transaction size
@@ -49,19 +49,18 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const txMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const txGroupRef = useRef<THREE.Group | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const hoveredTxRef = useRef<string | null>(null);
   const frameIdRef = useRef<number>(0);
+  const transactionsRef = useRef<Transaction[]>([]);
   const [webglError, setWebglError] = useState(false);
 
-  // Helper function removed - logic moved inline
-
+  // Initialize scene once
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Check WebGL
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     if (!gl) {
@@ -69,23 +68,15 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
       return;
     }
 
-    // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x09090b);
     scene.fog = new THREE.Fog(0x09090b, 30, 100);
     sceneRef.current = scene;
 
-    // Camera - isometric angle
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(40, 35, 40);
     cameraRef.current = camera;
 
-    // Renderer
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -100,7 +91,6 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
       return;
     }
 
-    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -121,13 +111,9 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
     dirLight.shadow.mapSize.height = 2048;
     scene.add(dirLight);
 
-    // Ground plane
+    // Ground
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
-    const groundMaterial = new THREE.MeshLambertMaterial({ 
-      color: 0x121214,
-      transparent: true,
-      opacity: 0.6,
-    });
+    const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x121214, transparent: true, opacity: 0.6 });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -140,49 +126,12 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
     gridHelper.material.transparent = true;
     scene.add(gridHelper);
 
-    // Create transaction cubes in a packed layout
-    const transactions = blockData.transactions.slice(0, 200);
-    const txMeshes = new Map<string, THREE.Mesh>();
-    
-    // Calculate grid dimensions for a square-ish layout
-    const count = transactions.length;
-    const cols = Math.ceil(Math.sqrt(count));
-    const spacing = 2.5;
-    
-    transactions.forEach((tx, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      
-      // Offset to center
-      const x = (col - cols / 2) * spacing;
-      const z = (row - cols / 2) * spacing;
-      
-      // Create mesh
-      const size = getTransactionSize(tx);
-      const color = getTransactionColor(tx.fee, tx.size);
-      const height = 0.3 + (tx.fee / 100000) * 2;
-      
-      const geometry = new THREE.BoxGeometry(size, height, size);
-      const material = new THREE.MeshLambertMaterial({ 
-        color,
-        transparent: true,
-        opacity: 0.9,
-      });
-      
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(x, height / 2, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      
-      (mesh as any).userData = { tx, originalY: height / 2 };
-      
-      scene.add(mesh);
-      txMeshes.set(tx.txid, mesh);
-    });
-    
-    txMeshesRef.current = txMeshes;
+    // Transaction group
+    const txGroup = new THREE.Group();
+    scene.add(txGroup);
+    txGroupRef.current = txGroup;
 
-    // Mouse interaction
+    // Mouse handlers
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -190,7 +139,7 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
 
     const handleClick = () => {
       if (hoveredTxRef.current && onTransactionClick) {
-        const tx = blockData.transactions.find(t => t.txid === hoveredTxRef.current);
+        const tx = transactionsRef.current.find(t => t.txid === hoveredTxRef.current);
         if (tx) onTransactionClick(tx);
       }
     };
@@ -198,7 +147,6 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("click", handleClick);
 
-    // Resize handler
     const handleResize = () => {
       if (!cameraRef.current || !rendererRef.current) return;
       cameraRef.current.aspect = window.innerWidth / window.innerHeight;
@@ -211,15 +159,13 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
     const animate = () => {
       controls.update();
 
-      // Raycasting for hover
+      // Raycasting
       raycasterRef.current.setFromCamera(mouseRef.current, camera);
-      const intersects = raycasterRef.current.intersectObjects(
-        Array.from(txMeshes.values())
-      );
+      const intersects = raycasterRef.current.intersectObjects(txGroup.children);
       
       // Reset previous hover
       if (hoveredTxRef.current) {
-        const prevMesh = txMeshes.get(hoveredTxRef.current);
+        const prevMesh = txGroup.getObjectByName(hoveredTxRef.current) as THREE.Mesh;
         if (prevMesh) {
           prevMesh.position.y = (prevMesh as any).userData.originalY;
           prevMesh.scale.setScalar(1);
@@ -232,14 +178,12 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
       // Apply new hover
       if (intersects.length > 0) {
         const hitMesh = intersects[0].object as THREE.Mesh;
-        const txid = (hitMesh as any).userData.tx.txid;
+        const txid = hitMesh.name;
         hoveredTxRef.current = txid;
         
-        // Highlight effect
         hitMesh.position.y = (hitMesh as any).userData.originalY + 0.5;
         hitMesh.scale.setScalar(1.1);
         (hitMesh.material as THREE.MeshLambertMaterial).opacity = 1;
-        
         document.body.style.cursor = "pointer";
       }
 
@@ -254,43 +198,76 @@ export function BlockVisualizer({ blockData, onTransactionClick }: BlockVisualiz
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("click", handleClick);
       window.removeEventListener("resize", handleResize);
-      
-      txMeshes.forEach((mesh) => {
-        scene.remove(mesh);
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
-      });
-      txMeshes.clear();
-      
       controls.dispose();
       renderer.dispose();
-      
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [blockData, onTransactionClick]);
+  }, [onTransactionClick]);
+
+  // Update transactions when blockData changes
+  useEffect(() => {
+    if (!txGroupRef.current) return;
+
+    // Clear existing
+    while (txGroupRef.current.children.length > 0) {
+      const child = txGroupRef.current.children[0];
+      txGroupRef.current.remove(child);
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      }
+    }
+
+    // Store transactions for click handler
+    transactionsRef.current = blockData.transactions;
+
+    // Create new transaction cubes
+    const transactions = blockData.transactions.slice(0, 200);
+    const cols = Math.ceil(Math.sqrt(transactions.length));
+    const spacing = 2.5;
+    
+    transactions.forEach((tx, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = (col - cols / 2) * spacing;
+      const z = (row - cols / 2) * spacing;
+      
+      const size = getTransactionSize(tx);
+      const color = getTransactionColor(tx.fee, tx.size);
+      const height = 0.3 + (tx.fee / 100000) * 2;
+      
+      const geometry = new THREE.BoxGeometry(size, height, size);
+      const material = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.9 });
+      const mesh = new THREE.Mesh(geometry, material);
+      
+      mesh.position.set(x, height / 2, z);
+      mesh.name = tx.txid;
+      (mesh as any).userData = { tx, originalY: height / 2 };
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      
+      txGroupRef.current!.add(mesh);
+    });
+
+    // Reset camera target
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
+    }
+  }, [blockData]);
 
   if (webglError) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-bg">
         <div className="text-center max-w-md px-6">
-          <h2 className="font-mono text-lg font-bold text-white mb-2">
-            WebGL Not Available
-          </h2>
-          <p className="font-mono text-sm text-zinc-500">
-            Your browser doesn&apos;t support WebGL, which is required for the 3D visualization.
-          </p>
+          <h2 className="font-mono text-lg font-bold text-white mb-2">WebGL Not Available</h2>
+          <p className="font-mono text-sm text-zinc-500">Your browser doesn&apos;t support WebGL.</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0"
-      style={{ cursor: "grab" }}
-    />
-  );
+  return <div ref={containerRef} className="absolute inset-0" style={{ cursor: "grab" }} />;
 }
