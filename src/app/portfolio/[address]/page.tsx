@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getPortfolio } from "@/lib/api";
 import PortfolioGrid from "@/components/portfolio/PortfolioGrid";
+import CopyAddressButton from "@/components/portfolio/CopyAddressButton";
 
 interface Props {
   params: Promise<{ address: string }>;
@@ -30,9 +31,10 @@ export default async function PortfolioPage({ params }: Props) {
             Portfolio
           </h1>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide break-all">
+            <span className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
               {truncateAddress(address)}
             </span>
+            <CopyAddressButton address={address} />
             {initialData && (
               <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] text-zinc-400">
                 <span className="text-primary">{initialData.total}</span> bitmaps
