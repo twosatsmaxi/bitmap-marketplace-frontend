@@ -5,40 +5,16 @@ import { BlockVisualizer } from "@/components/mempool/BlockVisualizer";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { BackButton } from "@/components/mempool/BackButton";
 
-interface Transaction {
-  txid: string;
+interface BlockMeta {
+  height: number;
+  tx_count: number;
   size: number;
-  fee: number;
-  inputs: number;
-  outputs: number;
 }
 
 interface BlockData {
-  height: number;
-  hash: string;
-  timestamp: number;
-  size: number;
-  tx_count: number;
-  transactions: Transaction[];
-}
-
-// Generate mock block data as fallback
-function generateMockBlock(height: number): BlockData {
-  const txCount = 150 + Math.floor(Math.random() * 200);
-  return {
-    height,
-    hash: `0000000000000000000${Math.random().toString(36).substring(2, 20)}`,
-    timestamp: Date.now() / 1000 - Math.random() * 3600,
-    size: txCount * 500 + Math.floor(Math.random() * 100000),
-    tx_count: txCount,
-    transactions: Array.from({ length: txCount }, (_, i) => ({
-      txid: `${height}_${i}_${Math.random().toString(36).substring(2, 15)}`,
-      size: 150 + Math.floor(Math.random() * 2000),
-      fee: Math.floor(Math.random() * 100000),
-      inputs: 1 + Math.floor(Math.random() * 5),
-      outputs: 1 + Math.floor(Math.random() * 3),
-    })),
-  };
+  meta: BlockMeta;
+  /** 1 byte per tx — values 1-6 (log₁₀ output value buckets) */
+  bytes: Uint8Array;
 }
 
 function LoadingOverlay({ blockHeight }: { blockHeight: number }) {
@@ -60,11 +36,21 @@ function LoadingOverlay({ blockHeight }: { blockHeight: number }) {
   );
 }
 
+// Bucket value labels for the legend and detail panel
+const BUCKET_LABELS: Record<number, string> = {
+  1: "< 0.001 BTC",
+  2: "0.001 – 0.01 BTC",
+  3: "0.01 – 0.1 BTC",
+  4: "0.1 – 1 BTC",
+  5: "1 – 10 BTC",
+  6: "10+ BTC",
+};
+
 export default function MempoolPage() {
   const [mounted, setMounted] = useState(false);
   const [blockHeight, setBlockHeight] = useState(800150);
   const [blockData, setBlockData] = useState<BlockData | null>(null);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [selectedTxIndex, setSelectedTxIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,30 +63,38 @@ export default function MempoolPage() {
 
     async function fetchBlock() {
       setLoading(true);
-      setSelectedTx(null);
-      
+      setSelectedTxIndex(null);
+
       try {
-        const res = await fetch(`/api/explore/blocks/${blockHeight}`);
-        const text = await res.text();
-        
+        // Fetch meta and binary data in parallel
+        const [metaRes, bytesRes] = await Promise.all([
+          fetch(`/api/explore/blocks/${blockHeight}/meta`),
+          fetch(`/api/explore/blocks/${blockHeight}`),
+        ]);
+
         if (cancelled) return;
-        
-        if (!text || text.trim() === '') {
-          throw new Error('Empty response');
+
+        if (!metaRes.ok || !bytesRes.ok) {
+          throw new Error(`HTTP error: meta=${metaRes.status} bytes=${bytesRes.status}`);
         }
-        
-        const data = JSON.parse(text);
-        
-        if (res.ok && data.transactions) {
-          setBlockData(data);
-        } else {
-          throw new Error(data.error || 'Invalid response');
-        }
+
+        const meta = await metaRes.json();
+        const buffer = await bytesRes.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        if (cancelled) return;
+
+        setBlockData({
+          meta: {
+            height: blockHeight,
+            tx_count: meta.tx_count || bytes.length,
+            size: meta.size || 0,
+          },
+          bytes,
+        });
       } catch (e) {
         if (!cancelled) {
           console.error("Failed to fetch block:", e);
-          // Use mock data on error
-          setBlockData(generateMockBlock(blockHeight));
         }
       } finally {
         if (!cancelled) {
@@ -120,17 +114,21 @@ export default function MempoolPage() {
     setBlockHeight(height);
   }, []);
 
-  const handleTxClick = useCallback((tx: Transaction) => {
-    setSelectedTx(tx);
+  const handleTxClick = useCallback((index: number) => {
+    setSelectedTxIndex(index);
   }, []);
 
   const handleClose = useCallback(() => {
-    setSelectedTx(null);
+    setSelectedTxIndex(null);
   }, []);
 
   if (!mounted) {
     return <LoadingOverlay blockHeight={800150} />;
   }
+
+  const selectedBucket = selectedTxIndex !== null && blockData
+    ? blockData.bytes[selectedTxIndex]
+    : null;
 
   return (
     <>
@@ -138,8 +136,8 @@ export default function MempoolPage() {
       {loading && <LoadingOverlay blockHeight={blockHeight} />}
 
       {/* Block Selector */}
-      <BlockSelector 
-        currentHeight={blockHeight} 
+      <BlockSelector
+        currentHeight={blockHeight}
         onHeightChange={handleHeightChange}
         disabled={loading}
       />
@@ -152,35 +150,37 @@ export default function MempoolPage() {
               Transactions
             </div>
             <div className="font-mono text-lg font-bold text-white">
-              {blockData.tx_count.toLocaleString()}
+              {blockData.meta.tx_count.toLocaleString()}
             </div>
-            <div className="font-mono text-[10px] text-zinc-600">
-              {(blockData.size / 1000000).toFixed(2)} MB
-            </div>
+            {blockData.meta.size > 0 && (
+              <div className="font-mono text-[10px] text-zinc-600">
+                {(blockData.meta.size / 1000000).toFixed(2)} MB
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* 3D Visualizer */}
       {blockData && !loading && (
-        <BlockVisualizer 
-          key={blockData.height} // Force remount on block change
-          blockData={blockData}
+        <BlockVisualizer
+          key={blockData.meta.height}
+          blockBytes={blockData.bytes}
           onTransactionClick={handleTxClick}
         />
       )}
-      
+
       {/* Transaction Detail Panel */}
-      {selectedTx && !loading && (
+      {selectedTxIndex !== null && selectedBucket && !loading && (
         <div className="absolute bottom-6 right-6 z-10 w-80">
           <div className="bg-black/80 backdrop-blur-md rounded-xl border border-primary/30 p-5 shadow-2xl">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="font-mono text-xs text-zinc-500 uppercase tracking-wider mb-1">
-                  Transaction
+                  Transaction #{selectedTxIndex + 1}
                 </h2>
-                <p className="font-mono text-sm font-bold text-white truncate max-w-[200px]">
-                  {selectedTx.txid.substring(0, 16)}...
+                <p className="font-mono text-sm font-bold text-white">
+                  Output Value Bucket: {selectedBucket}
                 </p>
               </div>
               <button
@@ -191,48 +191,14 @@ export default function MempoolPage() {
               </button>
             </div>
 
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Size</span>
-                <span className="font-mono text-xs text-zinc-300">
-                  {selectedTx.size.toLocaleString()} bytes
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Fee</span>
+                <span className="font-mono text-xs text-zinc-500">Output Value</span>
                 <span className="font-mono text-xs text-primary">
-                  {(selectedTx.fee / 100000000).toFixed(8)} BTC
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Inputs</span>
-                <span className="font-mono text-xs text-zinc-300">
-                  {selectedTx.inputs}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Outputs</span>
-                <span className="font-mono text-xs text-zinc-300">
-                  {selectedTx.outputs}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Fee Rate</span>
-                <span className="font-mono text-xs text-zinc-300">
-                  {(selectedTx.fee / selectedTx.size).toFixed(1)} sat/vB
+                  {BUCKET_LABELS[selectedBucket] ?? `Bucket ${selectedBucket}`}
                 </span>
               </div>
             </div>
-
-            <a
-              href={`https://mempool.space/tx/${selectedTx.txid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg font-mono text-xs font-bold uppercase tracking-[0.15em] text-primary transition-colors"
-            >
-              View on Mempool
-              <span className="text-xs">↗</span>
-            </a>
           </div>
         </div>
       )}
@@ -241,18 +207,19 @@ export default function MempoolPage() {
       <div className="absolute top-20 right-6 z-10">
         <div className="bg-black/50 backdrop-blur-sm rounded-lg p-4 border border-white/10">
           <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 mb-3">
-            Fee Rate (sat/vB)
+            Output Value
           </h3>
           <div className="space-y-2">
             {[
-              { label: "500+", color: "#ffeb3b" },
-              { label: "100-500", color: "#ffc12a" },
-              { label: "50-100", color: "#f7931a" },
-              { label: "10-50", color: "#b87326" },
-              { label: "<10", color: "#7e4912" },
+              { label: "10+ BTC", color: "#ffeb3b" },
+              { label: "1 – 10 BTC", color: "#ffc12a" },
+              { label: "0.1 – 1 BTC", color: "#f7931a" },
+              { label: "0.01 – 0.1 BTC", color: "#b87326" },
+              { label: "0.001 – 0.01 BTC", color: "#a05a1a" },
+              { label: "< 0.001 BTC", color: "#7e4912" },
             ].map(({ label, color }) => (
               <div key={label} className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-3 h-3 rounded"
                   style={{ backgroundColor: color }}
                 />
