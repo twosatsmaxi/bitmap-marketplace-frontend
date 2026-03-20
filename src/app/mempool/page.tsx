@@ -1,21 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect } from "react";
 import { useMockMempoolData } from "@/components/mempool/hooks/useMockMempoolData";
 import { useAdaptiveQuality } from "@/components/mempool/hooks/useAdaptiveQuality";
+import { MempoolScene } from "@/components/mempool/MempoolScene";
 import { MempoolHUD } from "@/components/mempool/MempoolHUD";
 import { BackButton } from "@/components/mempool/BackButton";
-
-// Dynamically import Three.js scene to avoid SSR issues
-const MempoolScene = dynamic(
-  () =>
-    import("@/components/mempool/MempoolScene").then((mod) => mod.MempoolScene),
-  {
-    ssr: false,
-    loading: () => <LoadingScreen />,
-  }
-);
 
 function LoadingScreen() {
   return (
@@ -33,7 +23,8 @@ function LoadingScreen() {
   );
 }
 
-function MempoolContent() {
+export default function MempoolPage() {
+  const [mounted, setMounted] = useState(false);
   const {
     transactions,
     stats,
@@ -42,6 +33,14 @@ function MempoolContent() {
   } = useMockMempoolData();
 
   const { quality, fps, particleCount } = useAdaptiveQuality();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <LoadingScreen />;
+  }
 
   return (
     <>
@@ -54,13 +53,5 @@ function MempoolContent() {
       <MempoolHUD stats={stats} fps={fps} quality={quality} />
       <BackButton />
     </>
-  );
-}
-
-export default function MempoolPage() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <MempoolContent />
-    </Suspense>
   );
 }

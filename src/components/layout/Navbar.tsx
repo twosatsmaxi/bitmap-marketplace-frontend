@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, Terminal, Menu, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -53,20 +53,15 @@ export default function Navbar() {
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
-            <NavLink href="/activity" active={isActivityActive}>
-              <span className="flex items-center gap-1.5">
-                Activity
-                {isActivityActive && (
-                  <Link
-                    href="/mempool"
-                    className="ml-1 flex items-center gap-1 text-[9px] text-primary/80 hover:text-primary"
-                    title="Immersive View"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                  </Link>
-                )}
-              </span>
-            </NavLink>
+            <NavLink href="/activity" active={isActivityActive}>Activity</NavLink>
+            {isActivityActive && (
+              <NavLink href="/mempool" active={pathname === "/mempool"}>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3" />
+                  3D View
+                </span>
+              </NavLink>
+            )}
             <SoonNav label="Analytics" />
           </div>
 
