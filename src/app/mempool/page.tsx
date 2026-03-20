@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { BlockVisualizer } from "@/components/mempool/BlockVisualizer";
+import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { BackButton } from "@/components/mempool/BackButton";
 
 interface Transaction {
@@ -10,6 +11,15 @@ interface Transaction {
   fee: number;
   inputs: number;
   outputs: number;
+}
+
+interface BlockData {
+  height: number;
+  hash: string;
+  timestamp: number;
+  size: number;
+  tx_count: number;
+  transactions: Transaction[];
 }
 
 function LoadingScreen() {
@@ -30,10 +40,39 @@ function LoadingScreen() {
 
 export default function MempoolPage() {
   const [mounted, setMounted] = useState(false);
+  const [blockHeight, setBlockHeight] = useState(800150);
+  const [blockData, setBlockData] = useState<BlockData | null>(null);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Fetch block data when height changes
+  useEffect(() => {
+    async function fetchBlock() {
+      setLoading(true);
+      setSelectedTx(null);
+      
+      try {
+        const res = await fetch(`/api/explore/blocks/${blockHeight}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBlockData(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch block:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBlock();
+  }, [blockHeight]);
+
+  const handleHeightChange = useCallback((height: number) => {
+    setBlockHeight(height);
   }, []);
 
   const handleTxClick = useCallback((tx: Transaction) => {
@@ -50,10 +89,36 @@ export default function MempoolPage() {
 
   return (
     <>
-      <BlockVisualizer 
-        blockHeight={800150}
-        onTransactionClick={handleTxClick}
+      {/* Block Selector */}
+      <BlockSelector 
+        currentHeight={blockHeight} 
+        onHeightChange={handleHeightChange} 
       />
+
+      {/* Block Info */}
+      {blockData && (
+        <div className="absolute top-6 left-72 z-10">
+          <div className="bg-black/50 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+              Transactions
+            </div>
+            <div className="font-mono text-lg font-bold text-white">
+              {blockData.tx_count.toLocaleString()}
+            </div>
+            <div className="font-mono text-[10px] text-zinc-600">
+              {(blockData.size / 1000000).toFixed(2)} MB
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3D Visualizer */}
+      {blockData && (
+        <BlockVisualizer 
+          blockData={blockData}
+          onTransactionClick={handleTxClick}
+        />
+      )}
       
       {/* Transaction Detail Panel */}
       {selectedTx && (
