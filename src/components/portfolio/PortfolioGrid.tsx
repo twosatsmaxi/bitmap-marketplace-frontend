@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import useSWRInfinite from "swr/infinite";
 import { Box, Square, X } from "lucide-react";
 import BlockCard from "@/components/explore/BlockCard";
@@ -74,6 +74,8 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(new Map());
   const [isometric, toggle3D] = use3DPreference();
   const [activeTrait, setActiveTrait] = useState<string | null>(null);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
+  const prevTraitRef = useRef<string | null>(null);
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PortfolioResponse | null): string | null => {
@@ -173,11 +175,39 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
 
   const isLoading = !data && !error;
 
+  // Handle filter change with visual transition
   const handleTraitClick = (traitName: string) => {
-    setActiveTrait(current => current === traitName ? null : traitName);
+    const newTrait = activeTrait === traitName ? null : traitName;
+    
+    // Only animate if actually changing
+    if (newTrait !== activeTrait) {
+      setIsFilterTransitioning(true);
+      prevTraitRef.current = activeTrait;
+      
+      // Small delay to allow fade-out before state change triggers data fetch
+      setTimeout(() => {
+        setActiveTrait(newTrait);
+      }, 50);
+    }
   };
 
-  const clearFilter = () => setActiveTrait(null);
+  // Clear transition state when data loads
+  useEffect(() => {
+    if (!isValidating && isFilterTransitioning) {
+      const timer = setTimeout(() => setIsFilterTransitioning(false), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isValidating, isFilterTransitioning]);
+
+  const clearFilter = () => {
+    if (activeTrait) {
+      setIsFilterTransitioning(true);
+      prevTraitRef.current = activeTrait;
+      setTimeout(() => {
+        setActiveTrait(null);
+      }, 50);
+    }
+  };
 
   return (
     <>
@@ -211,8 +241,14 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
         </div>
       )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Grid with fade transition on filter change */}
+      <div 
+        className={cn(
+          "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4",
+          "transition-all duration-200 ease-out",
+          isFilterTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
+        )}
+      >
         {heights.map((height, index) => (
           <BlockCard
             key={height}
