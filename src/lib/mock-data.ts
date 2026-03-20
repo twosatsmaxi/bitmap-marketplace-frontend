@@ -34,10 +34,22 @@ function getMockTraits(blockNumber: number): string[] {
   return traits.length > 0 ? traits : ["standard"];
 }
 
+/**
+ * Generate mock child inscription IDs for a bitmap
+ */
+function getMockChildren(blockNumber: number, count: number): string[] {
+  if (count <= 0) return [];
+  return Array.from({ length: count }, (_, i) => 
+    `${blockNumber}child${i}a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2i${i}`
+  );
+}
+
 export function makeMockBitmap(
   blockNumber: number,
   overrides: Partial<Bitmap> = {}
 ): Bitmap {
+  const childrenCount = overrides.childrenCount ?? Math.floor(Math.random() * 5);
+  
   return {
     id: `${blockNumber}.bitmap`,
     blockNumber,
@@ -48,7 +60,8 @@ export function makeMockBitmap(
     bitmapType: getBitmapType(blockNumber),
     rarity: getBitmapRarity(blockNumber),
     traits: getMockTraits(blockNumber),
-    childrenCount: Math.floor(Math.random() * 5),
+    childrenCount,
+    children: overrides.children ?? getMockChildren(blockNumber, childrenCount),
     price: blockNumber < 10000 ? Math.floor(Math.random() * 500000) + 50000 : undefined,
     lastSalePrice: Math.floor(Math.random() * 300000) + 20000,
     listingStatus: blockNumber % 3 === 0 ? "listed" : blockNumber % 5 === 0 ? "has_offer" : "unlisted",
