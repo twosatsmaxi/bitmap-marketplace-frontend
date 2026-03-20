@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Mempool Visualization | Bitmap Marketplace",
-  description: "Immersive 3D visualization of live Bitcoin mempool activity",
+  title: "Bitmap Visualizer | Bitmap Marketplace",
+  description: "3D visualization of Bitcoin blocks as bitmaps",
 };
 
 export default function MempoolLayout({

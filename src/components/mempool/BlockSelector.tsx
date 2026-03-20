@@ -33,11 +33,8 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
             className="cursor-pointer"
             onClick={() => setIsOpen(!isOpen)}
           >
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              Block Height
-            </div>
             <div className="font-mono text-xl font-bold text-primary">
-              {currentHeight.toLocaleString()}
+              {currentHeight.toLocaleString()}<span className="text-zinc-500">.bitmap</span>
             </div>
           </div>
           {txCount != null && (
