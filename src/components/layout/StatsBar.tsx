@@ -1,15 +1,16 @@
 "use client";
 
 import type { CollectionStats } from "@/lib/types";
+import { MOCK_STATS } from "@/lib/mock-data";
 import CountUp from "@/components/ui/CountUp";
 import { formatSats, formatNumber, formatPercent } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import useSWR from "swr";
 
-interface StatsBarProps {
-  stats: CollectionStats;
-}
+const BIS_BASE = "https://api.bestinslot.xyz/v3";
+const API_KEY = process.env.NEXT_PUBLIC_BESTINSLOT_API_KEY;
 
 interface StatItemData {
   key: string;
@@ -19,18 +20,64 @@ interface StatItemData {
   highlight?: boolean;
 }
 
-export default function StatsBar({ stats }: StatsBarProps) {
+async function fetchCollectionStats(): Promise<CollectionStats> {
+  if (!API_KEY || API_KEY === "your_key_here") {
+    throw new Error("No API key configured");
+  }
+  const url = new URL(`${BIS_BASE}/collection/stats`);
+  url.searchParams.set("slug", "bitmap");
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  
+  try {
+    const res = await fetch(url.toString(), {
+      headers: {
+        "x-api-key": API_KEY,
+        "Content-Type": "application/json",
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) throw new Error(`BiS API error: ${res.status}`);
+    return res.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+function StatSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("animate-pulse bg-zinc-800 rounded", className)} />
+  );
+}
+
+export default function StatsBar() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
+  const { data: stats, isLoading } = useSWR<CollectionStats>(
+    "collection-stats",
+    fetchCollectionStats,
+    {
+      refreshInterval: 60000, // Refresh every 60 seconds
+      revalidateOnFocus: false,
+      fallbackData: MOCK_STATS, // Show mock data immediately while fetching
+    }
+  );
+
+  const displayStats = stats ?? MOCK_STATS;
+
   const statItems: StatItemData[] = [
-    { key: "floor", label: "Floor", value: stats.floorPrice, format: "sats", highlight: true },
-    { key: "volume", label: "24h Vol", value: stats.totalVolume, format: "sats" },
-    { key: "avg", label: "24h Avg", value: stats.avgPrice24h, format: "sats" },
-    { key: "change", label: "24h Change", value: stats.change24h, format: "percent" },
-    { key: "listed", label: "Listed", value: stats.listedCount, format: "number" },
-    { key: "holders", label: "Holders", value: stats.holders, format: "number" },
+    { key: "floor", label: "Floor", value: displayStats.floorPrice, format: "sats", highlight: true },
+    { key: "volume", label: "24h Vol", value: displayStats.totalVolume, format: "sats" },
+    { key: "avg", label: "24h Avg", value: displayStats.avgPrice24h, format: "sats" },
+    { key: "change", label: "24h Change", value: displayStats.change24h, format: "percent" },
+    { key: "listed", label: "Listed", value: displayStats.listedCount, format: "number" },
+    { key: "holders", label: "Holders", value: displayStats.holders, format: "number" },
   ];
 
   const checkScroll = () => {
@@ -121,20 +168,24 @@ export default function StatsBar({ stats }: StatsBarProps) {
               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 md:text-[10px]">
                 {item.label}:
               </span>
-              <span
-                className={cn(
-                  "font-mono text-xs font-bold md:text-sm",
-                  item.highlight
-                    ? "text-primary"
-                    : item.format === "percent"
-                    ? item.value >= 0
-                      ? "text-success"
-                      : "text-danger"
-                    : "text-zinc-300"
-                )}
-              >
-                <CountUp end={item.value} formatFn={() => formatValue(item)} />
-              </span>
+              {isLoading && !stats ? (
+                <StatSkeleton className="h-4 w-16" />
+              ) : (
+                <span
+                  className={cn(
+                    "font-mono text-xs font-bold md:text-sm",
+                    item.highlight
+                      ? "text-primary"
+                      : item.format === "percent"
+                      ? item.value >= 0
+                        ? "text-success"
+                        : "text-danger"
+                      : "text-zinc-300"
+                  )}
+                >
+                  <CountUp end={item.value} formatFn={() => formatValue(item)} />
+                </span>
+              )}
             </div>
           ))}
 
@@ -143,9 +194,13 @@ export default function StatsBar({ stats }: StatsBarProps) {
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
               Listed %:
             </span>
-            <span className="font-mono text-sm font-bold text-zinc-300">
-              {((stats.listedCount / stats.totalSupply) * 100).toFixed(1)}%
-            </span>
+            {isLoading && !stats ? (
+              <StatSkeleton className="h-4 w-10" />
+            ) : (
+              <span className="font-mono text-sm font-bold text-zinc-300">
+                {((displayStats.listedCount / displayStats.totalSupply) * 100).toFixed(1)}%
+              </span>
+            )}
           </div>
         </div>
       </div>

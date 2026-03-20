@@ -3,10 +3,11 @@
 import type { Bitmap } from "@/lib/types";
 import { formatNumber, truncateAddr, truncateInscription } from "@/lib/utils";
 import { useState } from "react";
-import { ChevronDown, Plus, ExternalLink } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
 import Link from "next/link";
+import ChildrenGallery from "./ChildrenGallery";
 
 interface MetadataPanelProps {
   bitmap: Bitmap;
@@ -61,53 +62,6 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
     );
   };
 
-  // Children section component with collapsible ordinals.com links
-  const ChildrenSection = () => {
-    const [showChildren, setShowChildren] = useState(false);
-    
-    if (!bitmap.children || bitmap.children.length === 0) return null;
-
-    const childCount = bitmap.children.length;
-    const childLabel = `${childCount} ${childCount === 1 ? 'child' : 'children'}`;
-
-    return (
-      <div className="flex flex-col text-sm py-1">
-        <div className="flex items-start justify-between">
-          <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500 pt-0.5">
-            Children
-          </span>
-          <button
-            onClick={() => setShowChildren(!showChildren)}
-            className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
-          >
-            {childLabel}
-            <ChevronDown
-              className={cn(
-                "h-3 w-3 transition-transform",
-                showChildren && "rotate-180"
-              )}
-            />
-          </button>
-        </div>
-        {showChildren && (
-          <div className="flex flex-col items-end gap-1.5 mt-2 pr-0">
-            {bitmap.children.map((childId, idx) => (
-              <a
-                key={idx}
-                href={`https://ordinals.com/content/${childId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:text-primary/80 transition-colors"
-              >
-                {truncateInscription(childId)}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // Key properties always visible
   const keyProperties = [
@@ -174,7 +128,11 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
           </div>
         ))}
         {bitmap.traits && bitmap.traits.length > 0 && <TraitsSection />}
-        {bitmap.children && bitmap.children.length > 0 && <ChildrenSection />}
+        {bitmap.children && bitmap.children.length > 0 && (
+          <div className="pt-1">
+            <ChildrenGallery childIds={bitmap.children} count={bitmap.childrenCount} />
+          </div>
+        )}
       </div>
 
       {/* Mobile: Show More/Less for extended properties */}
