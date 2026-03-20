@@ -579,14 +579,14 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
               game.pickups.push({ mesh: coin, x: coin.position.x, z: coin.position.z, value: 10 + game.wave * 2 });
               
               game.score += 10 + game.wave * 2;
-              game.xp += 12;
+              game.xp += 8;
               setScore(game.score);
               
               // Level up check - queue upgrades instead of pausing
               if (game.xp >= game.xpToNext) {
                 game.xp -= game.xpToNext;
                 game.level++;
-                game.xpToNext = Math.floor(game.xpToNext * 1.3);
+                game.xpToNext = Math.floor(game.xpToNext * 1.5);
                 game.pendingUpgrades++;
                 setLevel(game.level);
                 
@@ -699,7 +699,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Upgrade Toast Notification */}
       {upgradeAnim && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 animate-bounce">
           <div className="br-card px-6 py-3 bg-primary text-black font-mono font-bold text-lg">
             {lastUpgrade}!
           </div>
@@ -708,22 +708,22 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Quick Upgrade Selection - Bottom Overlay */}
       {showUpgrade && (
-        <div className="absolute bottom-0 left-0 right-0 z-40 p-4 bg-gradient-to-t from-bg via-bg/95 to-transparent">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="font-mono text-xl font-bold text-primary mb-3 text-center">
-              LEVEL UP! Choose upgrade ({gameRef.current.pendingUpgrades} remaining)
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
+          <div className="max-w-2xl mx-auto text-center space-y-3">
+            <h2 className="font-mono text-2xl font-bold text-black bg-primary px-4 py-2 inline-block">
+              LEVEL UP! ({gameRef.current.pendingUpgrades} remaining)
             </h2>
             <div className="flex gap-3 justify-center">
               {UPGRADE_NAMES.slice(0, 3).map((u, i) => (
                 <button
                   key={i}
                   onClick={() => applyUpgrade(i)}
-                  className="flex-1 max-w-[180px] p-4 br-card bg-zinc-800 hover:bg-zinc-700 transition-all hover:scale-105 active:scale-95"
+                  className="flex-1 max-w-[160px] p-3 bg-primary hover:bg-primary/80 transition-all hover:scale-105 active:scale-95"
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-1">{u.icon}</div>
-                    <div className="font-mono font-bold text-white text-sm">{u.name}</div>
-                    <div className="font-mono text-[10px] text-zinc-400 mt-1">
+                    <div className="font-mono font-bold text-black text-sm">{u.name}</div>
+                    <div className="font-mono text-xs text-black/70 mt-1">
                       {u.name === "DAMAGE UP" && "+40% dmg"}
                       {u.name === "FIRE RATE" && "+25% speed"}
                       {u.name === "BULLET SPEED" && "+25% velocity"}
@@ -732,42 +732,84 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
                 </button>
               ))}
             </div>
-            <p className="text-center font-mono text-xs text-zinc-500 mt-3">
+            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
               Click to upgrade • You can still move with WASD
             </p>
           </div>
         </div>
       )}
 
-      {showStart && (
-        <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
-          <div className="text-center">
-            <h1 className="font-mono text-4xl font-bold text-primary mb-2">SATOSHI SURVIVORS</h1>
-            <p className="font-mono text-zinc-400 mb-2">The Blocks Are ALIVE</p>
-            <p className="font-mono text-sm text-zinc-500 mb-4">Block {blockHeight.toLocaleString()}</p>
-            <div className="font-mono text-sm text-zinc-400 mb-8 max-w-md space-y-1">
-              <p>🔊 Sound enabled!</p>
-              <p>Transaction blocks will rise and chase you</p>
-              <p>Destroy them to collect satoshis</p>
-            </div>
-            {highScore > 0 && <p className="font-mono text-sm text-zinc-400 mb-4">High Score: {highScore}</p>}
-            <button onClick={startGame} className="px-8 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80 transition-colors">
+      {/* Start Screen - Only show when gameOver is false */}
+      {showStart && !gameOver && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="text-center space-y-3">
+            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+              SATOSHI SURVIVORS
+            </h1>
+            <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+              The Blocks Are ALIVE
+            </p>
+            <br/>
+            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
+              Block {blockHeight.toLocaleString()}
+            </p>
+            <br/>
+            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
+              🔊 Sound enabled!
+            </p>
+            <br/>
+            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block max-w-lg">
+              Transaction blocks will rise and chase you
+            </p>
+            <br/>
+            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block">
+              Destroy them to collect satoshis
+            </p>
+            <br/>
+            {highScore > 0 && (
+              <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+                High Score: {highScore}
+              </p>
+            )}
+            <br/>
+            <button 
+              onClick={startGame} 
+              className="mt-4 px-12 py-4 bg-primary text-black font-mono font-bold text-2xl hover:bg-primary/80 transition-colors"
+            >
               PLAY
             </button>
           </div>
         </div>
       )}
 
-      {gameOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
-          <div className="text-center">
-            <h1 className="font-mono text-4xl font-bold text-red-500 mb-4">GAME OVER</h1>
-            <p className="font-mono text-2xl text-white mb-2">{score} sats</p>
-            <p className="font-mono text-sm text-zinc-500 mb-6">Level {level} • Wave {wave}</p>
-            {score === highScore && score > 0 && <p className="font-mono text-sm text-primary mb-6">New High Score!</p>}
-            <div className="flex gap-4 justify-center">
-              <button onClick={startGame} className="px-6 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80">PLAY AGAIN</button>
-              <button onClick={resetGame} className="px-6 py-3 bg-zinc-800 text-zinc-300 font-mono font-bold rounded hover:bg-zinc-700">MENU</button>
+      {/* Game Over Screen - Only show when not in start screen */}
+      {gameOver && !showStart && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="text-center space-y-3">
+            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+              GAME OVER
+            </h1>
+            <p className="font-mono text-4xl text-black bg-primary px-5 py-2 inline-block">
+              {score} sats
+            </p>
+            <br/>
+            <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+              Level {level} • Wave {wave}
+            </p>
+            <br/>
+            {score === highScore && score > 0 && (
+              <p className="font-mono text-xl text-black bg-primary px-4 py-1 inline-block">
+                New High Score!
+              </p>
+            )}
+            <br/>
+            <div className="flex gap-4 justify-center mt-4">
+              <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+                PLAY AGAIN
+              </button>
+              <button onClick={resetGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+                MENU
+              </button>
             </div>
           </div>
         </div>

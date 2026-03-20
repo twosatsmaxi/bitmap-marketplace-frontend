@@ -27,8 +27,8 @@ interface GameState {
 
 const INITIAL_SPEED = 180;
 const FOOD_COLOR = 0xffd700;
-const SNAKE_HEAD_COLOR = 0x00ff88;
-const SNAKE_BODY_COLOR = 0x00cc66;
+const SNAKE_HEAD_COLOR = 0x00ffff;
+const SNAKE_BODY_COLOR = 0x0088ff;
 
 export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
   // Reusable objects to avoid garbage collection
   const targetPosRef = useRef(new THREE.Vector3());
   const cameraPosRef = useRef(new THREE.Vector3());
-  const offsetRef = useRef(new THREE.Vector3(20, 25, 20));
+  const offsetRef = useRef(new THREE.Vector3(0, 35, 0.1));
 
   // Calculate grid position from index
   const getTxPosition = useCallback((index: number): Position | null => {
@@ -147,10 +147,11 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
     const spacing = 2.5;
     spacingRef.current = spacing;
 
-    // Camera
-    const camDist = Math.max(cols * spacing * 0.6, 25);
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(camDist, camDist * 0.7, camDist);
+    // Camera - top-down view for snake game
+    const camDist = Math.max(cols * spacing * 0.8, 30);
+    const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, camDist, 0);
+    camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
     // Renderer
@@ -342,13 +343,14 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
         const isFood = game.food?.index === userData.index;
 
         if (isHead) {
-          mesh.scale.setScalar(1.3);
+          const pulse = 1 + Math.sin(time * 0.01) * 0.1;
+          mesh.scale.setScalar(1.4 * pulse);
           (mesh.material as THREE.MeshStandardMaterial).emissive.setHex(SNAKE_HEAD_COLOR);
-          (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8;
+          (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.2;
         } else if (isBody) {
-          mesh.scale.lerp(new THREE.Vector3(1.15, 1.15, 1.15), 0.2);
+          mesh.scale.lerp(new THREE.Vector3(1.2, 1.2, 1.2), 0.2);
           (mesh.material as THREE.MeshStandardMaterial).emissive.setHex(SNAKE_BODY_COLOR);
-          (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5;
+          (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8;
         } else if (isFood) {
           const pulse = 1 + Math.sin(time * 0.005) * 0.15;
           mesh.scale.setScalar(pulse);
@@ -385,12 +387,7 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
         cameraPosRef.current.copy(targetPosRef.current).add(offsetRef.current);
         
         cameraRef.current.position.lerp(cameraPosRef.current, 0.04);
-        
-        // Look at snake head
-        if (controlsRef.current) {
-          controlsRef.current.target.lerp(targetPosRef.current, 0.1);
-          controlsRef.current.update();
-        }
+        cameraRef.current.lookAt(targetPosRef.current);
       }
 
       renderer.render(scene, camera);

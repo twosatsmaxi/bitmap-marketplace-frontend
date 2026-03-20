@@ -102,13 +102,15 @@ export default function VisualizerPage() {
 
   if (!mounted) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-bg/90">
-        <div className="text-center">
-          <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
-            <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+            LOADING...
+          </p>
+          <br/>
+          <div className="w-48 h-3 bg-zinc-800 mx-auto overflow-hidden">
+            <div className="h-full bg-primary animate-pulse w-1/2" />
           </div>
-          <p className="font-mono text-sm text-zinc-400">Loading...</p>
         </div>
       </div>
     );
@@ -168,16 +170,19 @@ export default function VisualizerPage() {
 
       {/* Main Content */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
-          <div className="text-center">
-            <div className="relative w-16 h-16 mx-auto mb-4">
-              <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
-              <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-            <p className="font-mono text-sm text-zinc-400">Loading Block</p>
-            <p className="font-mono text-xl font-bold text-primary mt-2">
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="text-center space-y-3">
+            <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+              LOADING BLOCK
+            </p>
+            <br/>
+            <p className="font-mono text-4xl text-black bg-primary px-6 py-2 inline-block">
               {blockHeight.toLocaleString()}
             </p>
+            <br/>
+            <div className="mt-4 w-64 h-3 bg-zinc-800 mx-auto overflow-hidden">
+              <div className="h-full bg-primary animate-pulse w-2/3" />
+            </div>
           </div>
         </div>
       )}
