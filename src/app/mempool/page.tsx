@@ -22,16 +22,38 @@ interface BlockData {
   transactions: Transaction[];
 }
 
-function LoadingScreen() {
+// Generate mock block data as fallback
+function generateMockBlock(height: number): BlockData {
+  const txCount = 150 + Math.floor(Math.random() * 200);
+  return {
+    height,
+    hash: `0000000000000000000${Math.random().toString(36).substring(2, 20)}`,
+    timestamp: Date.now() / 1000 - Math.random() * 3600,
+    size: txCount * 500 + Math.floor(Math.random() * 100000),
+    tx_count: txCount,
+    transactions: Array.from({ length: txCount }, (_, i) => ({
+      txid: `${height}_${i}_${Math.random().toString(36).substring(2, 15)}`,
+      size: 150 + Math.floor(Math.random() * 2000),
+      fee: Math.floor(Math.random() * 100000),
+      inputs: 1 + Math.floor(Math.random() * 5),
+      outputs: 1 + Math.floor(Math.random() * 3),
+    })),
+  };
+}
+
+function LoadingOverlay({ blockHeight }: { blockHeight: number }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-bg">
+    <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
       <div className="text-center">
         <div className="relative w-16 h-16 mx-auto mb-4">
           <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
           <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-        <p className="font-mono text-sm text-zinc-500 uppercase tracking-[0.2em]">
-          Loading Block...
+        <p className="font-mono text-sm text-zinc-400 uppercase tracking-[0.2em]">
+          Loading Block
+        </p>
+        <p className="font-mono text-xl font-bold text-primary mt-2">
+          {blockHeight.toLocaleString()}
         </p>
       </div>
     </div>
@@ -51,6 +73,8 @@ export default function MempoolPage() {
 
   // Fetch block data when height changes
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchBlock() {
       setLoading(true);
       setSelectedTx(null);
@@ -58,6 +82,8 @@ export default function MempoolPage() {
       try {
         const res = await fetch(`/api/explore/blocks/${blockHeight}`);
         const text = await res.text();
+        
+        if (cancelled) return;
         
         if (!text || text.trim() === '') {
           throw new Error('Empty response');
@@ -71,29 +97,23 @@ export default function MempoolPage() {
           throw new Error(data.error || 'Invalid response');
         }
       } catch (e) {
-        console.error("Failed to fetch block:", e);
-        // Generate mock data on error
-        const mockBlock = {
-          height: blockHeight,
-          hash: `0000000000000000000${Math.random().toString(36).substring(2, 20)}`,
-          timestamp: Date.now() / 1000 - Math.random() * 3600,
-          size: 187428,
-          tx_count: 200,
-          transactions: Array.from({ length: 200 }, (_, i) => ({
-            txid: `${blockHeight}_${i}_${Math.random().toString(36).substring(2, 15)}`,
-            size: 150 + Math.floor(Math.random() * 2000),
-            fee: Math.floor(Math.random() * 100000),
-            inputs: 1 + Math.floor(Math.random() * 5),
-            outputs: 1 + Math.floor(Math.random() * 3),
-          })),
-        };
-        setBlockData(mockBlock);
+        if (!cancelled) {
+          console.error("Failed to fetch block:", e);
+          // Use mock data on error
+          setBlockData(generateMockBlock(blockHeight));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchBlock();
+
+    return () => {
+      cancelled = true;
+    };
   }, [blockHeight]);
 
   const handleHeightChange = useCallback((height: number) => {
@@ -109,19 +129,23 @@ export default function MempoolPage() {
   }, []);
 
   if (!mounted) {
-    return <LoadingScreen />;
+    return <LoadingOverlay blockHeight={800150} />;
   }
 
   return (
     <>
+      {/* Loading Overlay */}
+      {loading && <LoadingOverlay blockHeight={blockHeight} />}
+
       {/* Block Selector */}
       <BlockSelector 
         currentHeight={blockHeight} 
-        onHeightChange={handleHeightChange} 
+        onHeightChange={handleHeightChange}
+        disabled={loading}
       />
 
       {/* Block Info */}
-      {blockData && (
+      {blockData && !loading && (
         <div className="absolute top-6 left-72 z-10">
           <div className="bg-black/50 backdrop-blur-sm rounded-lg p-3 border border-white/10">
             <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
@@ -138,15 +162,16 @@ export default function MempoolPage() {
       )}
 
       {/* 3D Visualizer */}
-      {blockData && (
+      {blockData && !loading && (
         <BlockVisualizer 
+          key={blockData.height} // Force remount on block change
           blockData={blockData}
           onTransactionClick={handleTxClick}
         />
       )}
       
       {/* Transaction Detail Panel */}
-      {selectedTx && (
+      {selectedTx && !loading && (
         <div className="absolute bottom-6 right-6 z-10 w-80">
           <div className="bg-black/80 backdrop-blur-md rounded-xl border border-primary/30 p-5 shadow-2xl">
             <div className="flex items-start justify-between mb-4">

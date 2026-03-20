@@ -6,9 +6,10 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 interface BlockSelectorProps {
   currentHeight: number;
   onHeightChange: (height: number) => void;
+  disabled?: boolean;
 }
 
-export function BlockSelector({ currentHeight, onHeightChange }: BlockSelectorProps) {
+export function BlockSelector({ currentHeight, onHeightChange, disabled }: BlockSelectorProps) {
   const [inputValue, setInputValue] = useState(currentHeight.toString());
   const [isOpen, setIsOpen] = useState(false);
 
@@ -40,7 +41,8 @@ export function BlockSelector({ currentHeight, onHeightChange }: BlockSelectorPr
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={handlePrev}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            disabled={disabled}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Previous Block"
           >
             <ChevronLeft className="w-4 h-4 text-zinc-400" />
@@ -60,7 +62,8 @@ export function BlockSelector({ currentHeight, onHeightChange }: BlockSelectorPr
           
           <button
             onClick={handleNext}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            disabled={disabled}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Next Block"
           >
             <ChevronRight className="w-4 h-4 text-zinc-400" />
@@ -83,7 +86,8 @@ export function BlockSelector({ currentHeight, onHeightChange }: BlockSelectorPr
             </div>
             <button
               type="submit"
-              className="px-3 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg font-mono text-xs font-bold uppercase text-primary transition-colors"
+              disabled={disabled}
+              className="px-3 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg font-mono text-xs font-bold uppercase text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Go
             </button>
