@@ -23,7 +23,11 @@ export async function GET(
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=1800, s-maxage=1800', // 30 min cache
+      },
+    });
   } catch {
     return NextResponse.json(
       { error: "Upstream unreachable" },
