@@ -20,26 +20,43 @@ export async function GET(
   const { height } = await params;
   const blockHeight = parseInt(height, 10);
 
-  if (isNaN(blockHeight)) {
-    return NextResponse.json({ error: "Invalid block height" }, { status: 400 });
+  if (isNaN(blockHeight) || blockHeight < 0) {
+    return NextResponse.json({ 
+      error: "Invalid block height",
+      height: blockHeight 
+    }, { status: 400 });
   }
 
   try {
     // Try to fetch real block data from backend
     const res = await fetch(`${BITMAP_INDEX_API}/api/blocks/${blockHeight}`, {
       headers: { "Accept-Encoding": "identity" },
+      signal: AbortSignal.timeout(5000), // 5 second timeout
     });
 
     if (res.ok) {
-      const data = await res.json();
-      // Add mock transactions if not present
-      if (!data.transactions) {
-        data.transactions = generateMockTransactions(blockHeight, data.tx_count || 200);
+      const text = await res.text();
+      if (!text) {
+        throw new Error('Empty response from upstream');
       }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error('Invalid JSON from upstream');
+      }
+      
+      // Add mock transactions if not present
+      if (!data.transactions || !Array.isArray(data.transactions)) {
+        const txCount = data.tx_count || 200;
+        data.transactions = generateMockTransactions(blockHeight, txCount);
+      }
+      
       return NextResponse.json(data);
     }
-  } catch {
-    console.log(`Backend unavailable for block ${blockHeight}, using mock data`);
+  } catch (e) {
+    console.log(`Backend error for block ${blockHeight}:`, e);
   }
 
   // Fallback: Generate mock block data
