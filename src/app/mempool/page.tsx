@@ -144,7 +144,7 @@ export default function MempoolPage() {
 
       {/* Block Info */}
       {blockData && !loading && (
-        <div className="absolute top-6 left-72 z-10">
+        <div className="absolute left-72 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
           <div className="bg-black/50 backdrop-blur-sm rounded-lg p-3 border border-white/10">
             <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
               Transactions
@@ -204,7 +204,7 @@ export default function MempoolPage() {
       )}
 
       {/* Legend */}
-      <div className="absolute top-20 right-6 z-10">
+      <div className="absolute right-6 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
         <div className="bg-black/50 backdrop-blur-sm rounded-lg p-4 border border-white/10">
           <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 mb-3">
             Output Value
