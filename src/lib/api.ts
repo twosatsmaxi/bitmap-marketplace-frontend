@@ -228,7 +228,7 @@ export async function getPortfolio(
   const url = `${baseUrl}/api/portfolio/${address}?${params}`;
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
-    next: { revalidate: 60 },
+    next: { revalidate: 1800 }, // 30 minutes
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Portfolio API error: ${res.status}`);
