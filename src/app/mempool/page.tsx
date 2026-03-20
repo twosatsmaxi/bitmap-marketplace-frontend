@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BlockWorld } from "@/components/mempool/BlockWorld";
 import { WorldHUD } from "@/components/mempool/WorldHUD";
 import { BackButton } from "@/components/mempool/BackButton";
@@ -22,29 +22,54 @@ function LoadingScreen() {
   );
 }
 
+// Generate mock blocks
+function generateMockBlocks(count: number): Bitmap[] {
+  const types = ["city", "grid", "mondrian", "punk", "palindrome"] as const;
+  const rarities = ["common", "uncommon", "rare", "epic", "legendary"] as const;
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${800000 + i}.bitmap`,
+    blockNumber: 800000 + i,
+    inscriptionId: `mock-${i}`,
+    owner: `bc1q${Math.random().toString(36).substring(2, 15)}`,
+    genesisHeight: 800000 + i,
+    bitmapType: types[Math.floor(Math.random() * types.length)],
+    rarity: rarities[Math.floor(Math.random() * rarities.length)],
+    traits: [],
+    listingStatus: Math.random() > 0.7 ? "listed" : "unlisted",
+    price: Math.random() > 0.7 ? Math.floor(Math.random() * 1000000) : undefined,
+    txid: `txid-${i}`,
+  }));
+}
+
 export default function MempoolPage() {
   const [mounted, setMounted] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<Bitmap | null>(null);
   const [blocks, setBlocks] = useState<Bitmap[]>([]);
   const [loading, setLoading] = useState(true);
-  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     setMounted(true);
     
-    // Fetch blocks from API
+    // Fetch blocks from API, fallback to mock data
     async function fetchBlocks() {
       try {
         const res = await fetch('/api/explore/blocks');
         if (res.ok) {
           const data = await res.json();
-          setBlocks(data.blocks || []);
+          if (data.blocks && data.blocks.length > 0) {
+            setBlocks(data.blocks.slice(0, 100)); // Limit to 100 for performance
+            setLoading(false);
+            return;
+          }
         }
       } catch (e) {
-        console.error('Failed to fetch blocks:', e);
-      } finally {
-        setLoading(false);
+        console.log('API failed, using mock data');
       }
+      
+      // Fallback to mock data
+      setBlocks(generateMockBlocks(100));
+      setLoading(false);
     }
     
     fetchBlocks();
@@ -59,15 +84,15 @@ export default function MempoolPage() {
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    // This will be implemented via the BlockWorld ref
+    // TODO: Implement zoom via ref
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    // This will be implemented via the BlockWorld ref
+    // TODO: Implement zoom via ref
   }, []);
 
   const handleReset = useCallback(() => {
-    // This will be implemented via the BlockWorld ref
+    // TODO: Implement reset via ref
   }, []);
 
   if (!mounted || loading) {
