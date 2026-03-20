@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Terminal, Menu, X } from "lucide-react";
+import { Search, Terminal, Menu, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
@@ -26,6 +26,8 @@ export default function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  const isActivityActive = pathname === "/activity" || pathname === "/mempool";
 
   return (
     <>
@@ -51,7 +53,20 @@ export default function Navbar() {
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
-            <SoonNav label="Activity" />
+            <NavLink href="/activity" active={isActivityActive}>
+              <span className="flex items-center gap-1.5">
+                Activity
+                {isActivityActive && (
+                  <Link
+                    href="/mempool"
+                    className="ml-1 flex items-center gap-1 text-[9px] text-primary/80 hover:text-primary"
+                    title="Immersive View"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                  </Link>
+                )}
+              </span>
+            </NavLink>
             <SoonNav label="Analytics" />
           </div>
 
@@ -135,7 +150,25 @@ export default function Navbar() {
             Explore
           </DrawerNavLink>
           <DrawerSoonNav label="Market" />
-          <DrawerSoonNav label="Activity" />
+          <DrawerNavLink
+            href="/activity"
+            active={isActivityActive}
+            onClick={() => setMenuOpen(false)}
+          >
+            Activity
+          </DrawerNavLink>
+          {isActivityActive && (
+            <DrawerNavLink
+              href="/mempool"
+              active={pathname === "/mempool"}
+              onClick={() => setMenuOpen(false)}
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Immersive View
+              </span>
+            </DrawerNavLink>
+          )}
           <DrawerSoonNav label="Analytics" />
 
           <div className="my-4 border-t border-[rgba(120,72,18,0.45)]" />
