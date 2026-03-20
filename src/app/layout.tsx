@@ -3,7 +3,6 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import StatsBar from "@/components/layout/StatsBar";
-import { getCollectionStats } from "@/lib/api";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -65,18 +64,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const stats = await getCollectionStats();
-
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-bg text-text-primary min-h-screen safe-area-inset-left safe-area-inset-right">
         <Navbar />
-        <StatsBar stats={stats} />
+        <StatsBar />
         <main className="pt-[var(--header-total)]">{children}</main>
       </body>
     </html>
