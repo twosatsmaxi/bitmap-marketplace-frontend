@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bitmap Visualizer | Bitmap Marketplace",
+  title: "Bitmap Visualizer — Bitmap Marketplace",
   description: "3D visualization of Bitcoin blocks as bitmaps",
 };
 
