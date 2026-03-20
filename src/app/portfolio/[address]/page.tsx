@@ -28,7 +28,7 @@ export default async function PortfolioPage({ params }: Props) {
       <div className="br-card p-3 md:p-5">
         <div className="flex flex-col gap-1">
           <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-            Portfolio
+            Bitmap Portfolio
           </h1>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
