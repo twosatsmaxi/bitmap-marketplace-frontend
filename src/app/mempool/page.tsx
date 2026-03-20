@@ -139,27 +139,11 @@ export default function MempoolPage() {
       <BlockSelector
         currentHeight={blockHeight}
         onHeightChange={handleHeightChange}
+        txCount={blockData?.meta.tx_count}
         disabled={loading}
       />
 
-      {/* Block Info */}
-      {blockData && !loading && (
-        <div className="absolute left-72 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
-          <div className="bg-black/50 backdrop-blur-sm rounded-lg p-3 border border-white/10">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-              Transactions
-            </div>
-            <div className="font-mono text-lg font-bold text-white">
-              {blockData.meta.tx_count.toLocaleString()}
-            </div>
-            {blockData.meta.size > 0 && (
-              <div className="font-mono text-[10px] text-zinc-600">
-                {(blockData.meta.size / 1000000).toFixed(2)} MB
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Block Info — rendered inside BlockSelector */}
 
       {/* 3D Visualizer */}
       {blockData && !loading && (
@@ -172,32 +156,23 @@ export default function MempoolPage() {
 
       {/* Transaction Detail Panel */}
       {selectedTxIndex !== null && selectedBucket && !loading && (
-        <div className="absolute bottom-6 right-6 z-10 w-80">
-          <div className="bg-black/80 backdrop-blur-md rounded-xl border border-primary/30 p-5 shadow-2xl">
-            <div className="flex items-start justify-between mb-4">
+        <div className="absolute bottom-6 right-6 z-10 w-64">
+          <div className="br-card p-4">
+            <div className="flex items-start justify-between mb-3">
               <div>
-                <h2 className="font-mono text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                   Transaction #{selectedTxIndex + 1}
-                </h2>
-                <p className="font-mono text-sm font-bold text-white">
-                  Output Value Bucket: {selectedBucket}
-                </p>
+                </div>
+                <div className="font-mono text-sm font-bold text-primary mt-1">
+                  {BUCKET_LABELS[selectedBucket] ?? `Bucket ${selectedBucket}`}
+                </div>
               </div>
               <button
                 onClick={handleClose}
-                className="p-1 hover:bg-white/10 rounded transition-colors"
+                className="p-1 hover:bg-[rgba(255,255,255,0.07)] rounded transition-colors active:scale-95"
               >
-                <span className="text-zinc-400 text-lg">×</span>
+                <span className="text-zinc-500 text-sm">✕</span>
               </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-zinc-500">Output Value</span>
-                <span className="font-mono text-xs text-primary">
-                  {BUCKET_LABELS[selectedBucket] ?? `Bucket ${selectedBucket}`}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -205,45 +180,30 @@ export default function MempoolPage() {
 
       {/* Legend */}
       <div className="absolute right-6 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
-        <div className="bg-black/50 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-          <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 mb-3">
+        <div className="br-card p-3">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
             Output Value
-          </h3>
-          <div className="space-y-2">
+          </div>
+          <div className="space-y-1.5">
             {[
               { label: "10+ BTC", color: "#ffeb3b" },
               { label: "1 – 10 BTC", color: "#ffc12a" },
               { label: "0.1 – 1 BTC", color: "#f7931a" },
-              { label: "0.01 – 0.1 BTC", color: "#b87326" },
-              { label: "0.001 – 0.01 BTC", color: "#a05a1a" },
-              { label: "< 0.001 BTC", color: "#7e4912" },
+              { label: "0.01 – 0.1", color: "#b87326" },
+              { label: "0.001 – 0.01", color: "#a05a1a" },
+              { label: "< 0.001", color: "#7e4912" },
             ].map(({ label, color }) => (
               <div key={label} className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded"
+                  className="w-2.5 h-2.5 rounded-sm"
                   style={{ backgroundColor: color }}
                 />
-                <span className="font-mono text-[10px] text-zinc-400">
+                <span className="font-mono text-[10px] text-zinc-500">
                   {label}
                 </span>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Controls hint */}
-      <div className="absolute bottom-6 left-6 z-10">
-        <div className="bg-black/50 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-          <h3 className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-zinc-400 mb-2">
-            Controls
-          </h3>
-          <ul className="font-mono text-xs text-zinc-500 space-y-1">
-            <li>• Left click + drag to rotate</li>
-            <li>• Right click + drag to pan</li>
-            <li>• Scroll to zoom</li>
-            <li>• Click cube for details</li>
-          </ul>
         </div>
       </div>
 

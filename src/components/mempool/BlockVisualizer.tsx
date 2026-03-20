@@ -24,9 +24,9 @@ function getBucketColor(bucket: number): number {
   }
 }
 
-/** Map bucket value (1-6) to cube size */
-function getBucketSize(bucket: number): number {
-  return 0.4 + bucket * 0.3;
+/** Map bucket value (1-6) to bubble radius */
+function getBucketRadius(bucket: number): number {
+  return 0.15 + bucket * 0.12;
 }
 
 export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisualizerProps) {
@@ -51,22 +51,17 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x09090b);
 
-    // Camera — position based on tx count
-    const txCount = blockBytes.length;
-    const cols = Math.ceil(Math.sqrt(Math.min(txCount, 2000)));
-    const gridSpan = cols * 2.5;
-    const camDist = Math.max(gridSpan * 0.6, 25);
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(camDist, camDist * 0.7, camDist);
+    // Camera
+    const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 8, 25);
+    camera.lookAt(0, 0, 0);
 
     // Renderer
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);
     } catch {
       setWebglError(true);
@@ -77,79 +72,89 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2.2;
-    controls.minDistance = 10;
-    controls.maxDistance = camDist * 3;
+    controls.enablePan = false;
+    controls.minDistance = 8;
+    controls.maxDistance = 60;
     controls.target.set(0, 0, 0);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(30, 50, 30);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 15);
     scene.add(dirLight);
 
-    const pointLight = new THREE.PointLight(0xf7931a, 0.5, camDist * 2);
-    pointLight.position.set(0, 20, 0);
+    const pointLight = new THREE.PointLight(0xf7931a, 0.6, 50);
+    pointLight.position.set(0, 10, 0);
     scene.add(pointLight);
 
-    // Ground
-    const groundSize = gridSpan * 2;
-    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-    const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x121214, transparent: true, opacity: 0.6 });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // Shared geometries per bucket size (performance)
+    const geometries = new Map<number, THREE.SphereGeometry>();
+    for (let b = 1; b <= 6; b++) {
+      geometries.set(b, new THREE.SphereGeometry(getBucketRadius(b), 16, 12));
+    }
 
-    // Grid
-    const gridHelper = new THREE.GridHelper(groundSize, Math.min(cols * 2, 100), 0xf7931a, 0x27272a);
-    gridHelper.position.y = 0.01;
-    gridHelper.material.opacity = 0.2;
-    gridHelper.material.transparent = true;
-    scene.add(gridHelper);
-
-    // Transaction cubes — use all bytes, cap at 2000 for performance
+    // Create bubbles — cap at 2000 for performance
     const txGroup = new THREE.Group();
     scene.add(txGroup);
 
-    const visibleCount = Math.min(txCount, 2000);
-    const spacing = 2.5;
+    const visibleCount = Math.min(blockBytes.length, 2000);
+    const spreadRadius = Math.sqrt(visibleCount) * 0.5;
+
+    interface BubbleData {
+      velocity: THREE.Vector3;
+      originalY: number;
+      index: number;
+      bucket: number;
+    }
+
+    const bubbles: { mesh: THREE.Mesh; data: BubbleData }[] = [];
 
     for (let i = 0; i < visibleCount; i++) {
       const bucket = blockBytes[i];
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = (col - cols / 2) * spacing;
-      const z = (row - cols / 2) * spacing;
-
-      const size = getBucketSize(bucket);
       const color = getBucketColor(bucket);
-      const height = 0.3 + bucket * 0.4;
+      const geometry = geometries.get(bucket)!;
 
-      const geometry = new THREE.BoxGeometry(size, height, size);
       const material = new THREE.MeshStandardMaterial({
         color,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.85,
         emissive: color,
-        emissiveIntensity: 0.3,
-        roughness: 0.4,
-        metalness: 0.3,
+        emissiveIntensity: 0.2,
+        roughness: 0.2,
+        metalness: 0.1,
       });
+
       const mesh = new THREE.Mesh(geometry, material);
 
-      mesh.position.set(x, height / 2, z);
+      // Random spherical distribution
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = spreadRadius * Math.cbrt(Math.random());
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+
+      mesh.position.set(x, y, z);
       mesh.name = String(i);
-      mesh.userData = { index: i, bucket, originalY: height / 2 };
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      mesh.userData = { index: i, bucket, originalY: y };
 
       txGroup.add(mesh);
+
+      bubbles.push({
+        mesh,
+        data: {
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.01,
+            (Math.random() - 0.5) * 0.01,
+            (Math.random() - 0.5) * 0.01,
+          ),
+          originalY: y,
+          index: i,
+          bucket,
+        },
+      });
     }
 
     // Interaction state
@@ -180,34 +185,55 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
 
     // Animation loop
     let disposed = false;
+    const clock = new THREE.Clock();
+
     const animate = () => {
       if (disposed) return;
+      const dt = Math.min(clock.getDelta(), 0.05);
       controls.update();
 
+      // Animate bubbles — gentle floating
+      for (const { mesh, data } of bubbles) {
+        mesh.position.x += data.velocity.x;
+        mesh.position.y += data.velocity.y;
+        mesh.position.z += data.velocity.z;
+
+        // Soft boundary — keep within spread radius
+        const dist = mesh.position.length();
+        if (dist > spreadRadius) {
+          // Nudge back toward center
+          const pullback = mesh.position.clone().normalize().multiplyScalar(-0.002);
+          data.velocity.add(pullback);
+        }
+
+        // Damping + small random drift
+        data.velocity.multiplyScalar(0.998);
+        data.velocity.x += (Math.random() - 0.5) * 0.0003;
+        data.velocity.y += (Math.random() - 0.5) * 0.0003;
+        data.velocity.z += (Math.random() - 0.5) * 0.0003;
+      }
+
+      // Slow rotation of the whole group
+      txGroup.rotation.y += dt * 0.05;
+
+      // Raycasting for hover
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(txGroup.children);
 
-      // Reset previous hover
       if (hoveredName !== null) {
         const prevMesh = txGroup.getObjectByName(hoveredName) as THREE.Mesh;
         if (prevMesh) {
-          prevMesh.position.y = prevMesh.userData.originalY;
           prevMesh.scale.setScalar(1);
-          (prevMesh.material as THREE.MeshStandardMaterial).opacity = 0.9;
-          (prevMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3;
+          (prevMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.2;
         }
         hoveredName = null;
         document.body.style.cursor = "default";
       }
 
-      // Apply new hover
       if (intersects.length > 0) {
         const hitMesh = intersects[0].object as THREE.Mesh;
         hoveredName = hitMesh.name;
-
-        hitMesh.position.y = hitMesh.userData.originalY + 0.5;
-        hitMesh.scale.setScalar(1.1);
-        (hitMesh.material as THREE.MeshStandardMaterial).opacity = 1;
+        hitMesh.scale.setScalar(1.4);
         (hitMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.6;
         document.body.style.cursor = "pointer";
       }
@@ -228,9 +254,9 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
       controls.dispose();
       renderer.dispose();
       domElement.remove();
+      geometries.forEach(g => g.dispose());
       txGroup.children.forEach(child => {
         if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
           (child.material as THREE.Material).dispose();
         }
       });
@@ -248,5 +274,5 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     );
   }
 
-  return <div ref={containerRef} className="absolute inset-0" style={{ cursor: "grab" }} />;
+  return <div ref={containerRef} className="absolute inset-0" style={{ top: "var(--header-total)", cursor: "grab" }} />;
 }

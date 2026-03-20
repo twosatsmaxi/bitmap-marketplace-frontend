@@ -1,72 +1,103 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BlockSelectorProps {
   currentHeight: number;
   onHeightChange: (height: number) => void;
+  txCount?: number;
   disabled?: boolean;
 }
 
-export function BlockSelector({ currentHeight, onHeightChange, disabled }: BlockSelectorProps) {
-  const [inputValue, setInputValue] = useState(currentHeight.toString());
+export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled }: BlockSelectorProps) {
+  const [value, setValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    const height = parseInt(inputValue, 10);
+    const height = parseInt(value, 10);
     if (!isNaN(height) && height > 0) {
       onHeightChange(height);
       setIsOpen(false);
+      setValue("");
     }
-  }, [inputValue, onHeightChange]);
+  }, [value, onHeightChange]);
 
   return (
     <div className="absolute left-6 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
-      <div className="bg-black/80 backdrop-blur-md rounded-xl border border-white/10 p-4 shadow-2xl">
-        <div
-          className="text-center cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            Block Height
+      <div className="br-card p-3">
+        <div className="flex items-start gap-4">
+          <div
+            className="cursor-pointer"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Block Height
+            </div>
+            <div className="font-mono text-xl font-bold text-primary">
+              {currentHeight.toLocaleString()}
+            </div>
           </div>
-          <div className="font-mono text-2xl font-bold text-primary">
-            {currentHeight.toLocaleString()}
-          </div>
+          {txCount != null && (
+            <div className="border-l border-[rgba(255,255,255,0.08)] pl-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                Transactions
+              </div>
+              <div className="font-mono text-xl font-bold text-white">
+                {txCount.toLocaleString()}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Search Input */}
         {isOpen && (
-          <form onSubmit={handleSubmit} className="flex items-center gap-2 mt-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+          <form onSubmit={handleSubmit} className="mt-3">
+            <div className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-zinc-600" />
               <input
-                type="number"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Block height..."
-                className="w-full bg-black/50 border border-white/10 rounded-lg pl-9 pr-3 py-2 font-mono text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-primary/50"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Enter height..."
+                value={value}
+                onChange={(e) => {
+                  if (/^\d*$/.test(e.target.value)) setValue(e.target.value);
+                }}
+                disabled={disabled}
                 autoFocus
+                className={cn(
+                  "w-full rounded border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.07)] py-2 pl-8 pr-10",
+                  "font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none",
+                  "focus:border-[rgba(255,255,255,0.25)] focus:bg-[rgba(255,255,255,0.09)]",
+                  "disabled:opacity-50"
+                )}
               />
+              <button
+                type="submit"
+                disabled={disabled || !value}
+                className={cn(
+                  "absolute right-1.5 flex h-6 w-6 items-center justify-center rounded",
+                  "bg-[rgba(247,162,59,0.9)] text-black transition-all",
+                  "hover:bg-[rgba(247,162,59,1)] active:scale-95",
+                  "disabled:opacity-0 disabled:pointer-events-none"
+                )}
+                aria-label="Go to block"
+              >
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={disabled}
-              className="px-3 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg font-mono text-xs font-bold uppercase text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Go
-            </button>
           </form>
         )}
 
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="w-full mt-2 py-1.5 text-center font-mono text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95"
           >
-            Search Block
+            <Search className="h-3 w-3" />
+            Search
           </button>
         )}
       </div>
