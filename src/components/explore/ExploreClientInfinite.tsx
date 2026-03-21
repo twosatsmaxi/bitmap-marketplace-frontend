@@ -403,7 +403,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
               Bitmap Explorer
             </h1>
             <div className="hidden sm:block">
-              <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
+              <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
             </div>
             <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em] text-zinc-400">
               Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
@@ -411,7 +411,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
           </div>
 
           <div className="sm:hidden">
-            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} />
+            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
           </div>
 
           <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
