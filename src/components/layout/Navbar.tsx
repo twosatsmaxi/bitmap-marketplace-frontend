@@ -27,7 +27,7 @@ export default function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const isActivityActive = pathname === "/activity" || pathname === "/mempool";
+  const isActivityActive = pathname === "/activity" || pathname === "/visualizer";
 
   return (
     <>
@@ -55,7 +55,7 @@ export default function Navbar() {
             <SoonNav label="Trade" />
             <NavLink href="/activity" active={isActivityActive}>Activity</NavLink>
             {isActivityActive && (
-              <NavLink href="/mempool" active={pathname === "/mempool"}>
+              <NavLink href="/visualizer" active={pathname === "/visualizer"}>
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3" />
                   3D View
@@ -154,8 +154,8 @@ export default function Navbar() {
           </DrawerNavLink>
           {isActivityActive && (
             <DrawerNavLink
-              href="/mempool"
-              active={pathname === "/mempool"}
+              href="/visualizer"
+              active={pathname === "/visualizer"}
               onClick={() => setMenuOpen(false)}
             >
               <span className="flex items-center gap-2">
