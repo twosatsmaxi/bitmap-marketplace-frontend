@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { BlockSnakeGame } from "@/components/visualizer/BlockSnakeGame";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { HelicopterVisualizer } from "@/components/visualizer/HelicopterVisualizer";
 import { SatoshiSurvivors } from "@/components/visualizer/SatoshiSurvivors";
 import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
@@ -28,7 +29,9 @@ const BUCKET_LABELS: Record<number, string> = {
   6: "10+ BTC",
 };
 
-export default function VisualizerPage() {
+function VisualizerContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [blockHeight, setBlockHeight] = useState(800150);
   const [blockData, setBlockData] = useState<BlockData | null>(null);
@@ -36,9 +39,29 @@ export default function VisualizerPage() {
   const [loading, setLoading] = useState(true);
   const [gameMode, setGameMode] = useState<"visualize" | "snake" | "survivors">("visualize");
 
+  // Read bitmap from query params on mount
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const bitmapParam = searchParams.get("bitmap");
+    const blockParam = searchParams.get("block");
+    const heightParam = bitmapParam || blockParam;
+    
+    if (heightParam) {
+      const height = parseInt(heightParam, 10);
+      if (!isNaN(height) && height > 0) {
+        setBlockHeight(height);
+      }
+    }
+  }, [searchParams]);
+
+  // Update URL when block height changes
+  const updateBlockHeight = useCallback((height: number) => {
+    setBlockHeight(height);
+    // Update URL without reloading
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("bitmap", height.toString());
+    router.replace(`/visualizer?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   // Fetch block data
   useEffect(() => {
@@ -97,8 +120,8 @@ export default function VisualizerPage() {
   }, []);
 
   const handleHeightChange = useCallback((height: number) => {
-    setBlockHeight(height);
-  }, []);
+    updateBlockHeight(height);
+  }, [updateBlockHeight]);
 
   if (!mounted) {
     return (
@@ -143,7 +166,7 @@ export default function VisualizerPage() {
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
           >
-            Snake
+            Helicopter
           </button>
           <button
             onClick={() => setGameMode("survivors")}
@@ -158,8 +181,8 @@ export default function VisualizerPage() {
         </div>
       </div>
 
-      {/* Block Selector (Visualize mode only) */}
-      {gameMode === "visualize" && (
+      {/* Block Selector (Visualize and Survivors modes) */}
+      {(gameMode === "visualize" || gameMode === "survivors") && (
         <BlockSelector
           currentHeight={blockHeight}
           onHeightChange={handleHeightChange}
@@ -190,7 +213,7 @@ export default function VisualizerPage() {
       {blockData && !loading && (
         <>
           {gameMode === "snake" ? (
-            <BlockSnakeGame 
+            <HelicopterVisualizer 
               blockBytes={blockData.bytes} 
               blockHeight={blockData.meta.height}
             />
@@ -261,5 +284,26 @@ export default function VisualizerPage() {
 
       <BackButton />
     </>
+  );
+}
+
+// Wrap in Suspense for useSearchParams
+export default function VisualizerPage() {
+  return (
+    <Suspense fallback={
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+            LOADING...
+          </p>
+          <br/>
+          <div className="w-48 h-3 bg-zinc-800 mx-auto overflow-hidden">
+            <div className="h-full bg-primary animate-pulse w-1/2" />
+          </div>
+        </div>
+      </div>
+    }>
+      <VisualizerContent />
+    </Suspense>
   );
 }

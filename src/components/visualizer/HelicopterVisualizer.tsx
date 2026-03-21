@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 
-interface BlockSnakeGameProps {
+interface HelicopterVisualizerProps {
   blockBytes: Uint8Array;
   blockHeight: number;
 }
@@ -30,7 +30,7 @@ const FOOD_COLOR = 0xffd700;
 const SNAKE_HEAD_COLOR = 0x00ffff;
 const SNAKE_BODY_COLOR = 0x0088ff;
 
-export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps) {
+export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
@@ -425,7 +425,7 @@ export function BlockSnakeGame({ blockBytes, blockHeight }: BlockSnakeGameProps)
       {showStart && (
         <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
           <div className="text-center">
-            <h1 className="font-mono text-4xl font-bold text-primary mb-2">SNAKE</h1>
+            <h1 className="font-mono text-4xl font-bold text-primary mb-2">HELICOPTER</h1>
             <p className="font-mono text-zinc-400 mb-2">on Block {blockHeight.toLocaleString()}</p>
             <p className="font-mono text-sm text-zinc-500 mb-2">{blockBytes.length.toLocaleString()} transactions</p>
             <p className="font-mono text-sm text-zinc-500 mb-8">Slither through the block. Collect satoshis.</p>
