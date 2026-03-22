@@ -54,26 +54,6 @@ const MEMORY_PAIR_COLORS = [
 /** Symbols for memory game pairs */
 const MEMORY_PAIR_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
-/** Create a sprite texture with a letter label */
-function createNumberSprite(label: string): THREE.Sprite {
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, 128, 128);
-  ctx.fillStyle = "#000000";
-  ctx.font = "bold 80px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(label, 64, 64);
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(1.2, 1.2, 1);
-  sprite.name = "label";
-  return sprite;
-}
-
 /** Generate shuffled pair assignments for memory game */
 function generatePairAssignments(count: number): number[] {
   const pairs = Math.floor(count / 2);
@@ -109,7 +89,8 @@ export function BlockVisualizer({
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [matchAnimation, setMatchAnimation] = useState<{ active: boolean; bucket: number }>({ active: false, bucket: 0 });
-  
+  const [revealedLabels, setRevealedLabels] = useState<Map<number, { x: number; y: number; label: string; color: string }>>(new Map());
+
   // Game state refs
   const gameStateRef = useRef({
     isPlaying: false,
@@ -194,17 +175,27 @@ export function BlockVisualizer({
     setScore(0);
     setTimeElapsed(0);
     setMatchAnimation({ active: false, bucket: 0 });
-    
-    // Reset all cubes to hidden state
+    setRevealedLabels(new Map());
+
+    // Reset all cubes to hidden state and regenerate pair assignments
     if (txGroupRef.current && gameMode === "memory") {
-      txGroupRef.current.children.forEach((child) => {
+      const count = txGroupRef.current.children.length;
+      pairAssignmentsRef.current = generatePairAssignments(count);
+      txGroupRef.current.children.forEach((child, i) => {
         const mesh = child as THREE.Mesh;
-        if (mesh && !mesh.userData.isDisabled) {
+        const isDisabled = pairAssignmentsRef.current[i] === -1;
+        mesh.userData.isDisabled = isDisabled;
+        if (mesh && !isDisabled) {
           const material = mesh.material as THREE.MeshStandardMaterial;
           material.color.setHex(HIDDEN_COLOR);
           material.emissive.setHex(HIDDEN_EMISSIVE);
           material.emissiveIntensity = 0.1;
+          material.opacity = 0.9;
           mesh.userData.isRevealed = false;
+          material.needsUpdate = true;
+        } else if (isDisabled) {
+          const material = mesh.material as THREE.MeshStandardMaterial;
+          material.opacity = 0.3;
         }
       });
     }
@@ -255,8 +246,9 @@ export function BlockVisualizer({
     
     // Animate reveal
     if (mesh) {
-      const bucket = currentBlockBytes[index];
-      const targetColor = getBucketColor(bucket);
+      const pairId = pairAssignmentsRef.current[index];
+      const targetColor = MEMORY_PAIR_COLORS[pairId % MEMORY_PAIR_COLORS.length];
+      const pairLabel = MEMORY_PAIR_SYMBOLS[pairId % MEMORY_PAIR_SYMBOLS.length];
       const material = mesh.material as THREE.MeshStandardMaterial;
       
       // Animate scale up and color change
@@ -277,11 +269,22 @@ export function BlockVisualizer({
           material.color.setHex(targetColor);
           material.emissive.setHex(targetColor);
           material.emissiveIntensity = 0.4;
-          // Add number label sprite on top of the cube
-          const sprite = createNumberSprite(bucket, targetColor);
-          const cubeHeight = mesh.geometry.parameters.height;
-          sprite.position.set(0, cubeHeight / 2 + 0.8, 0);
-          mesh.add(sprite);
+          material.needsUpdate = true;
+          // Project 3D position to screen for HTML label overlay
+          if (cameraRef.current && containerRef.current) {
+            const pos = mesh.position.clone();
+            pos.y += 1.5; // above the cube
+            pos.project(cameraRef.current);
+            const rect = containerRef.current.getBoundingClientRect();
+            const x = (pos.x * 0.5 + 0.5) * rect.width;
+            const y = (-pos.y * 0.5 + 0.5) * rect.height;
+            const hex = "#" + targetColor.toString(16).padStart(6, "0");
+            setRevealedLabels(prev => {
+              const next = new Map(prev);
+              next.set(index, { x, y, label: pairLabel, color: hex });
+              return next;
+            });
+          }
         }
 
         if (progress < 1) {
@@ -298,10 +301,10 @@ export function BlockVisualizer({
       setMoves(newMoves);
       
       const [first, second] = game.flippedCards;
-      const firstBucket = currentBlockBytes[first];
-      const secondBucket = currentBlockBytes[second];
-      
-      if (firstBucket === secondBucket) {
+      const firstPair = pairAssignmentsRef.current[first];
+      const secondPair = pairAssignmentsRef.current[second];
+
+      if (firstPair === secondPair) {
         // Match!
         setTimeout(() => {
           game.matchedCards.add(first);
@@ -312,26 +315,21 @@ export function BlockVisualizer({
           const newMatches = currentMatches + 1;
           setMatches(newMatches);
 
-          // Animate matched cubes with a glow pulse in 3D
+          // Animate matched cubes with bounce + scale pulse
           [first, second].forEach(idx => {
             const m = txGroupRef.current?.children[idx] as THREE.Mesh;
             if (m) {
-              const mat = m.material as THREE.MeshStandardMaterial;
               const startTime = Date.now();
               const duration = 600;
               const baseY = m.userData.originalY;
               const animateMatch = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                // Pulse glow up then settle
-                const glow = 0.4 + 0.6 * Math.sin(progress * Math.PI);
-                mat.emissiveIntensity = glow;
-                m.position.y = baseY + 0.3 * Math.sin(progress * Math.PI);
-                m.scale.setScalar(1 + 0.1 * Math.sin(progress * Math.PI));
+                m.position.y = baseY + 0.5 * Math.sin(progress * Math.PI);
+                m.scale.setScalar(1 + 0.15 * Math.sin(progress * Math.PI));
                 if (progress < 1) {
                   requestAnimationFrame(animateMatch);
                 } else {
-                  mat.emissiveIntensity = 0.5;
                   m.position.y = baseY;
                   m.scale.setScalar(1);
                 }
@@ -341,7 +339,7 @@ export function BlockVisualizer({
           });
 
           // Show subtle HUD notification
-          setMatchAnimation({ active: true, bucket: firstBucket });
+          setMatchAnimation({ active: true, bucket: firstPair });
           setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 800);
           
           // Check for game over
@@ -387,9 +385,13 @@ export function BlockVisualizer({
                   mat.color.setHex(HIDDEN_COLOR);
                   mat.emissive.setHex(HIDDEN_EMISSIVE);
                   mat.emissiveIntensity = 0.1;
-                  // Remove number label sprite
-                  const label = m.children.find(c => c.name === "label");
-                  if (label) m.remove(label);
+                  mat.needsUpdate = true;
+                  // Remove HTML label
+                  setRevealedLabels(prev => {
+                    const next = new Map(prev);
+                    next.delete(idx);
+                    return next;
+                  });
                 }
 
                 if (progress < 1) {
@@ -444,9 +446,9 @@ export function BlockVisualizer({
     const gridSpan = cols * (gameMode === "memory" ? 3.0 : 2.5);
     const camDist = Math.max(gridSpan * 0.6, 25);
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    // Memory mode: top-down with a slight quirky tilt for visual interest
+    // Memory mode: tilted top-down for card visibility with quirky angle
     if (gameMode === "memory") {
-      camera.position.set(camDist * 0.3, camDist * 1.4, camDist * 0.15);
+      camera.position.set(camDist * 0.4, camDist * 1.1, camDist * 0.6);
     } else {
       camera.position.set(camDist, camDist * 0.7, camDist);
     }
@@ -612,10 +614,12 @@ export function BlockVisualizer({
           mesh.scale.setScalar(1);
           if (!mesh.userData.isRevealed) {
             const mat = mesh.material as THREE.MeshStandardMaterial;
-            mat.opacity = 0.9;
-            mat.emissiveIntensity = 0.1;
-            if (gameMode === "memory") {
-              mat.emissive.setHex(HIDDEN_EMISSIVE);
+            if (mat) {
+              mat.opacity = 0.9;
+              mat.emissiveIntensity = 0.1;
+              if (gameMode === "memory" && mat.emissive) {
+                mat.emissive.setHex(HIDDEN_EMISSIVE);
+              }
             }
           }
         }
@@ -640,10 +644,12 @@ export function BlockVisualizer({
           hitMesh.scale.setScalar(1.15);
           if (!hitMesh.userData.isRevealed) {
             const mat = hitMesh.material as THREE.MeshStandardMaterial;
-            mat.opacity = 1;
-            mat.emissiveIntensity = gameMode === "memory" ? 0.6 : 0.3;
-            if (gameMode === "memory") {
-              mat.emissive.setHex(0xf7931a);
+            if (mat) {
+              mat.opacity = 1;
+              mat.emissiveIntensity = gameMode === "memory" ? 0.6 : 0.3;
+              if (gameMode === "memory" && mat.emissive) {
+                mat.emissive.setHex(0xf7931a);
+              }
             }
           }
           container.style.cursor = "pointer";
@@ -696,6 +702,34 @@ export function BlockVisualizer({
       {/* Memory Game UI Overlay */}
       {gameMode === "memory" && (
         <>
+          {/* Floating pair labels above revealed cubes */}
+          {revealedLabels.size > 0 && (
+            <div className="absolute inset-0 z-20 pointer-events-none" style={{ top: "var(--header-total)" }}>
+              {Array.from(revealedLabels.entries()).map(([idx, { x, y, label, color }]) => (
+                <div
+                  key={idx}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${x}px`,
+                    top: `${y}px`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <div
+                    className="font-mono font-bold text-[11px] leading-none w-5 h-5 flex items-center justify-center rounded-full"
+                    style={{
+                      color: "#fff",
+                      backgroundColor: color,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Match Animation - subtle HUD notification */}
           {matchAnimation.active && (
             <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
