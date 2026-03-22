@@ -27,8 +27,10 @@ interface GameState {
 
 const BUCKET_COLORS = [0x7e4912, 0xa05a1a, 0xb87326, 0xf7931a, 0xffc12a, 0xffeb3b];
 const BUCKET_LABELS = ["<0.001", "0.001-0.01", "0.01-0.1", "0.1-1", "1-10", "10+"];
-const CARD_BACK_COLOR = 0x27272a;  // Lighter grey for better visibility
-const CARD_BACK_COLOR_DARK = 0x18181b;
+const BUCKET_SYMBOLS = ["1", "2", "3", "4", "5", "6"];  // Simple numbers for matching
+const CARD_BACK_COLOR = 0x1a1a1e;  // Dark grey for face-down cards
+const CARD_BACK_COLOR_HOVER = 0x2a2a35;  // Lighter on hover
+const CARD_BACK_COLOR_DARK = 0x0d0d10;
 const MATCH_ANIMATION_DURATION = 600;
 
 export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProps) {
@@ -40,6 +42,8 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
   const [showStart, setShowStart] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [matchAnimation, setMatchAnimation] = useState<{ active: boolean; bucket: number }>({ active: false, bucket: 0 });
+  const [firstPlay, setFirstPlay] = useState(true);
+  const [flippedCardIds, setFlippedCardIds] = useState<number[]>([]);  // Track which cards are flipped for UI overlay
 
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -63,6 +67,10 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
   useEffect(() => {
     const saved = localStorage.getItem(`memoryMatch_highScore_${blockHeight}`);
     if (saved) setHighScore(parseInt(saved, 10));
+    
+    // Check if first time playing
+    const hasPlayed = localStorage.getItem(`memoryMatch_hasPlayed_${blockHeight}`);
+    setFirstPlay(!hasPlayed);
     
     // Always start with the start screen
     setShowStart(true);
@@ -132,6 +140,10 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       isGameOver: false,
     };
     
+    // Mark that user has played this block
+    localStorage.setItem(`memoryMatch_hasPlayed_${blockHeight}`, "true");
+    setFirstPlay(false);
+    
     setScore(0);
     setMoves(0);
     setTimeElapsed(0);
@@ -188,6 +200,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     // Flip the card
     card.isFlipped = true;
     game.flippedCards.push(cardIndex);
+    setFlippedCardIds([...game.flippedCards]);  // Update UI
     
     // Animate flip
     const cardMesh = cardsGroupRef.current?.children[cardIndex] as THREE.Mesh;
@@ -239,6 +252,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           secondCard.isMatched = true;
           game.matches++;
           game.flippedCards = [];
+          setFlippedCardIds([]);
           
           // Show match animation
           setMatchAnimation({ active: true, bucket: firstCard.bucket });
@@ -326,6 +340,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           });
           
           game.flippedCards = [];
+          setFlippedCardIds([]);
         }, 1000);
       }
     }
@@ -574,32 +589,76 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       {/* Match Animation Overlay */}
       {matchAnimation.active && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
-          <div 
-            className="px-6 py-3 font-mono font-bold text-black text-2xl animate-bounce"
-            style={{ 
-              backgroundColor: `#${(BUCKET_COLORS[matchAnimation.bucket - 1] || BUCKET_COLORS[0]).toString(16).padStart(6, "0")}`
-            }}
-          >
-            MATCH! {BUCKET_LABELS[matchAnimation.bucket - 1]}
+          <div className="flex flex-col items-center">
+            <div 
+              className="w-20 h-20 rounded-lg flex items-center justify-center mb-3 shadow-2xl animate-bounce"
+              style={{ 
+                backgroundColor: `#${(BUCKET_COLORS[matchAnimation.bucket - 1] || BUCKET_COLORS[0]).toString(16).padStart(6, "0")}`
+              }}
+            >
+              <span className="text-black font-bold text-4xl">{BUCKET_SYMBOLS[matchAnimation.bucket - 1]}</span>
+            </div>
+            <div className="px-6 py-2 bg-primary text-black font-mono font-bold text-xl rounded">
+              MATCH!
+            </div>
           </div>
         </div>
       )}
 
       {/* Start Screen */}
       {showStart && (
-        <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
-          <div className="text-center">
-            <h1 className="font-mono text-4xl font-bold text-primary mb-2">MEMORY MATCH</h1>
-            <p className="font-mono text-zinc-400 mb-2">Block {blockHeight.toLocaleString()}</p>
-            <p className="font-mono text-sm text-zinc-500 mb-2">{blockBytes.length.toLocaleString()} transactions</p>
-            <p className="font-mono text-sm text-zinc-500 mb-2">Find matching transaction pairs!</p>
-            <p className="font-mono text-xs text-zinc-600 mb-8">Flip cards to reveal values • Match = same BTC range</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50">
+          <div className="text-center max-w-md px-6">
+            <h1 className="font-mono text-4xl font-bold text-primary mb-4">MEMORY MATCH</h1>
+            
+            {/* Visual Card Examples */}
+            <div className="flex justify-center gap-4 mb-6">
+              <div className="text-center">
+                <div 
+                  className="w-16 h-20 rounded border-2 border-zinc-600 flex items-center justify-center mb-2 mx-auto"
+                  style={{ backgroundColor: `#${CARD_BACK_COLOR.toString(16).padStart(6, "0")}` }}
+                >
+                  <span className="text-zinc-500 text-xs">?</span>
+                </div>
+                <span className="font-mono text-[10px] text-zinc-500">Hidden</span>
+              </div>
+              <div className="flex items-center text-zinc-600">→</div>
+              <div className="text-center">
+                <div 
+                  className="w-16 h-20 rounded border-2 flex items-center justify-center mb-2 mx-auto"
+                  style={{ 
+                    backgroundColor: `#${BUCKET_COLORS[2].toString(16).padStart(6, "0")}`,
+                    borderColor: `#${BUCKET_COLORS[2].toString(16).padStart(6, "0")}`
+                  }}
+                >
+                  <span className="text-black font-bold text-xl">{BUCKET_SYMBOLS[2]}</span>
+                </div>
+                <span className="font-mono text-[10px] text-zinc-500">Revealed</span>
+              </div>
+            </div>
+            
+            <div className="bg-zinc-900/50 rounded-lg p-4 mb-6">
+              <p className="font-mono text-sm text-zinc-300 mb-2">
+                <span className="text-primary font-bold">1.</span> Click cards to flip them
+              </p>
+              <p className="font-mono text-sm text-zinc-300 mb-2">
+                <span className="text-primary font-bold">2.</span> Find two cards with the <span className="text-primary">same number</span>
+              </p>
+              <p className="font-mono text-sm text-zinc-300">
+                <span className="text-primary font-bold">3.</span> Match all pairs to win!
+              </p>
+            </div>
+            
+            <p className="font-mono text-xs text-zinc-600 mb-6">
+              Block {blockHeight.toLocaleString()} • {Math.floor(blockBytes.length / 2)} pairs to match
+            </p>
+            
             {highScore > 0 && (
               <p className="font-mono text-sm text-zinc-400 mb-4">High Score: {highScore}</p>
             )}
             <button
               onClick={startGame}
-              className="px-8 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80 transition-colors"
+              className="px-10 py-4 bg-primary text-black font-mono font-bold text-lg rounded hover:bg-primary/80 transition-colors shadow-lg shadow-primary/20"
             >
               PLAY
             </button>
@@ -639,6 +698,25 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       {/* HUD */}
       {!showStart && !gameOver && (
         <>
+          {/* Instruction hint */}
+          {firstPlay && flippedCardIds.length === 0 && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+              <div className="br-card px-6 py-4 bg-bg/90 border border-primary/30">
+                <p className="font-mono text-lg text-primary font-bold mb-1">Click any card to flip</p>
+                <p className="font-mono text-xs text-zinc-400">Find cards with matching numbers</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Flipped Cards Counter */}
+          {flippedCardIds.length > 0 && flippedCardIds.length < 2 && (
+            <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20">
+              <div className="br-card px-4 py-2 bg-bg/80">
+                <span className="font-mono text-sm text-zinc-300">Flip one more card...</span>
+              </div>
+            </div>
+          )}
+          
           <div className="absolute top-20 right-6 z-10 flex gap-2">
             <div className="br-card px-3 py-2">
               <span className="font-mono text-xs text-zinc-500 block">TIME</span>
@@ -652,18 +730,22 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
 
           <div className="absolute bottom-6 left-6 z-10">
             <div className="br-card p-3 bg-bg/80">
-              <div className="font-mono text-[10px] uppercase text-zinc-500 mb-2">Value Ranges</div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {BUCKET_LABELS.map((label, i) => (
-                  <div key={i} className="flex items-center gap-2">
+              <div className="font-mono text-[10px] uppercase text-zinc-500 mb-2">Match by Number</div>
+              <div className="flex gap-2">
+                {BUCKET_SYMBOLS.map((symbol, i) => (
+                  <div key={i} className="flex flex-col items-center">
                     <div 
-                      className="w-3 h-3 rounded-sm" 
+                      className="w-8 h-8 rounded flex items-center justify-center mb-1" 
                       style={{ backgroundColor: `#${BUCKET_COLORS[i].toString(16).padStart(6, "0")}` }}
-                    />
-                    <span className="font-mono text-[10px] text-zinc-400">{label} BTC</span>
+                    >
+                      <span className="text-black font-bold text-sm">{symbol}</span>
+                    </div>
                   </div>
                 ))}
               </div>
+              <p className="font-mono text-[10px] text-zinc-500 mt-2 text-center">
+                Find two cards with the same number
+              </p>
             </div>
           </div>
 
