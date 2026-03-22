@@ -472,7 +472,10 @@ export function BlockVisualizer({
         const isMatched = game.matchedCards.has(hitMesh.userData.index);
         const isDisabled = hitMesh.userData.isDisabled;
         
-        if (!isFlipped && !isMatched && !isDisabled && gameMode === "memory" ? game.isPlaying : true) {
+        // Check if hoverable: in memory mode must be playing, in visualize mode always
+        const canHover = gameMode === "memory" ? (game.isPlaying && !isFlipped && !isMatched && !isDisabled) : true;
+        
+        if (canHover) {
           hoveredMeshRef.current = hitMesh;
           hitMesh.position.y = hitMesh.userData.originalY + 0.5;
           hitMesh.scale.setScalar(1.1);
@@ -523,7 +526,8 @@ export function BlockVisualizer({
 
   return (
     <>
-      <div ref={containerRef} className="absolute inset-0" style={{ top: "var(--header-total)", cursor: "grab" }} />
+      {/* 3D Canvas - always at bottom */}
+      <div ref={containerRef} className="absolute inset-0 z-0" style={{ top: "var(--header-total)", cursor: "grab" }} />
       
       {/* Memory Game UI Overlay */}
       {gameMode === "memory" && (
@@ -643,24 +647,6 @@ export function BlockVisualizer({
                 </div>
               </div>
               
-              <div className="absolute bottom-6 left-6 z-10">
-                <div className="br-card p-3 bg-bg/80">
-                  <div className="font-mono text-[10px] uppercase text-zinc-500 mb-2">Match by Number</div>
-                  <div className="flex gap-1">
-                    {BUCKET_SYMBOLS.map((symbol, i) => (
-                      <div 
-                        key={i} 
-                        className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold"
-                        style={{ 
-                          backgroundColor: `#${getBucketColor(i + 1).toString(16).padStart(6, "0")}`
-                        }}
-                      >
-                        {symbol}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </>
