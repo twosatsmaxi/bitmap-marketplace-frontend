@@ -817,24 +817,24 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {!showStart && !gameOver && (
         <>
-          <div className="absolute top-20 right-6 z-10 flex gap-2">
-            <div className="br-card px-3 py-2">
-              <span className="font-mono text-xs text-zinc-500">LVL</span>
-              <span className="font-mono text-xl font-bold text-primary ml-1">{level}</span>
+          <div className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2">
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500">LVL</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1">{level}</span>
             </div>
-            <div className="br-card px-4 py-2">
-              <span className="font-mono text-2xl font-bold text-primary">{score}</span>
-              <span className="font-mono text-xs text-zinc-500 ml-1">sats</span>
-            </div>
-          </div>
-          <div className="absolute top-20 left-6 z-10">
-            <div className="br-card px-3 py-2">
-              <span className="font-mono text-xs text-zinc-500">WAVE</span>
-              <span className="font-mono text-xl font-bold text-red-400 ml-1">{wave}</span>
+            <div className="br-card px-2.5 md:px-4 py-1.5 md:py-2">
+              <span className="font-mono text-lg md:text-2xl font-bold text-primary">{score}</span>
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500 ml-1">sats</span>
             </div>
           </div>
-          <div className="absolute bottom-6 left-6 z-10">
-            <div className="br-card p-3 bg-bg/80">
+          <div className="absolute top-16 md:top-20 left-3 md:left-6 z-10">
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500">WAVE</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1">{wave}</span>
+            </div>
+          </div>
+          <div className="absolute bottom-4 md:bottom-6 left-3 md:left-6 z-10 hidden sm:block">
+            <div className="br-card p-2.5 md:p-3 bg-bg/80">
               <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
               <div className="font-mono text-xs text-zinc-300 space-y-1">
                 <div>WASD — Move</div>
@@ -843,7 +843,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             </div>
           </div>
           {!showUpgrade && (
-            <button onClick={resetGame} className="absolute bottom-6 right-6 z-10 px-4 py-2 br-card font-mono text-sm text-zinc-400 hover:text-white">← Exit</button>
+            <button onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
           )}
         </>
       )}

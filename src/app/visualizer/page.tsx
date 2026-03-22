@@ -146,11 +146,11 @@ function VisualizerContent() {
   return (
     <>
       {/* Mode Toggle */}
-      <div className="absolute top-[var(--header-total)] left-6 z-20 mt-4">
-        <div className="flex gap-2">
+      <div className="absolute top-[var(--header-total)] left-3 md:left-6 z-20 mt-2 md:mt-4">
+        <div className="flex gap-1.5 md:gap-2">
           <button
             onClick={() => setGameMode("visualize")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
+            className={`px-2.5 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
               gameMode === "visualize"
                 ? "bg-primary text-black font-bold"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
@@ -160,7 +160,7 @@ function VisualizerContent() {
           </button>
           <button
             onClick={() => setGameMode("snake")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
+            className={`px-2.5 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
               gameMode === "snake"
                 ? "bg-primary text-black font-bold"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
@@ -170,7 +170,7 @@ function VisualizerContent() {
           </button>
           <button
             onClick={() => setGameMode("survivors")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
+            className={`px-2.5 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
               gameMode === "survivors"
                 ? "bg-primary text-black font-bold"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"

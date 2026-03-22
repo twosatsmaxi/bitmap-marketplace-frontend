@@ -60,11 +60,11 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
 
   return (
     <div className="absolute left-1/2 -translate-x-1/2 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
-      {/* Title row */}
-      <div className="flex items-center justify-center gap-3">
+      {/* Title row - stack on mobile, row on desktop */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3">
         <div className="flex items-baseline">
           {isEditing ? (
-            <span className="font-mono text-2xl font-bold">
+            <span className="font-mono text-xl md:text-2xl font-bold">
               <input
                 ref={inputRef}
                 type="text"
@@ -77,7 +77,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 disabled={disabled}
-                className="bg-transparent font-mono text-2xl font-bold text-primary p-0 m-0 border-0 outline-none shadow-none focus:outline-none focus:border-0 focus:ring-0"
+                className="bg-transparent font-mono text-xl md:text-2xl font-bold text-primary p-0 m-0 border-0 outline-none shadow-none focus:outline-none focus:border-0 focus:ring-0"
                 style={{ 
                   width: `${Math.max(value.length, 1)}ch`,
                   appearance: 'none',
@@ -91,7 +91,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
               onClick={startEditing}
               disabled={disabled}
               className={cn(
-                "font-mono text-2xl font-bold cursor-text group",
+                "font-mono text-xl md:text-2xl font-bold cursor-text group",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
@@ -105,9 +105,9 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
 
         {txCount != null && (
           <>
-            <div className="h-5 w-px bg-[rgba(255,255,255,0.12)]" />
-            <span className="font-mono text-xs text-zinc-500">
-              {txCount.toLocaleString()} <span className="text-[10px] uppercase tracking-[0.1em]">txns</span>
+            <div className="hidden md:block h-5 w-px bg-[rgba(255,255,255,0.12)]" />
+            <span className="font-mono text-[10px] md:text-xs text-zinc-500">
+              {txCount.toLocaleString()} <span className="text-[9px] md:text-[10px] uppercase tracking-[0.1em]">txns</span>
             </span>
           </>
         )}
