@@ -7,6 +7,7 @@ import { SatoshiSurvivors } from "@/components/visualizer/SatoshiSurvivors";
 import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { BackButton } from "@/components/mempool/BackButton";
+import { useChainTip } from "@/hooks/useChainTip";
 
 interface BlockMeta {
   height: number;
@@ -32,12 +33,13 @@ const BUCKET_LABELS: Record<number, string> = {
 function VisualizerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { chainTip } = useChainTip();
   const [mounted, setMounted] = useState(false);
   const [blockHeight, setBlockHeight] = useState(800150);
   const [blockData, setBlockData] = useState<BlockData | null>(null);
   const [selectedTxIndex, setSelectedTxIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [gameMode, setGameMode] = useState<"visualize" | "snake" | "survivors">("visualize");
+  const [gameMode, setGameMode] = useState<"visualize" | "snake" | "survivors" | "memory">("visualize");
 
   // Read bitmap from query params on mount
   useEffect(() => {
@@ -60,7 +62,7 @@ function VisualizerContent() {
     // Update URL without reloading
     const params = new URLSearchParams(searchParams.toString());
     params.set("bitmap", height.toString());
-    router.replace(`/visualizer?${params.toString()}`, { scroll: false });
+    router.replace(`/play?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
   // Fetch block data
@@ -131,8 +133,16 @@ function VisualizerContent() {
             LOADING...
           </p>
           <br/>
-          <div className="w-48 h-3 bg-zinc-800 mx-auto overflow-hidden">
-            <div className="h-full bg-primary animate-pulse w-1/2" />
+          <div className="flex gap-1 justify-center">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-4 h-4 bg-primary rounded-sm"
+                style={{
+                  animation: `bitmapPulse 1.2s ease-in-out ${i * 0.15}s infinite`,
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -143,14 +153,18 @@ function VisualizerContent() {
     ? blockData.bytes[selectedTxIndex]
     : null;
 
+  // Determine if this is a small block (<= 20 transactions, >= 2 for memory game)
+  const isSmallBlock = blockData && blockData.meta.tx_count <= 20 && blockData.meta.tx_count >= 2;
+  const isVerySmallBlock = blockData && blockData.meta.tx_count < 10;
+
   return (
     <>
       {/* Mode Toggle */}
-      <div className="absolute top-[var(--header-total)] left-6 z-20 mt-4">
-        <div className="flex gap-2">
+      <div className="absolute top-[var(--header-total)] left-3 md:left-6 z-20 mt-2 md:mt-4">
+        <div className="flex flex-wrap gap-1.5 md:gap-2 max-w-[180px] md:max-w-none">
           <button
             onClick={() => setGameMode("visualize")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
+            className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
               gameMode === "visualize"
                 ? "bg-primary text-black font-bold"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
@@ -158,26 +172,42 @@ function VisualizerContent() {
           >
             Visualize
           </button>
-          <button
-            onClick={() => setGameMode("snake")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
-              gameMode === "snake"
-                ? "bg-primary text-black font-bold"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-            }`}
-          >
-            Helicopter
-          </button>
-          <button
-            onClick={() => setGameMode("survivors")}
-            className={`px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-colors ${
-              gameMode === "survivors"
-                ? "bg-primary text-black font-bold"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-            }`}
-          >
-            Survivors
-          </button>
+          {!isVerySmallBlock && (
+            <button
+              onClick={() => setGameMode("snake")}
+              className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
+                gameMode === "snake"
+                  ? "bg-primary text-black font-bold"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              Helicopter
+            </button>
+          )}
+          {!isVerySmallBlock && (
+            <button
+              onClick={() => setGameMode("survivors")}
+              className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
+                gameMode === "survivors"
+                  ? "bg-primary text-black font-bold"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              Survivors
+            </button>
+          )}
+          {isSmallBlock && (
+            <button
+              onClick={() => setGameMode("memory")}
+              className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
+                gameMode === "memory"
+                  ? "bg-primary text-black font-bold"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              }`}
+            >
+              Memory
+            </button>
+          )}
         </div>
       </div>
 
@@ -188,6 +218,7 @@ function VisualizerContent() {
           onHeightChange={handleHeightChange}
           txCount={blockData?.meta.tx_count}
           disabled={loading}
+          maxHeight={chainTip}
         />
       )}
 
@@ -203,8 +234,16 @@ function VisualizerContent() {
               {blockHeight.toLocaleString()}
             </p>
             <br/>
-            <div className="mt-4 w-64 h-3 bg-zinc-800 mx-auto overflow-hidden">
-              <div className="h-full bg-primary animate-pulse w-2/3" />
+            <div className="mt-4 flex gap-1 justify-center">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-5 h-5 bg-primary rounded-sm"
+                  style={{
+                    animation: `bitmapPulse 1.2s ease-in-out ${i * 0.12}s infinite`,
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -220,6 +259,13 @@ function VisualizerContent() {
           ) : gameMode === "survivors" ? (
             <SatoshiSurvivors 
               blockBytes={blockData.bytes} 
+              blockHeight={blockData.meta.height}
+            />
+          ) : gameMode === "memory" ? (
+            <BlockVisualizer
+              key={`memory-${blockData.meta.height}`}
+              blockBytes={blockData.bytes}
+              gameMode="memory"
               blockHeight={blockData.meta.height}
             />
           ) : (
@@ -297,8 +343,16 @@ export default function VisualizerPage() {
             LOADING...
           </p>
           <br/>
-          <div className="w-48 h-3 bg-zinc-800 mx-auto overflow-hidden">
-            <div className="h-full bg-primary animate-pulse w-1/2" />
+          <div className="flex gap-1 justify-center">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-4 h-4 bg-primary rounded-sm"
+                style={{
+                  animation: `bitmapPulse 1.2s ease-in-out ${i * 0.15}s infinite`,
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>

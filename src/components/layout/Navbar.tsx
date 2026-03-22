@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Search, Terminal, Menu, X, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Terminal, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
@@ -27,7 +27,6 @@ export default function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const isActivityActive = pathname === "/activity" || pathname === "/visualizer";
 
   return (
     <>
@@ -53,16 +52,7 @@ export default function Navbar() {
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
-            <NavLink href="/activity" active={isActivityActive}>Activity</NavLink>
-            {isActivityActive && (
-              <NavLink href="/visualizer" active={pathname === "/visualizer"}>
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3" />
-                  3D View
-                </span>
-              </NavLink>
-            )}
-            <SoonNav label="Analytics" />
+            <SoonNav label="Activity" />
           </div>
 
           {/* Right side */}
@@ -70,14 +60,7 @@ export default function Navbar() {
             {/* Trade — always visible on mobile */}
             <SoonNavInline label="Trade" className="md:hidden" />
 
-            {/* Desktop: Query + Connect */}
-            <span className="hidden items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600 sm:hidden md:inline-flex">
-              <Search className="h-3.5 w-3.5" />
-              Query
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-                Soon
-              </span>
-            </span>
+            {/* Desktop: Connect */}
             <span className="hidden items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600 md:inline-flex">
               Connect
               <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
@@ -145,39 +128,12 @@ export default function Navbar() {
             Explore
           </DrawerNavLink>
           <DrawerSoonNav label="Market" />
-          <DrawerNavLink
-            href="/activity"
-            active={isActivityActive}
-            onClick={() => setMenuOpen(false)}
-          >
-            Activity
-          </DrawerNavLink>
-          {isActivityActive && (
-            <DrawerNavLink
-              href="/visualizer"
-              active={pathname === "/visualizer"}
-              onClick={() => setMenuOpen(false)}
-            >
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Immersive View
-              </span>
-            </DrawerNavLink>
-          )}
-          <DrawerSoonNav label="Analytics" />
+          <DrawerSoonNav label="Activity" />
 
           <div className="my-4 border-t border-[rgba(120,72,18,0.45)]" />
 
           {/* Mobile Actions */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-                Query
-              </span>
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
-                Soon
-              </span>
-            </div>
             <div className="flex items-center justify-between px-4 py-3">
               <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
                 Connect Wallet

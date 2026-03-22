@@ -398,20 +398,14 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       {/* Header panel */}
       <div className="br-card p-3 md:p-5">
         <div className="flex flex-col gap-2 md:gap-3">
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
               Bitmap Explorer
             </h1>
-            <div className="hidden sm:block">
-              <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
-            </div>
+            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
             <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em] text-zinc-400">
               Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
             </span>
-          </div>
-
-          <div className="sm:hidden">
-            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
           </div>
 
           <p className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
@@ -462,23 +456,31 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       <div className="sticky top-[var(--header-total)] z-30 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-bg/95 backdrop-blur-sm border-y border-[rgba(255,255,255,0.06)]">
         <div className="text-center font-mono text-xs">
           {activeFilter ? (
-            <span className="text-zinc-400">
-              {/* Mobile: abbreviated counts */}
-              <span className="md:hidden">
-                <span className="text-primary font-bold">{abbreviateNumber(loadedCount)}</span>
-                <span className="text-zinc-600 mx-1">/</span>
-                <span className="text-zinc-500">{totalCount ? abbreviateNumber(totalCount) : '...'}</span>
+            loadedCount === 0 && !totalCount ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0ms' }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '150ms' }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '300ms' }} />
               </span>
-              {/* Desktop: full counts */}
-              <span className="hidden md:inline">
-                <span className="text-primary font-bold">{loadedCount.toLocaleString()}</span>
-                <span className="text-zinc-600 mx-1.5">/</span>
-                <span className="text-zinc-500">{totalCount?.toLocaleString() ?? '...'}</span>
+            ) : (
+              <span className="text-zinc-400">
+                {/* Mobile: abbreviated counts */}
+                <span className="md:hidden">
+                  <span className="text-primary font-bold">{abbreviateNumber(loadedCount)}</span>
+                  <span className="text-zinc-600 mx-1">/</span>
+                  <span className="text-zinc-500">{totalCount ? abbreviateNumber(totalCount) : '...'}</span>
+                </span>
+                {/* Desktop: full counts */}
+                <span className="hidden md:inline">
+                  <span className="text-primary font-bold">{loadedCount.toLocaleString()}</span>
+                  <span className="text-zinc-600 mx-1.5">/</span>
+                  <span className="text-zinc-500">{totalCount?.toLocaleString() ?? '...'}</span>
+                </span>
+                {totalPages > 0 && (
+                  <span className="text-zinc-600 ml-2 md:ml-3">Pg {visiblePageIndex + 1}</span>
+                )}
               </span>
-              {totalPages > 0 && (
-                <span className="text-zinc-600 ml-2 md:ml-3">Pg {visiblePageIndex + 1}</span>
-              )}
-            </span>
+            )
           ) : (
             <span className="text-primary font-bold">
               {/* Mobile: abbreviated */}

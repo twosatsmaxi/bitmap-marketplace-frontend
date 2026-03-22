@@ -209,21 +209,14 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
       <div className="br-card p-3 md:p-5">
         <div className="flex flex-col gap-2 md:gap-3">
           {/* Top row: Title + search + tip */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
               Bitmap Explorer
             </h1>
-            <div className="hidden sm:block">
-              <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
-            </div>
+            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
             <span className="ml-auto border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] md:tracking-[0.2em] text-zinc-400">
               Tip <span className="text-primary">#{latestBlock.toLocaleString()}</span>
             </span>
-          </div>
-
-          {/* Mobile Search */}
-          <div className="sm:hidden">
-            <BlockSearch onSearch={jumpTo} latestBlock={latestBlock} currentHeight={anchorHeight} />
           </div>
 
           {/* Subtitle below */}

@@ -31,7 +31,7 @@ export default async function ActivityPage({ searchParams }: PageProps) {
               </p>
             </div>
             <Link
-              href="/visualizer"
+              href="/play"
               className="flex items-center gap-2 self-start px-4 py-2.5
                 border border-primary/40 rounded-lg
                 bg-primary/10 hover:bg-primary/20
