@@ -29,7 +29,8 @@ interface GameState {
 
 const BUCKET_COLORS = [0x7e4912, 0xa05a1a, 0xb87326, 0xf7931a, 0xffc12a, 0xffeb3b];
 const BUCKET_LABELS = ["<0.001", "0.001-0.01", "0.01-0.1", "0.1-1", "1-10", "10+"];
-const CARD_BACK_COLOR = 0x1a1a1e;
+const CARD_BACK_COLOR = 0x27272a;  // Lighter grey for better visibility
+const CARD_BACK_COLOR_DARK = 0x18181b;
 const MATCH_ANIMATION_DURATION = 600;
 
 export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProps) {
@@ -60,10 +61,19 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     isGameOver: false,
   });
 
-  // Load high score from localStorage
+  // Load high score from localStorage and reset game state on mount
   useEffect(() => {
     const saved = localStorage.getItem(`memoryMatch_highScore_${blockHeight}`);
     if (saved) setHighScore(parseInt(saved, 10));
+    
+    // Always start with the start screen
+    setShowStart(true);
+    setGameOver(false);
+    setScore(0);
+    setMoves(0);
+    setTimeElapsed(0);
+    gameRef.current.isPlaying = false;
+    gameRef.current.isGameOver = false;
   }, [blockHeight]);
 
   // Initialize cards from block bytes
@@ -141,7 +151,24 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           mesh.rotation.y = 0;
           mesh.position.set(card.originalPos.x, card.originalPos.y, card.originalPos.z);
           mesh.scale.setScalar(1);
-          (mesh.material as THREE.MeshStandardMaterial).opacity = 1;
+          mesh.userData.isFaceUp = false;
+          
+          // Reset material to back color
+          const materials = mesh.material as THREE.MeshStandardMaterial[];
+          if (Array.isArray(materials)) {
+            materials.forEach((mat, i) => {
+              if (i === 2) { // Top face
+                mat.color.setHex(CARD_BACK_COLOR);
+                mat.emissive.setHex(0x000000);
+                mat.emissiveIntensity = 0;
+              } else {
+                mat.color.setHex(CARD_BACK_COLOR_DARK);
+                mat.emissive.setHex(0x000000);
+                mat.emissiveIntensity = 0;
+              }
+              mat.opacity = 1;
+            });
+          }
         }
       });
     }
@@ -181,12 +208,16 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
         
         cardMesh.rotation.y = startRotation + (targetRotation - startRotation) * easeProgress;
         
-        // Change color at halfway point
-        if (progress >= 0.5) {
-          const mat = cardMesh.material as THREE.MeshStandardMaterial;
-          mat.color.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
-          mat.emissive.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
-          mat.emissiveIntensity = 0.5;
+        // Change color at halfway point - update top face material (index 2)
+        if (progress >= 0.5 && !cardMesh.userData.isFaceUp) {
+          cardMesh.userData.isFaceUp = true;
+          const materials = cardMesh.material as THREE.MeshStandardMaterial[];
+          if (Array.isArray(materials)) {
+            const topMat = materials[2]; // Top face
+            topMat.color.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
+            topMat.emissive.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
+            topMat.emissiveIntensity = 0.5;
+          }
         }
         
         if (progress < 1) {
@@ -279,11 +310,15 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
                 
                 mesh.rotation.y = startRotation + (targetRotation - startRotation) * easeProgress;
                 
-                if (progress >= 0.5) {
-                  const mat = mesh.material as THREE.MeshStandardMaterial;
-                  mat.color.setHex(CARD_BACK_COLOR);
-                  mat.emissive.setHex(0x000000);
-                  mat.emissiveIntensity = 0;
+                if (progress >= 0.5 && mesh.userData.isFaceUp) {
+                  mesh.userData.isFaceUp = false;
+                  const materials = mesh.material as THREE.MeshStandardMaterial[];
+                  if (Array.isArray(materials)) {
+                    const topMat = materials[2]; // Top face
+                    topMat.color.setHex(CARD_BACK_COLOR);
+                    topMat.emissive.setHex(0x000000);
+                    topMat.emissiveIntensity = 0;
+                  }
                 }
                 
                 if (progress < 1) {
@@ -320,11 +355,13 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     const gridWidth = Math.max(0, (cols - 1) * spacing);
     const gridHeight = Math.max(0, (rows - 1) * spacing);
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-    const camDist = Math.max(gridWidth, gridHeight) * 0.8 + 10;
-    camera.position.set(0, Math.max(10, camDist * 0.6), Math.max(15, camDist));
+    // Camera - top-down view for memory game
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const viewSize = Math.max(gridWidth, gridHeight);
+    const camHeight = Math.max(15, viewSize * 0.8);
+    camera.position.set(0, camHeight, 0);
     camera.lookAt(0, 0, 0);
+    camera.up.set(0, 0, -1);
     cameraRef.current = camera;
 
     // Renderer
@@ -334,15 +371,16 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(20, 40, 20);
+    // Lighting - brighter for top-down view
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    dirLight.position.set(10, 30, 10);
     scene.add(dirLight);
     
-    const pointLight = new THREE.PointLight(0xf7931a, 0.3, 50);
-    pointLight.position.set(0, 10, 0);
-    scene.add(pointLight);
+    // Additional light from bottom to illuminate card faces
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    bottomLight.position.set(0, -10, 0);
+    scene.add(bottomLight);
 
     // Ground
     const groundSize = Math.max(10, Math.max(gridWidth, gridHeight) + 10);
@@ -374,15 +412,36 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       const x = (col - (cols - 1) / 2) * spacing;
       const z = (row - (rows - 1) / 2) * spacing;
       
-      const cardMaterial = new THREE.MeshStandardMaterial({
+      // Create different materials for each face
+      // Top face (face-up shows bucket color, starts face-down so shows back color)
+      const topMaterial = new THREE.MeshStandardMaterial({
         color: CARD_BACK_COLOR,
-        roughness: 0.4,
-        metalness: 0.3,
+        roughness: 0.3,
+        metalness: 0.2,
+      });
+      // Bottom face
+      const bottomMaterial = new THREE.MeshStandardMaterial({
+        color: CARD_BACK_COLOR_DARK,
+        roughness: 0.5,
+        metalness: 0.1,
+      });
+      // Side faces - use darker color
+      const sideMaterial = new THREE.MeshStandardMaterial({
+        color: CARD_BACK_COLOR_DARK,
+        roughness: 0.5,
+        metalness: 0.2,
       });
       
-      const cardMesh = new THREE.Mesh(cardGeometry, cardMaterial);
+      // Array of materials: right, left, top, bottom, front, back
+      const materials = [
+        sideMaterial, sideMaterial,  // right, left
+        topMaterial, bottomMaterial,  // top, bottom
+        sideMaterial, sideMaterial,  // front, back
+      ];
+      
+      const cardMesh = new THREE.Mesh(cardGeometry, materials);
       cardMesh.position.set(x, 0, z);
-      cardMesh.userData = { cardIndex: i };
+      cardMesh.userData = { cardIndex: i, isFaceUp: false };
       
       cardsGroup.add(cardMesh);
       

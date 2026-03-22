@@ -178,6 +178,78 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const spacing = 2.5;
   const multiShotRef = useRef(1);
 
+  // Virtual joystick state for mobile
+  const joystickRef = useRef<{ active: boolean; dx: number; dz: number }>({ active: false, dx: 0, dz: 0 });
+  const joystickOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+  const joystickContainerRef = useRef<HTMLDivElement>(null);
+  const joystickKnobRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile/touch device
+  useEffect(() => {
+    const check = () => setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Virtual joystick touch handlers
+  const handleJoystickStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    joystickOriginRef.current = { x: centerX, y: centerY };
+    joystickRef.current.active = true;
+
+    // Update knob position
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    const maxR = rect.width / 2 - 20;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+    }
+    const norm = Math.min(dist / maxR, 1);
+    joystickRef.current.dx = Math.cos(angle) * norm;
+    joystickRef.current.dz = Math.sin(angle) * norm;
+  }, []);
+
+  const handleJoystickMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!joystickRef.current.active) return;
+    const touch = e.touches[0];
+    const origin = joystickOriginRef.current;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const maxR = rect.width / 2 - 20;
+    const dx = touch.clientX - origin.x;
+    const dy = touch.clientY - origin.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+    }
+    const norm = Math.min(dist / maxR, 1);
+    joystickRef.current.dx = Math.cos(angle) * norm;
+    joystickRef.current.dz = Math.sin(angle) * norm;
+  }, []);
+
+  const handleJoystickEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    joystickRef.current.active = false;
+    joystickRef.current.dx = 0;
+    joystickRef.current.dz = 0;
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = 'translate(0px, 0px)';
+    }
+  }, []);
+
   const startGame = useCallback(() => {
     synthRef.current.init();
     
@@ -404,13 +476,20 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
         return;
       }
 
-      // Player movement (works even during upgrade selection)
+      // Player movement (keyboard + virtual joystick)
       let mx = 0, mz = 0;
       if (keys.w) mz -= 1;
       if (keys.s) mz += 1;
       if (keys.a) mx -= 1;
       if (keys.d) mx += 1;
-      
+
+      // Add virtual joystick input
+      const joy = joystickRef.current;
+      if (joy.active) {
+        mx += joy.dx;
+        mz += joy.dz;
+      }
+
       if (mx !== 0 || mz !== 0) {
         const len = Math.sqrt(mx * mx + mz * mz);
         mx /= len; mz /= len;
@@ -833,15 +912,35 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
               <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1">{wave}</span>
             </div>
           </div>
-          <div className="absolute bottom-4 md:bottom-6 left-3 md:left-6 z-10 hidden sm:block">
-            <div className="br-card p-2.5 md:p-3 bg-bg/80">
-              <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
-              <div className="font-mono text-xs text-zinc-300 space-y-1">
-                <div>WASD — Move</div>
-                <div>Mouse wheel — Zoom</div>
+          {/* Desktop controls hint */}
+          {!isMobile && (
+            <div className="absolute bottom-4 md:bottom-6 left-3 md:left-6 z-10 hidden sm:block">
+              <div className="br-card p-2.5 md:p-3 bg-bg/80">
+                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
+                <div className="font-mono text-xs text-zinc-300 space-y-1">
+                  <div>WASD — Move</div>
+                  <div>Mouse wheel — Zoom</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          {/* Mobile virtual joystick */}
+          {isMobile && (
+            <div
+              ref={joystickContainerRef}
+              onTouchStart={handleJoystickStart}
+              onTouchMove={handleJoystickMove}
+              onTouchEnd={handleJoystickEnd}
+              className="absolute bottom-8 left-6 z-20 w-[120px] h-[120px] rounded-full border-2 border-primary/40 bg-bg/30 flex items-center justify-center touch-none"
+              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+            >
+              <div
+                ref={joystickKnobRef}
+                className="w-12 h-12 rounded-full bg-primary/70 border-2 border-primary transition-none pointer-events-none"
+                style={{ willChange: 'transform' }}
+              />
+            </div>
+          )}
           {!showUpgrade && (
             <button onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
           )}
