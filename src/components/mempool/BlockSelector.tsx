@@ -8,9 +8,10 @@ interface BlockSelectorProps {
   onHeightChange: (height: number) => void;
   txCount?: number;
   disabled?: boolean;
+  maxHeight?: number | null;
 }
 
-export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled }: BlockSelectorProps) {
+export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled, maxHeight }: BlockSelectorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(currentHeight.toString());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,13 +32,17 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
   }, [isEditing]);
 
   const handleSubmit = useCallback(() => {
-    const height = parseInt(value, 10);
+    let height = parseInt(value, 10);
     if (!isNaN(height) && height > 0) {
+      // Limit to chain tip if available
+      if (maxHeight !== null && maxHeight !== undefined && height > maxHeight) {
+        height = maxHeight;
+      }
       onHeightChange(height);
     }
     setIsEditing(false);
     setValue(currentHeight.toString());
-  }, [value, onHeightChange, currentHeight]);
+  }, [value, onHeightChange, currentHeight, maxHeight]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -58,8 +63,26 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
     setValue(currentHeight.toString());
   }, [currentHeight, disabled]);
 
+  // Handle input change with max limit
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    // Only allow digits
+    if (!/^\d*$/.test(newValue)) return;
+    
+    // If we have a max height, prevent entering values that exceed it
+    if (maxHeight !== null && maxHeight !== undefined && newValue !== "") {
+      const numValue = parseInt(newValue, 10);
+      if (!isNaN(numValue) && numValue > maxHeight) {
+        setValue(maxHeight.toString());
+        return;
+      }
+    }
+    
+    setValue(newValue);
+  }, [maxHeight]);
+
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
+    <div className="absolute left-1/2 -translate-x-1/2 z-10 mt-8 md:mt-0" style={{ top: "calc(var(--header-total) + 1rem)" }}>
       {/* Title row - stack on mobile, row on desktop */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3">
         <div className="flex items-baseline">
@@ -71,9 +94,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={value}
-                onChange={(e) => {
-                  if (/^\d*$/.test(e.target.value)) setValue(e.target.value);
-                }}
+                onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 disabled={disabled}
