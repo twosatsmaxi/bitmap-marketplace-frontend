@@ -154,8 +154,8 @@ function VisualizerContent() {
     ? blockData.bytes[selectedTxIndex]
     : null;
 
-  // Determine if this is a small block (<= 20 transactions)
-  const isSmallBlock = blockData && blockData.meta.tx_count <= 20;
+  // Determine if this is a small block (<= 20 transactions, >= 2 for memory game)
+  const isSmallBlock = blockData && blockData.meta.tx_count <= 20 && blockData.meta.tx_count >= 2;
   const isVerySmallBlock = blockData && blockData.meta.tx_count < 10;
 
   return (

@@ -72,6 +72,15 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     const pairs: Card[] = [];
     const txCount = blockBytes.length;
     
+    // Need at least 2 transactions to play
+    if (txCount < 2) {
+      // Return minimal placeholder cards for demo (both same value)
+      return [
+        { id: 0, bucket: 3, isFlipped: false, isMatched: false, originalPos: { x: 0, y: 0, z: 0 } },
+        { id: 1, bucket: 3, isFlipped: false, isMatched: false, originalPos: { x: 0, y: 0, z: 0 } },
+      ];
+    }
+    
     // If odd number, we'll have one single card (no pair for last one)
     const pairCount = Math.floor(txCount / 2);
     
@@ -302,19 +311,19 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
 
     const txCount = blockBytes.length;
     const pairCount = Math.floor(txCount / 2);
-    const totalCards = pairCount * 2;
+    const totalCards = Math.max(2, pairCount * 2); // Ensure at least 2 cards minimum
     
     // Calculate grid layout
-    const cols = Math.ceil(Math.sqrt(totalCards));
-    const rows = Math.ceil(totalCards / cols);
+    const cols = Math.max(1, Math.ceil(Math.sqrt(totalCards)));
+    const rows = Math.max(1, Math.ceil(totalCards / cols));
     const spacing = 2.5;
-    const gridWidth = (cols - 1) * spacing;
-    const gridHeight = (rows - 1) * spacing;
+    const gridWidth = Math.max(0, (cols - 1) * spacing);
+    const gridHeight = Math.max(0, (rows - 1) * spacing);
 
     // Camera
     const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
     const camDist = Math.max(gridWidth, gridHeight) * 0.8 + 10;
-    camera.position.set(0, camDist * 0.6, camDist);
+    camera.position.set(0, Math.max(10, camDist * 0.6), Math.max(15, camDist));
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
@@ -336,7 +345,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     scene.add(pointLight);
 
     // Ground
-    const groundSize = Math.max(gridWidth, gridHeight) + 10;
+    const groundSize = Math.max(10, Math.max(gridWidth, gridHeight) + 10);
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(groundSize, groundSize),
       new THREE.MeshLambertMaterial({ color: 0x121214, transparent: true, opacity: 0.6 })
@@ -346,7 +355,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     scene.add(ground);
 
     // Grid helper
-    const gridHelper = new THREE.GridHelper(groundSize, Math.min(cols * 2, 20), 0xf7931a, 0x27272a);
+    const gridHelper = new THREE.GridHelper(groundSize, Math.max(2, Math.min(cols * 2, 20)), 0xf7931a, 0x27272a);
     gridHelper.position.y = -1.99;
     gridHelper.material.opacity = 0.2;
     gridHelper.material.transparent = true;
@@ -422,14 +431,20 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate);
       
+      // Skip if no cards
+      if (cardsGroup.children.length === 0) {
+        renderer.render(scene, camera);
+        return;
+      }
+      
       // Hover effect
       raycasterRef.current.setFromCamera(mouseRef.current, camera);
       const intersects = raycasterRef.current.intersectObjects(cardsGroup.children);
       
       // Reset previous hover
-      if (hoveredCard !== null) {
+      if (hoveredCard !== null && hoveredCard < cardsGroup.children.length) {
         const prevMesh = cardsGroup.children[hoveredCard] as THREE.Mesh;
-        if (prevMesh && !gameRef.current.cards[hoveredCard]?.isFlipped) {
+        if (prevMesh && gameRef.current.cards[hoveredCard] && !gameRef.current.cards[hoveredCard]?.isFlipped) {
           prevMesh.position.y = 0;
         }
         hoveredCard = null;
@@ -440,12 +455,15 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       if (intersects.length > 0 && gameRef.current.isPlaying && !gameRef.current.isGameOver) {
         const mesh = intersects[0].object as THREE.Mesh;
         const cardIndex = mesh.userData.cardIndex;
-        const card = gameRef.current.cards[cardIndex];
         
-        if (card && !card.isFlipped && !card.isMatched) {
-          hoveredCard = cardIndex;
-          mesh.position.y = 0.3;
-          container.style.cursor = "pointer";
+        if (cardIndex !== undefined && cardIndex >= 0 && cardIndex < gameRef.current.cards.length) {
+          const card = gameRef.current.cards[cardIndex];
+          
+          if (card && !card.isFlipped && !card.isMatched) {
+            hoveredCard = cardIndex;
+            mesh.position.y = 0.3;
+            container.style.cursor = "pointer";
+          }
         }
       }
       
