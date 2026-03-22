@@ -30,7 +30,7 @@ export default function BlockSearch({ onSearch, latestBlock, currentHeight, disa
   const handleSubmit = useCallback(() => {
     const num = parseInt(value, 10);
     if (isNaN(num) || num < 0 || num > latestBlock) {
-      setError(`Pick a block between 0 and ${latestBlock.toLocaleString()}`);
+      setError(`Pick a block between 0 and ${latestBlock}`);
       setIsEditing(false);
       setValue("");
       return;
@@ -74,7 +74,7 @@ export default function BlockSearch({ onSearch, latestBlock, currentHeight, disa
     const num = parseInt(input, 10);
     if (input !== "" && !isNaN(num) && num > latestBlock) {
       setValue(latestBlock.toString());
-      setError(`Max block is ${latestBlock.toLocaleString()}`);
+      setError(`Max block is ${latestBlock}`);
       return;
     }
     
@@ -99,10 +99,10 @@ export default function BlockSearch({ onSearch, latestBlock, currentHeight, disa
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
               disabled={disabled}
-              placeholder={displayHeight.toLocaleString()}
+              placeholder={displayHeight.toString()}
               className="bg-transparent font-mono text-sm md:text-base font-bold text-primary p-0 m-0 border-0 outline-none shadow-none focus:outline-none focus:border-0 focus:ring-0"
               style={{ 
-                width: `${Math.max(value.length || displayHeight.toLocaleString().length, 3)}ch`,
+                width: `${Math.max(value.length || displayHeight.toString().length, 3)}ch`,
                 minWidth: '4ch'
               }}
             />
@@ -118,7 +118,7 @@ export default function BlockSearch({ onSearch, latestBlock, currentHeight, disa
             )}
           >
             <span className="text-primary group-hover:text-primary/80 transition-colors">
-              {displayHeight.toLocaleString()}
+              {displayHeight.toString()}
             </span>
             <span className="text-zinc-600">.bitmap</span>
           </button>
