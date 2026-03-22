@@ -88,7 +88,9 @@ export function BlockVisualizer({
   const highScoreRef = useRef(highScore);
   const blockHeightRef = useRef(blockHeight);
   const onGameStateChangeRef = useRef(onGameStateChange);
-  const handleCubeClickRef = useRef<(index: number) => void>(() => {});
+  
+  // Store click handler in a mutable object that survives re-renders
+  const clickHandlerRef = useRef<{ fn: ((index: number) => void) | null }>({ fn: null });
 
   // Load high score
   useEffect(() => {
@@ -299,11 +301,11 @@ export function BlockVisualizer({
     }
   }, [gameMode, moves, matches, blockBytes, calculateScore, blockHeight, highScore, gameOver, onTransactionClick, onGameStateChange]);
   
-  // Update handleCubeClick ref after it's defined
+  // Update click handler ref
   useEffect(() => {
-    handleCubeClickRef.current = handleCubeClick;
+    clickHandlerRef.current.fn = handleCubeClick;
   }, [handleCubeClick]);
-
+  
   // Format time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -457,9 +459,9 @@ export function BlockVisualizer({
     };
 
     const handleClick = () => {
-      if (hoveredMeshRef.current) {
+      if (hoveredMeshRef.current && clickHandlerRef.current.fn) {
         const index = parseInt(hoveredMeshRef.current.name, 10);
-        handleCubeClickRef.current(index);
+        clickHandlerRef.current.fn(index);
       }
     };
 
