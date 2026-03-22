@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { HelicopterVisualizer } from "@/components/visualizer/HelicopterVisualizer";
 import { SatoshiSurvivors } from "@/components/visualizer/SatoshiSurvivors";
 import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
-import { MemoryMatchGame } from "@/components/visualizer/MemoryMatchGame";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { BackButton } from "@/components/mempool/BackButton";
 import { useChainTip } from "@/hooks/useChainTip";
@@ -263,8 +262,10 @@ function VisualizerContent() {
               blockHeight={blockData.meta.height}
             />
           ) : gameMode === "memory" ? (
-            <MemoryMatchGame 
-              blockBytes={blockData.bytes} 
+            <BlockVisualizer
+              key={blockData.meta.height}
+              blockBytes={blockData.bytes}
+              gameMode="memory"
               blockHeight={blockData.meta.height}
             />
           ) : (
