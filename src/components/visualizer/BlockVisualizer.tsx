@@ -9,7 +9,7 @@ interface BlockVisualizerProps {
   /** 1 byte per tx — values 1-6 (log₁₀ output value buckets) */
   blockBytes: Uint8Array;
   onTransactionClick?: (index: number) => void;
-  /** When true, enables memory match game mode */
+  /** When true, enables Bit Recall game mode */
   gameMode?: "visualize" | "memory";
   blockHeight?: number;
   onGameStateChange?: (state: { isPlaying: boolean; isGameOver: boolean; matches: number; moves: number }) => void;
@@ -743,7 +743,7 @@ export function BlockVisualizer({
           {showStartScreen && (
             <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
               <div className="text-center max-w-md px-6 pointer-events-auto">
-                <h1 className="font-mono text-4xl font-bold text-primary mb-4">MEMORY MATCH</h1>
+                <h1 className="font-mono text-4xl font-bold text-primary mb-4">BIT RECALL</h1>
                 
                 {/* Visual examples */}
                 <div className="flex justify-center gap-4 mb-6">

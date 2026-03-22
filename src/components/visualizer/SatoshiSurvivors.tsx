@@ -171,6 +171,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<any>(null);
   const playerRef = useRef<THREE.Group | null>(null);
   const blocksRef = useRef<THREE.Mesh[]>([]);
   const frameIdRef = useRef(0);
@@ -329,6 +330,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, container);
+    controlsRef.current = controls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     controls.enablePan = false;
@@ -443,28 +445,31 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     playerRef.current = player;
 
     const keys = { w: false, a: false, s: false, d: false };
-    window.addEventListener("keydown", (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k === "w" || k === "arrowup") keys.w = true;
       if (k === "a" || k === "arrowleft") keys.a = true;
       if (k === "s" || k === "arrowdown") keys.s = true;
       if (k === "d" || k === "arrowright") keys.d = true;
       if (k === "escape") resetGame();
-    });
-    window.addEventListener("keyup", (e) => {
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k === "w" || k === "arrowup") keys.w = false;
       if (k === "a" || k === "arrowleft") keys.a = false;
       if (k === "s" || k === "arrowdown") keys.s = false;
       if (k === "d" || k === "arrowright") keys.d = false;
-    });
-
-    window.addEventListener("resize", () => {
+    };
+    const onResize = () => {
       if (!cameraRef.current || !rendererRef.current) return;
       cameraRef.current.aspect = container.clientWidth / container.clientHeight;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(container.clientWidth, container.clientHeight);
-    });
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("resize", onResize);
 
     let lastTime = 0;
     let lastSpawn = 0;
@@ -772,14 +777,18 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
     return () => {
       cancelAnimationFrame(frameIdRef.current);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("resize", onResize);
+      controls.dispose();
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
   }, [blockBytes, highScore, resetGame, showUpgrade]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="absolute inset-0" style={{ top: "var(--header-total)" }} />
+    <div className="relative w-full h-full z-0">
+      <div ref={containerRef} className="absolute inset-0 z-0" style={{ top: "var(--header-total)" }} />
 
       {/* Upgrade Toast Notification */}
       {upgradeAnim && (

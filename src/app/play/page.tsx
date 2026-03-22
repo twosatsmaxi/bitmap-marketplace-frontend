@@ -205,7 +205,7 @@ function VisualizerContent() {
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
               }`}
             >
-              Memory
+              Bit Recall
             </button>
           )}
         </div>
