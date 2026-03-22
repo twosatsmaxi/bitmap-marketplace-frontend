@@ -554,8 +554,8 @@ export function BlockVisualizer({
           
           {/* Start Screen */}
           {showStartScreen && (
-            <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50" style={{ top: "var(--header-total)" }}>
-              <div className="text-center max-w-md px-6">
+            <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
+              <div className="text-center max-w-md px-6 pointer-events-auto">
                 <h1 className="font-mono text-4xl font-bold text-primary mb-4">MEMORY MATCH</h1>
                 
                 {/* Visual examples */}
@@ -602,7 +602,7 @@ export function BlockVisualizer({
                 )}
                 <button
                   onClick={startGame}
-                  className="px-10 py-4 bg-primary text-black font-mono font-bold text-lg rounded hover:bg-primary/80 transition-colors"
+                  className="px-10 py-4 bg-primary text-black font-mono font-bold text-lg rounded hover:bg-primary/80 transition-colors pointer-events-auto"
                 >
                   PLAY
                 </button>
@@ -612,8 +612,8 @@ export function BlockVisualizer({
           
           {/* Game Over Screen */}
           {gameOver && (
-            <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50" style={{ top: "var(--header-total)" }}>
-              <div className="text-center">
+            <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
+              <div className="text-center pointer-events-auto">
                 <h1 className="font-mono text-4xl font-bold text-primary mb-4">COMPLETE!</h1>
                 <p className="font-mono text-2xl text-white mb-2">Score: {score}</p>
                 <p className="font-mono text-sm text-zinc-400 mb-2">Time: {formatTime(timeElapsed)}</p>
@@ -624,7 +624,7 @@ export function BlockVisualizer({
                 <div className="flex gap-4 justify-center">
                   <button
                     onClick={startGame}
-                    className="px-6 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80 transition-colors"
+                    className="px-6 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80 transition-colors pointer-events-auto"
                   >
                     PLAY AGAIN
                   </button>
@@ -636,7 +636,7 @@ export function BlockVisualizer({
           {/* HUD */}
           {!showStartScreen && !gameOver && (
             <>
-              <div className="absolute top-20 right-6 z-10 flex gap-2">
+              <div className="absolute top-20 right-6 z-10 flex gap-2 pointer-events-none">
                 <div className="br-card px-3 py-2">
                   <span className="font-mono text-xs text-zinc-500 block">TIME</span>
                   <span className="font-mono text-xl font-bold text-white">{formatTime(timeElapsed)}</span>
