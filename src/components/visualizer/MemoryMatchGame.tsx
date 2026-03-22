@@ -13,8 +13,6 @@ interface Card {
   bucket: number;
   isFlipped: boolean;
   isMatched: boolean;
-  mesh?: THREE.Mesh;
-  originalPos: { x: number; y: number; z: number };
 }
 
 interface GameState {
@@ -86,8 +84,8 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     if (txCount < 2) {
       // Return minimal placeholder cards for demo (both same value)
       return [
-        { id: 0, bucket: 3, isFlipped: false, isMatched: false, originalPos: { x: 0, y: 0, z: 0 } },
-        { id: 1, bucket: 3, isFlipped: false, isMatched: false, originalPos: { x: 0, y: 0, z: 0 } },
+        { id: 0, bucket: 3, isFlipped: false, isMatched: false },
+        { id: 1, bucket: 3, isFlipped: false, isMatched: false },
       ];
     }
     
@@ -100,7 +98,6 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
         bucket: blockBytes[i],
         isFlipped: false,
         isMatched: false,
-        originalPos: { x: 0, y: 0, z: 0 },
       });
     }
     
@@ -144,12 +141,11 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     
     // Reset card visuals
     if (cardsGroupRef.current) {
-      cardsGroupRef.current.children.forEach((child, index) => {
+      cardsGroupRef.current.children.forEach((child) => {
         const mesh = child as THREE.Mesh;
-        const card = cards[index];
-        if (card && mesh) {
+        if (mesh && mesh.userData.originalPos) {
           mesh.rotation.y = 0;
-          mesh.position.set(card.originalPos.x, card.originalPos.y, card.originalPos.z);
+          mesh.position.set(mesh.userData.originalPos.x, mesh.userData.originalPos.y, mesh.userData.originalPos.z);
           mesh.scale.setScalar(1);
           mesh.userData.isFaceUp = false;
           
@@ -441,14 +437,14 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       
       const cardMesh = new THREE.Mesh(cardGeometry, materials);
       cardMesh.position.set(x, 0, z);
-      cardMesh.userData = { cardIndex: i, isFaceUp: false };
+      // Store position in userData so we can always reference it
+      cardMesh.userData = { 
+        cardIndex: i, 
+        isFaceUp: false,
+        originalPos: { x, y: 0, z }
+      };
       
       cardsGroup.add(cardMesh);
-      
-      // Store original position in game state
-      if (gameRef.current.cards[i]) {
-        gameRef.current.cards[i].originalPos = { x, y: 0, z };
-      }
     }
 
     // Mouse interaction
@@ -503,8 +499,8 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       // Reset previous hover
       if (hoveredCard !== null && hoveredCard < cardsGroup.children.length) {
         const prevMesh = cardsGroup.children[hoveredCard] as THREE.Mesh;
-        if (prevMesh && gameRef.current.cards[hoveredCard] && !gameRef.current.cards[hoveredCard]?.isFlipped) {
-          prevMesh.position.y = 0;
+        if (prevMesh && prevMesh.userData.originalPos && !gameRef.current.cards[hoveredCard]?.isFlipped) {
+          prevMesh.position.y = prevMesh.userData.originalPos.y;
         }
         hoveredCard = null;
         container.style.cursor = "default";
@@ -563,18 +559,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     };
   }, [blockBytes, handleCardClick]);
 
-  // Update card positions when game starts
-  useEffect(() => {
-    if (gameRef.current.cards.length > 0 && cardsGroupRef.current) {
-      gameRef.current.cards.forEach((card, i) => {
-        const mesh = cardsGroupRef.current?.children[i] as THREE.Mesh;
-        if (mesh) {
-          card.mesh = mesh;
-          card.originalPos = { ...mesh.position };
-        }
-      });
-    }
-  }, [gameRef.current.cards.length]);
+
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
