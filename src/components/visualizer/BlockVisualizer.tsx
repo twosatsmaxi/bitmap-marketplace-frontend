@@ -77,6 +77,18 @@ export function BlockVisualizer({
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const hoveredMeshRef = useRef<THREE.Mesh | null>(null);
   const originalColorsRef = useRef<Map<number, number>>(new Map());
+  
+  // Store mutable values in refs to avoid stale closures
+  const gameModeRef = useRef(gameMode);
+  const gameOverRef = useRef(gameOver);
+  const blockBytesRef = useRef(blockBytes);
+  const onTransactionClickRef = useRef(onTransactionClick);
+  const movesRef = useRef(moves);
+  const matchesRef = useRef(matches);
+  const highScoreRef = useRef(highScore);
+  const blockHeightRef = useRef(blockHeight);
+  const onGameStateChangeRef = useRef(onGameStateChange);
+  const handleCubeClickRef = useRef<(index: number) => void>(() => {});
 
   // Load high score
   useEffect(() => {
@@ -127,15 +139,33 @@ export function BlockVisualizer({
     onGameStateChange?.({ isPlaying: true, isGameOver: false, matches: 0, moves: 0 });
   }, [gameMode, onGameStateChange]);
 
-  // Handle cube click in memory mode
+  // Update refs when props/state change
+  useEffect(() => {
+    gameModeRef.current = gameMode;
+    gameOverRef.current = gameOver;
+    blockBytesRef.current = blockBytes;
+    onTransactionClickRef.current = onTransactionClick;
+    movesRef.current = moves;
+    matchesRef.current = matches;
+    highScoreRef.current = highScore;
+    blockHeightRef.current = blockHeight;
+    onGameStateChangeRef.current = onGameStateChange;
+  }, [gameMode, gameOver, blockBytes, onTransactionClick, moves, matches, highScore, blockHeight, onGameStateChange]);
+  
+  // Handle cube click in memory mode - uses refs to avoid stale closure
   const handleCubeClick = useCallback((index: number) => {
-    if (gameMode !== "memory") {
-      onTransactionClick?.(index);
+    const currentGameMode = gameModeRef.current;
+    const currentGameOver = gameOverRef.current;
+    const currentBlockBytes = blockBytesRef.current;
+    const currentOnTransactionClick = onTransactionClickRef.current;
+    
+    if (currentGameMode !== "memory") {
+      currentOnTransactionClick?.(index);
       return;
     }
     
     const game = gameStateRef.current;
-    if (!game.isPlaying || gameOver) return;
+    if (!game.isPlaying || currentGameOver) return;
     
     // Check if already flipped or matched
     if (game.flippedCards.includes(index) || game.matchedCards.has(index)) return;
@@ -152,7 +182,7 @@ export function BlockVisualizer({
     
     // Animate reveal
     if (mesh) {
-      const bucket = blockBytes[index];
+      const bucket = currentBlockBytes[index];
       const targetColor = getBucketColor(bucket);
       const material = mesh.material as THREE.MeshStandardMaterial;
       
@@ -185,12 +215,13 @@ export function BlockVisualizer({
     
     // Check for match when 2 cards flipped
     if (game.flippedCards.length === 2) {
-      const newMoves = moves + 1;
+      const currentMoves = movesRef.current;
+      const newMoves = currentMoves + 1;
       setMoves(newMoves);
       
       const [first, second] = game.flippedCards;
-      const firstBucket = blockBytes[first];
-      const secondBucket = blockBytes[second];
+      const firstBucket = currentBlockBytes[first];
+      const secondBucket = currentBlockBytes[second];
       
       if (firstBucket === secondBucket) {
         // Match!
@@ -199,7 +230,8 @@ export function BlockVisualizer({
           game.matchedCards.add(second);
           game.flippedCards = [];
           
-          const newMatches = matches + 1;
+          const currentMatches = matchesRef.current;
+          const newMatches = currentMatches + 1;
           setMatches(newMatches);
           
           // Show match animation
@@ -207,7 +239,7 @@ export function BlockVisualizer({
           setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 1000);
           
           // Check for game over
-          const totalPairs = Math.floor(blockBytes.length / 2);
+          const totalPairs = Math.floor(currentBlockBytes.length / 2);
           if (newMatches >= totalPairs) {
             const finalTime = Math.floor((Date.now() - game.startTime) / 1000);
             const finalScore = calculateScore(newMoves, finalTime, totalPairs);
@@ -216,14 +248,14 @@ export function BlockVisualizer({
             setGameOver(true);
             game.isPlaying = false;
             
-            if (finalScore > highScore) {
+            if (finalScore > highScoreRef.current) {
               setHighScore(finalScore);
-              localStorage.setItem(`memory_highScore_${blockHeight}`, finalScore.toString());
+              localStorage.setItem(`memory_highScore_${blockHeightRef.current}`, finalScore.toString());
             }
             
-            onGameStateChange?.({ isPlaying: false, isGameOver: true, matches: newMatches, moves: newMoves });
+            onGameStateChangeRef.current?.({ isPlaying: false, isGameOver: true, matches: newMatches, moves: newMoves });
           } else {
-            onGameStateChange?.({ isPlaying: true, isGameOver: false, matches: newMatches, moves: newMoves });
+            onGameStateChangeRef.current?.({ isPlaying: true, isGameOver: false, matches: newMatches, moves: newMoves });
           }
         }, 400);
       } else {
@@ -266,6 +298,11 @@ export function BlockVisualizer({
       }
     }
   }, [gameMode, moves, matches, blockBytes, calculateScore, blockHeight, highScore, gameOver, onTransactionClick, onGameStateChange]);
+  
+  // Update handleCubeClick ref after it's defined
+  useEffect(() => {
+    handleCubeClickRef.current = handleCubeClick;
+  }, [handleCubeClick]);
 
   // Format time
   const formatTime = (seconds: number): string => {
@@ -422,7 +459,7 @@ export function BlockVisualizer({
     const handleClick = () => {
       if (hoveredMeshRef.current) {
         const index = parseInt(hoveredMeshRef.current.name, 10);
-        handleCubeClick(index);
+        handleCubeClickRef.current(index);
       }
     };
 
@@ -511,7 +548,8 @@ export function BlockVisualizer({
       renderer.dispose();
       domElement.remove();
     };
-  }, [blockBytes, gameMode, handleCubeClick, gameOver]);
+  // Only recreate scene when blockBytes or gameMode changes (not on game state changes)
+  }, [blockBytes, gameMode]);
 
   if (webglError) {
     return (
