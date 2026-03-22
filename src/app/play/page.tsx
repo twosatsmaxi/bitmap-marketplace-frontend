@@ -125,6 +125,24 @@ function VisualizerContent() {
     updateBlockHeight(height);
   }, [updateBlockHeight]);
 
+  // Block size classifications (must be before effects that use them)
+  const isSmallBlock = blockData && blockData.meta.tx_count <= 20 && blockData.meta.tx_count >= 2;
+  const isVerySmallBlock = blockData && blockData.meta.tx_count < 10;
+  // Helicopter/Snake game works best with 20-40 txs (playable grid, not too long)
+  const isHelicopterBlock = blockData && blockData.meta.tx_count >= 20 && blockData.meta.tx_count <= 40;
+  // Survivors needs 30+ txs for enough enemy spawn points and arena space
+  const isSurvivorsBlock = blockData && blockData.meta.tx_count >= 30;
+
+  // Auto-switch from Helicopter or Survivors to Visualize if block is outside the sweet spot
+  useEffect(() => {
+    if (gameMode === "snake" && blockData && !isHelicopterBlock) {
+      setGameMode("visualize");
+    }
+    if (gameMode === "survivors" && blockData && !isSurvivorsBlock) {
+      setGameMode("visualize");
+    }
+  }, [blockData, gameMode, isHelicopterBlock, isSurvivorsBlock]);
+
   if (!mounted) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
@@ -153,10 +171,6 @@ function VisualizerContent() {
     ? blockData.bytes[selectedTxIndex]
     : null;
 
-  // Determine if this is a small block (<= 20 transactions, >= 2 for memory game)
-  const isSmallBlock = blockData && blockData.meta.tx_count <= 20 && blockData.meta.tx_count >= 2;
-  const isVerySmallBlock = blockData && blockData.meta.tx_count < 10;
-
   return (
     <>
       {/* Mode Toggle */}
@@ -172,7 +186,7 @@ function VisualizerContent() {
           >
             Visualize
           </button>
-          {!isVerySmallBlock && (
+          {isHelicopterBlock && (
             <button
               onClick={() => setGameMode("snake")}
               className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
@@ -184,7 +198,7 @@ function VisualizerContent() {
               Helicopter
             </button>
           )}
-          {!isVerySmallBlock && (
+          {isSurvivorsBlock && (
             <button
               onClick={() => setGameMode("survivors")}
               className={`px-2 md:px-4 py-1.5 md:py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider rounded transition-colors ${
@@ -205,14 +219,14 @@ function VisualizerContent() {
                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
               }`}
             >
-              Memory
+              Bit Recall
             </button>
           )}
         </div>
       </div>
 
-      {/* Block Selector (Visualize and Survivors modes) */}
-      {(gameMode === "visualize" || gameMode === "survivors") && (
+      {/* Block Selector (Visualize, Survivors, and Bit Recall modes) */}
+      {(gameMode === "visualize" || gameMode === "survivors" || gameMode === "memory") && (
         <BlockSelector
           currentHeight={blockHeight}
           onHeightChange={handleHeightChange}

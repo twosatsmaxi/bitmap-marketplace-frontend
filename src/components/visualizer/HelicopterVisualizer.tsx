@@ -418,8 +418,8 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   }, [blockBytes, getIndexFromGrid, getTxPosition, highScore, resetGame, spawnFood]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="absolute inset-0" style={{ top: "var(--header-total)" }} />
+    <div className="relative w-full h-full z-0">
+      <div ref={containerRef} className="absolute inset-0 z-0" style={{ top: "var(--header-total)" }} />
 
       {/* Start Screen */}
       {showStart && (
