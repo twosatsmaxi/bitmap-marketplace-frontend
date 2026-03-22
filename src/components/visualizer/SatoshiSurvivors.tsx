@@ -332,13 +332,18 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     controls.enablePan = false;
-    controls.enableRotate = true;
     controls.minDistance = 10;
     controls.maxDistance = 100;
     controls.maxPolarAngle = Math.PI / 2 - 0.1;
     controls.minPolarAngle = Math.PI / 4;
     controls.mouseButtons = { LEFT: undefined, MIDDLE: undefined, RIGHT: undefined };
     controls.zoomSpeed = 1.2;
+    // On mobile, disable rotate so touch doesn't fight with joystick — keep pinch zoom only
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    controls.enableRotate = !isTouchDevice;
+    if (isTouchDevice) {
+      controls.touches = { ONE: THREE.TOUCH.DOLLY_PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+    }
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -843,6 +848,10 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             <br/>
             <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block">
               Destroy them to collect satoshis
+            </p>
+            <br/>
+            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
+              {isMobile ? '🕹️ Use joystick to move • Pinch to zoom' : '⌨️ WASD to move • Scroll to zoom'}
             </p>
             <br/>
             {highScore > 0 && (

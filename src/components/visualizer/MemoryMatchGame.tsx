@@ -551,7 +551,13 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       cardsGroup.children.forEach(child => {
         if (child instanceof THREE.Mesh) {
           child.geometry.dispose();
-          (child.material as THREE.Material).dispose();
+          // Handle both single material and material arrays
+          const materials = child.material;
+          if (Array.isArray(materials)) {
+            materials.forEach(mat => mat.dispose());
+          } else {
+            materials.dispose();
+          }
         }
       });
     };
