@@ -84,24 +84,20 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
 
   // Initialize cards from block bytes
   const initializeCards = useCallback((): Card[] => {
-    // Create pairs from block bytes
-    const pairs: Card[] = [];
+    const cards: Card[] = [];
     const txCount = blockBytes.length;
     
     // Need at least 2 transactions to play
     if (txCount < 2) {
-      // Return minimal placeholder cards for demo (both same value)
       return [
         { id: 0, bucket: 3, isFlipped: false, isMatched: false },
         { id: 1, bucket: 3, isFlipped: false, isMatched: false },
       ];
     }
     
-    // If odd number, we'll have one single card (no pair for last one)
-    const pairCount = Math.floor(txCount / 2);
-    
-    for (let i = 0; i < pairCount * 2; i++) {
-      pairs.push({
+    // Create card for every transaction
+    for (let i = 0; i < txCount; i++) {
+      cards.push({
         id: i,
         bucket: blockBytes[i],
         isFlipped: false,
@@ -109,13 +105,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       });
     }
     
-    // Shuffle cards using Fisher-Yates
-    for (let i = pairs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
-    }
-    
-    return pairs;
+    return cards;
   }, [blockBytes]);
 
   // Calculate score based on moves and time
@@ -196,6 +186,10 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     
     const card = game.cards[cardIndex];
     if (!card || card.isFlipped || card.isMatched || game.flippedCards.length >= 2) return;
+    
+    // Check if card is disabled (odd one out)
+    const mesh = cardsGroupRef.current?.children[cardIndex] as THREE.Mesh;
+    if (mesh?.userData.isDisabled) return;
     
     // Flip the card
     card.isFlipped = true;
@@ -356,8 +350,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     sceneRef.current = scene;
 
     const txCount = blockBytes.length;
-    const pairCount = Math.floor(txCount / 2);
-    const totalCards = Math.max(2, pairCount * 2); // Ensure at least 2 cards minimum
+    const totalCards = Math.max(2, txCount); // Show all transactions
     
     // Calculate grid layout
     const cols = Math.max(1, Math.ceil(Math.sqrt(totalCards)));
@@ -417,30 +410,39 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
 
     const cardGeometry = new THREE.BoxGeometry(1.8, 0.3, 2.2);
     
+    // Check if odd number of transactions - last card will be disabled
+    const isOddCount = txCount % 2 === 1 && txCount >= 2;
+    const disabledIndex = isOddCount ? txCount - 1 : -1;
+    
     for (let i = 0; i < totalCards; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = (col - (cols - 1) / 2) * spacing;
       const z = (row - (rows - 1) / 2) * spacing;
       
+      const isDisabled = i === disabledIndex;
+      
       // Create different materials for each face
-      // Top face (face-up shows bucket color, starts face-down so shows back color)
       const topMaterial = new THREE.MeshStandardMaterial({
-        color: CARD_BACK_COLOR,
+        color: isDisabled ? 0x111111 : CARD_BACK_COLOR,
         roughness: 0.3,
-        metalness: 0.2,
+        metalness: isDisabled ? 0.0 : 0.2,
+        transparent: isDisabled,
+        opacity: isDisabled ? 0.4 : 1.0,
       });
-      // Bottom face
       const bottomMaterial = new THREE.MeshStandardMaterial({
-        color: CARD_BACK_COLOR_DARK,
+        color: isDisabled ? 0x0a0a0a : CARD_BACK_COLOR_DARK,
         roughness: 0.5,
         metalness: 0.1,
+        transparent: isDisabled,
+        opacity: isDisabled ? 0.4 : 1.0,
       });
-      // Side faces - use darker color
       const sideMaterial = new THREE.MeshStandardMaterial({
-        color: CARD_BACK_COLOR_DARK,
+        color: isDisabled ? 0x0a0a0a : CARD_BACK_COLOR_DARK,
         roughness: 0.5,
-        metalness: 0.2,
+        metalness: isDisabled ? 0.0 : 0.2,
+        transparent: isDisabled,
+        opacity: isDisabled ? 0.4 : 1.0,
       });
       
       // Array of materials: right, left, top, bottom, front, back
@@ -456,8 +458,18 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       cardMesh.userData = { 
         cardIndex: i, 
         isFaceUp: false,
-        originalPos: { x, y: 0, z }
+        originalPos: { x, y: 0, z },
+        isDisabled: isDisabled,
+        bucket: blockBytes[i]
       };
+      
+      // For disabled cards, position them slightly lower and mark as matched
+      if (isDisabled) {
+        cardMesh.position.y = -0.2;
+        if (gameRef.current.cards[i]) {
+          gameRef.current.cards[i].isMatched = true; // Auto-match disabled cards
+        }
+      }
       
       cardsGroup.add(cardMesh);
     }
@@ -698,6 +710,52 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       {/* HUD */}
       {!showStart && !gameOver && (
         <>
+          {/* Card Number Overlays - shown on flipped cards */}
+          {flippedCardIds.map((cardIndex) => {
+            const card = gameRef.current.cards[cardIndex];
+            if (!card) return null;
+            
+            // Calculate grid position
+            const txCount = blockBytes.length;
+            const cols = Math.max(1, Math.ceil(Math.sqrt(txCount)));
+            const spacing = 2.5;
+            const col = cardIndex % cols;
+            const row = Math.floor(cardIndex / cols);
+            const x = (col - (cols - 1) / 2) * spacing;
+            const z = (row - (cols - 1) / 2) * spacing;
+            
+            // Convert 3D position to screen position (approximate for top-down view)
+            const centerX = 50; // center of screen in %
+            const centerY = 55; // slightly below center
+            const scale = 12; // scale factor to convert 3D units to screen %
+            
+            const screenX = centerX + (x * scale);
+            const screenY = centerY + (z * scale * 0.6); // aspect ratio correction
+            
+            return (
+              <div
+                key={`card-${cardIndex}`}
+                className="absolute z-15 pointer-events-none flex items-center justify-center"
+                style={{
+                  left: `${screenX}%`,
+                  top: `${screenY}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: '60px',
+                  height: '60px',
+                }}
+              >
+                <div 
+                  className="w-12 h-12 rounded-lg flex items-center justify-center shadow-lg"
+                  style={{ 
+                    backgroundColor: `#${BUCKET_COLORS[card.bucket - 1]?.toString(16).padStart(6, "0") || BUCKET_COLORS[0].toString(16).padStart(6, "0")}`
+                  }}
+                >
+                  <span className="text-black font-bold text-2xl">{BUCKET_SYMBOLS[card.bucket - 1]}</span>
+                </div>
+              </div>
+            );
+          })}
+          
           {/* Instruction hint */}
           {firstPlay && flippedCardIds.length === 0 && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">

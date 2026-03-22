@@ -63,7 +63,7 @@ function VisualizerContent() {
     // Update URL without reloading
     const params = new URLSearchParams(searchParams.toString());
     params.set("bitmap", height.toString());
-    router.replace(`/visualizer?${params.toString()}`, { scroll: false });
+    router.replace(`/play?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
   // Fetch block data
