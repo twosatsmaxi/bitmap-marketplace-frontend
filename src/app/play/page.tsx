@@ -263,7 +263,7 @@ function VisualizerContent() {
             />
           ) : gameMode === "memory" ? (
             <BlockVisualizer
-              key={blockData.meta.height}
+              key={`memory-${blockData.meta.height}`}
               blockBytes={blockData.bytes}
               gameMode="memory"
               blockHeight={blockData.meta.height}

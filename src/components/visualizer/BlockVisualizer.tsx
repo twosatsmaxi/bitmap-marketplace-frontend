@@ -37,8 +37,60 @@ function getBucketSize(bucket: number): number {
 const HIDDEN_COLOR = 0x27272a;
 const HIDDEN_EMISSIVE = 0x111111;
 
-/** Symbols for matching (1-6) */
-const BUCKET_SYMBOLS = ["1", "2", "3", "4", "5", "6"];
+/** Distinct colors for memory game pairs */
+const MEMORY_PAIR_COLORS = [
+  0xff4444, // red
+  0x44aaff, // blue
+  0x44ff44, // green
+  0xffaa00, // orange
+  0xff44ff, // magenta
+  0xffff44, // yellow
+  0x44ffff, // cyan
+  0xff8844, // coral
+  0xaa44ff, // purple
+  0x88ff88, // light green
+];
+
+/** Symbols for memory game pairs */
+const MEMORY_PAIR_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+
+/** Create a sprite texture with a letter label */
+function createNumberSprite(label: string): THREE.Sprite {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = "#000000";
+  ctx.font = "bold 80px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 64, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1.2, 1.2, 1);
+  sprite.name = "label";
+  return sprite;
+}
+
+/** Generate shuffled pair assignments for memory game */
+function generatePairAssignments(count: number): number[] {
+  const pairs = Math.floor(count / 2);
+  const assignments: number[] = [];
+  for (let i = 0; i < pairs; i++) {
+    assignments.push(i, i); // each pair ID appears twice
+  }
+  // If odd count, add a -1 for the disabled card
+  if (count % 2 === 1) assignments.push(-1);
+  // Fisher-Yates shuffle
+  for (let i = assignments.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [assignments[i], assignments[j]] = [assignments[j], assignments[i]];
+  }
+  return assignments;
+}
+
 
 export function BlockVisualizer({ 
   blockBytes, 
@@ -77,6 +129,7 @@ export function BlockVisualizer({
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const hoveredMeshRef = useRef<THREE.Mesh | null>(null);
   const originalColorsRef = useRef<Map<number, number>>(new Map());
+  const pairAssignmentsRef = useRef<number[]>([]);
   
   // Store mutable values in refs to avoid stale closures
   const gameModeRef = useRef(gameMode);
@@ -91,6 +144,24 @@ export function BlockVisualizer({
   
   // Store click handler in a mutable object that survives re-renders
   const clickHandlerRef = useRef<{ fn: ((index: number) => void) | null }>({ fn: null });
+
+  // Sync start screen state when gameMode changes (handles React reuse)
+  useEffect(() => {
+    if (gameMode === "memory") {
+      setShowStartScreen(true);
+      setGameOver(false);
+      setMoves(0);
+      setMatches(0);
+      setScore(0);
+      setTimeElapsed(0);
+      gameStateRef.current = {
+        isPlaying: false,
+        flippedCards: [],
+        matchedCards: new Set(),
+        startTime: 0,
+      };
+    }
+  }, [gameMode]);
 
   // Load high score
   useEffect(() => {
@@ -196,18 +267,23 @@ export function BlockVisualizer({
       const animateReveal = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         // Scale bounce
         const scale = startScale + 0.15 * Math.sin(progress * Math.PI);
         mesh.scale.setScalar(scale);
-        
+
         if (progress >= 0.3 && !mesh.userData.isRevealed) {
           mesh.userData.isRevealed = true;
           material.color.setHex(targetColor);
           material.emissive.setHex(targetColor);
           material.emissiveIntensity = 0.4;
+          // Add number label sprite on top of the cube
+          const sprite = createNumberSprite(bucket, targetColor);
+          const cubeHeight = mesh.geometry.parameters.height;
+          sprite.position.set(0, cubeHeight / 2 + 0.8, 0);
+          mesh.add(sprite);
         }
-        
+
         if (progress < 1) {
           requestAnimationFrame(animateReveal);
         }
@@ -231,14 +307,42 @@ export function BlockVisualizer({
           game.matchedCards.add(first);
           game.matchedCards.add(second);
           game.flippedCards = [];
-          
+
           const currentMatches = matchesRef.current;
           const newMatches = currentMatches + 1;
           setMatches(newMatches);
-          
-          // Show match animation
+
+          // Animate matched cubes with a glow pulse in 3D
+          [first, second].forEach(idx => {
+            const m = txGroupRef.current?.children[idx] as THREE.Mesh;
+            if (m) {
+              const mat = m.material as THREE.MeshStandardMaterial;
+              const startTime = Date.now();
+              const duration = 600;
+              const baseY = m.userData.originalY;
+              const animateMatch = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Pulse glow up then settle
+                const glow = 0.4 + 0.6 * Math.sin(progress * Math.PI);
+                mat.emissiveIntensity = glow;
+                m.position.y = baseY + 0.3 * Math.sin(progress * Math.PI);
+                m.scale.setScalar(1 + 0.1 * Math.sin(progress * Math.PI));
+                if (progress < 1) {
+                  requestAnimationFrame(animateMatch);
+                } else {
+                  mat.emissiveIntensity = 0.5;
+                  m.position.y = baseY;
+                  m.scale.setScalar(1);
+                }
+              };
+              animateMatch();
+            }
+          });
+
+          // Show subtle HUD notification
           setMatchAnimation({ active: true, bucket: firstBucket });
-          setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 1000);
+          setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 800);
           
           // Check for game over
           const totalPairs = Math.floor(currentBlockBytes.length / 2);
@@ -283,8 +387,11 @@ export function BlockVisualizer({
                   mat.color.setHex(HIDDEN_COLOR);
                   mat.emissive.setHex(HIDDEN_EMISSIVE);
                   mat.emissiveIntensity = 0.1;
+                  // Remove number label sprite
+                  const label = m.children.find(c => c.name === "label");
+                  if (label) m.remove(label);
                 }
-                
+
                 if (progress < 1) {
                   requestAnimationFrame(animateHide);
                 } else {
@@ -334,10 +441,15 @@ export function BlockVisualizer({
     // Camera
     const txCount = blockBytes.length;
     const cols = Math.ceil(Math.sqrt(Math.min(txCount, 2000)));
-    const gridSpan = cols * 2.5;
+    const gridSpan = cols * (gameMode === "memory" ? 3.0 : 2.5);
     const camDist = Math.max(gridSpan * 0.6, 25);
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(camDist, camDist * 0.7, camDist);
+    // Memory mode: top-down with a slight quirky tilt for visual interest
+    if (gameMode === "memory") {
+      camera.position.set(camDist * 0.3, camDist * 1.4, camDist * 0.15);
+    } else {
+      camera.position.set(camDist, camDist * 0.7, camDist);
+    }
     cameraRef.current = camera;
 
     // Renderer
@@ -402,11 +514,14 @@ export function BlockVisualizer({
     txGroupRef.current = txGroup;
 
     const visibleCount = Math.min(txCount, 2000);
-    const spacing = 2.5;
-    
-    // For memory mode, check if odd number
-    const isOddCount = gameMode === "memory" && txCount % 2 === 1;
-    const disabledIndex = isOddCount ? txCount - 1 : -1;
+    const spacing = gameMode === "memory" ? 3.0 : 2.5;
+
+    // For memory mode, generate shuffled pair assignments
+    let pairAssignments: number[] = [];
+    if (gameMode === "memory") {
+      pairAssignments = generatePairAssignments(visibleCount);
+      pairAssignmentsRef.current = pairAssignments;
+    }
 
     for (let i = 0; i < visibleCount; i++) {
       const bucket = blockBytes[i];
@@ -415,12 +530,13 @@ export function BlockVisualizer({
       const x = (col - cols / 2) * spacing;
       const z = (row - cols / 2) * spacing;
 
-      const size = getBucketSize(bucket);
+      // In memory mode: uniform size for fair gameplay and bigger click targets
+      const size = gameMode === "memory" ? 2.0 : getBucketSize(bucket);
       const color = getBucketColor(bucket);
-      const height = 0.3 + bucket * 0.4;
-      
-      const isDisabled = i === disabledIndex;
-      
+      const height = gameMode === "memory" ? 1.5 : 0.3 + bucket * 0.4;
+
+      const isDisabled = gameMode === "memory" && pairAssignments[i] === -1;
+
       // Store original color
       originalColorsRef.current.set(i, color);
 
@@ -438,9 +554,9 @@ export function BlockVisualizer({
 
       mesh.position.set(x, height / 2, z);
       mesh.name = String(i);
-      mesh.userData = { 
-        index: i, 
-        bucket, 
+      mesh.userData = {
+        index: i,
+        bucket,
         originalY: height / 2,
         isDisabled,
         isRevealed: false
@@ -495,8 +611,12 @@ export function BlockVisualizer({
           mesh.position.y = mesh.userData.originalY;
           mesh.scale.setScalar(1);
           if (!mesh.userData.isRevealed) {
-            (mesh.material as THREE.MeshStandardMaterial).opacity = 0.9;
-            (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.1;
+            const mat = mesh.material as THREE.MeshStandardMaterial;
+            mat.opacity = 0.9;
+            mat.emissiveIntensity = 0.1;
+            if (gameMode === "memory") {
+              mat.emissive.setHex(HIDDEN_EMISSIVE);
+            }
           }
         }
         hoveredMeshRef.current = null;
@@ -517,10 +637,14 @@ export function BlockVisualizer({
         if (canHover) {
           hoveredMeshRef.current = hitMesh;
           hitMesh.position.y = hitMesh.userData.originalY + 0.5;
-          hitMesh.scale.setScalar(1.1);
+          hitMesh.scale.setScalar(1.15);
           if (!hitMesh.userData.isRevealed) {
-            (hitMesh.material as THREE.MeshStandardMaterial).opacity = 1;
-            (hitMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3;
+            const mat = hitMesh.material as THREE.MeshStandardMaterial;
+            mat.opacity = 1;
+            mat.emissiveIntensity = gameMode === "memory" ? 0.6 : 0.3;
+            if (gameMode === "memory") {
+              mat.emissive.setHex(0xf7931a);
+            }
           }
           container.style.cursor = "pointer";
         }
@@ -572,22 +696,11 @@ export function BlockVisualizer({
       {/* Memory Game UI Overlay */}
       {gameMode === "memory" && (
         <>
-          {/* Match Animation */}
+          {/* Match Animation - subtle HUD notification */}
           {matchAnimation.active && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
-              <div className="flex flex-col items-center">
-                <div 
-                  className="w-20 h-20 rounded-lg flex items-center justify-center mb-2 shadow-2xl animate-bounce"
-                  style={{ 
-                    backgroundColor: `#${getBucketColor(matchAnimation.bucket).toString(16).padStart(6, "0")}`,
-                    boxShadow: '0 0 30px rgba(247, 147, 26, 0.8)'
-                  }}
-                >
-                  <span className="text-black font-bold text-3xl">{BUCKET_SYMBOLS[matchAnimation.bucket - 1]}</span>
-                </div>
-                <div className="px-6 py-2 bg-primary text-black font-mono font-bold text-xl rounded">
-                  MATCH!
-                </div>
+            <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+              <div className="px-4 py-1.5 bg-primary/90 text-black font-mono font-bold text-sm rounded animate-bounce">
+                MATCH!
               </div>
             </div>
           )}
@@ -608,25 +721,23 @@ export function BlockVisualizer({
                   </div>
                   <div className="flex items-center text-zinc-600">→</div>
                   <div className="text-center">
-                    <div 
+                    <div
                       className="w-16 h-16 rounded border-2 flex items-center justify-center mb-2"
-                      style={{ 
+                      style={{
                         backgroundColor: `#${getBucketColor(3).toString(16).padStart(6, "0")}`,
                         borderColor: `#${getBucketColor(3).toString(16).padStart(6, "0")}`
                       }}
-                    >
-                      <span className="text-black font-bold text-2xl">{BUCKET_SYMBOLS[2]}</span>
-                    </div>
+                    />
                     <span className="font-mono text-[10px] text-zinc-500">Revealed</span>
                   </div>
                 </div>
-                
+
                 <div className="bg-zinc-900/50 rounded-lg p-4 mb-6">
                   <p className="font-mono text-sm text-zinc-300 mb-2">
-                    <span className="text-primary font-bold">1.</span> Click cubes to reveal
+                    <span className="text-primary font-bold">1.</span> Click cubes to reveal their color
                   </p>
                   <p className="font-mono text-sm text-zinc-300 mb-2">
-                    <span className="text-primary font-bold">2.</span> Find two with same number
+                    <span className="text-primary font-bold">2.</span> Find two cubes with the same color
                   </p>
                   <p className="font-mono text-sm text-zinc-300">
                     <span className="text-primary font-bold">3.</span> Match all pairs to win
