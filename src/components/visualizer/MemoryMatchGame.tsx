@@ -25,6 +25,7 @@ interface GameState {
   isGameOver: boolean;
 }
 
+// Same colors as BlockVisualizer - bucket colors based on transaction value
 const BUCKET_COLORS = [0x7e4912, 0xa05a1a, 0xb87326, 0xf7931a, 0xffc12a, 0xffeb3b];
 const BUCKET_LABELS = ["<0.001", "0.001-0.01", "0.01-0.1", "0.1-1", "1-10", "10+"];
 const BUCKET_SYMBOLS = ["1", "2", "3", "4", "5", "6"];  // Simple numbers for matching
@@ -141,7 +142,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     setShowStart(false);
     setMatchAnimation({ active: false, bucket: 0 });
     
-    // Reset card visuals
+    // Reset cube visuals
     if (cardsGroupRef.current) {
       cardsGroupRef.current.children.forEach((child) => {
         const mesh = child as THREE.Mesh;
@@ -151,22 +152,12 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           mesh.scale.setScalar(1);
           mesh.userData.isFaceUp = false;
           
-          // Reset material to back color
-          const materials = mesh.material as THREE.MeshStandardMaterial[];
-          if (Array.isArray(materials)) {
-            materials.forEach((mat, i) => {
-              if (i === 2) { // Top face
-                mat.color.setHex(CARD_BACK_COLOR);
-                mat.emissive.setHex(0x000000);
-                mat.emissiveIntensity = 0;
-              } else {
-                mat.color.setHex(CARD_BACK_COLOR_DARK);
-                mat.emissive.setHex(0x000000);
-                mat.emissiveIntensity = 0;
-              }
-              mat.opacity = 1;
-            });
-          }
+          // Reset material to back color (single material for cubes)
+          const material = mesh.material as THREE.MeshStandardMaterial;
+          material.color.setHex(mesh.userData.isDisabled ? 0x333333 : CARD_BACK_COLOR);
+          material.emissive.setHex(mesh.userData.isDisabled ? 0x000000 : 0x111111);
+          material.emissiveIntensity = 0.1;
+          material.opacity = mesh.userData.isDisabled ? 0.3 : 0.9;
         }
       });
     }
@@ -196,38 +187,39 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     game.flippedCards.push(cardIndex);
     setFlippedCardIds([...game.flippedCards]);  // Update UI
     
-    // Animate flip
-    const cardMesh = cardsGroupRef.current?.children[cardIndex] as THREE.Mesh;
-    if (cardMesh) {
-      const targetRotation = Math.PI;
-      const startRotation = cardMesh.rotation.y;
+    // Animate cube reveal - scale up and change color
+    const cubeMesh = cardsGroupRef.current?.children[cardIndex] as THREE.Mesh;
+    if (cubeMesh) {
       const duration = 300;
       const startTime = Date.now();
+      const startScale = cubeMesh.scale.x;
+      const targetScale = 1.2;
       
-      const animateFlip = () => {
+      const animateReveal = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const easeProgress = 1 - Math.pow(1 - progress, 3);
         
-        cardMesh.rotation.y = startRotation + (targetRotation - startRotation) * easeProgress;
+        // Scale animation
+        const currentScale = startScale + (targetScale - startScale) * Math.sin(progress * Math.PI);
+        cubeMesh.scale.setScalar(currentScale);
         
-        // Change color at halfway point - update top face material (index 2)
-        if (progress >= 0.5 && !cardMesh.userData.isFaceUp) {
-          cardMesh.userData.isFaceUp = true;
-          const materials = cardMesh.material as THREE.MeshStandardMaterial[];
-          if (Array.isArray(materials)) {
-            const topMat = materials[2]; // Top face
-            topMat.color.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
-            topMat.emissive.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
-            topMat.emissiveIntensity = 0.5;
-          }
+        // Change color to reveal bucket
+        if (progress >= 0.3 && !cubeMesh.userData.isFaceUp) {
+          cubeMesh.userData.isFaceUp = true;
+          const material = cubeMesh.material as THREE.MeshStandardMaterial;
+          material.color.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
+          material.emissive.setHex(BUCKET_COLORS[card.bucket - 1] || BUCKET_COLORS[0]);
+          material.emissiveIntensity = 0.4;
         }
         
         if (progress < 1) {
-          requestAnimationFrame(animateFlip);
+          requestAnimationFrame(animateReveal);
+        } else {
+          cubeMesh.scale.setScalar(1.1); // Keep slightly larger when revealed
         }
       };
-      animateFlip();
+      animateReveal();
     }
     
     // Check for match when 2 cards are flipped
@@ -294,7 +286,7 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           }
         }, 500);
       } else {
-        // No match - flip back
+        // No match - flip back (hide)
         setTimeout(() => {
           [first, second].forEach(idx => {
             const c = game.cards[idx];
@@ -302,34 +294,32 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
             
             const mesh = cardsGroupRef.current?.children[idx] as THREE.Mesh;
             if (mesh) {
-              const targetRotation = 0;
-              const startRotation = mesh.rotation.y;
               const duration = 300;
               const startTime = Date.now();
+              const startScale = mesh.scale.x;
               
-              const animateFlipBack = () => {
+              const animateHide = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
                 
-                mesh.rotation.y = startRotation + (targetRotation - startRotation) * easeProgress;
+                // Scale down animation
+                const currentScale = startScale - (startScale - 1) * progress;
+                mesh.scale.setScalar(Math.max(1, currentScale));
                 
+                // Change color back to hidden
                 if (progress >= 0.5 && mesh.userData.isFaceUp) {
                   mesh.userData.isFaceUp = false;
-                  const materials = mesh.material as THREE.MeshStandardMaterial[];
-                  if (Array.isArray(materials)) {
-                    const topMat = materials[2]; // Top face
-                    topMat.color.setHex(CARD_BACK_COLOR);
-                    topMat.emissive.setHex(0x000000);
-                    topMat.emissiveIntensity = 0;
-                  }
+                  const material = mesh.material as THREE.MeshStandardMaterial;
+                  material.color.setHex(CARD_BACK_COLOR);
+                  material.emissive.setHex(0x111111);
+                  material.emissiveIntensity = 0.1;
                 }
                 
                 if (progress < 1) {
-                  requestAnimationFrame(animateFlipBack);
+                  requestAnimationFrame(animateHide);
                 }
               };
-              animateFlipBack();
+              animateHide();
             }
           });
           
@@ -408,12 +398,11 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     cardsGroupRef.current = cardsGroup;
     scene.add(cardsGroup);
 
-    const cardGeometry = new THREE.BoxGeometry(1.8, 0.3, 2.2);
-    
     // Check if odd number of transactions - last card will be disabled
     const isOddCount = txCount % 2 === 1 && txCount >= 2;
     const disabledIndex = isOddCount ? txCount - 1 : -1;
     
+    // Create 3D cubes like BlockVisualizer
     for (let i = 0; i < totalCards; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
@@ -421,57 +410,45 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
       const z = (row - (rows - 1) / 2) * spacing;
       
       const isDisabled = i === disabledIndex;
+      const bucket = blockBytes[i];
       
-      // Create different materials for each face
-      const topMaterial = new THREE.MeshStandardMaterial({
-        color: isDisabled ? 0x111111 : CARD_BACK_COLOR,
-        roughness: 0.3,
-        metalness: isDisabled ? 0.0 : 0.2,
-        transparent: isDisabled,
-        opacity: isDisabled ? 0.4 : 1.0,
-      });
-      const bottomMaterial = new THREE.MeshStandardMaterial({
-        color: isDisabled ? 0x0a0a0a : CARD_BACK_COLOR_DARK,
-        roughness: 0.5,
-        metalness: 0.1,
-        transparent: isDisabled,
-        opacity: isDisabled ? 0.4 : 1.0,
-      });
-      const sideMaterial = new THREE.MeshStandardMaterial({
-        color: isDisabled ? 0x0a0a0a : CARD_BACK_COLOR_DARK,
-        roughness: 0.5,
-        metalness: isDisabled ? 0.0 : 0.2,
-        transparent: isDisabled,
-        opacity: isDisabled ? 0.4 : 1.0,
+      // Same sizing as BlockVisualizer
+      const size = 0.4 + bucket * 0.3;
+      const height = 0.3 + bucket * 0.4;
+      const color = isDisabled ? 0x333333 : CARD_BACK_COLOR;
+      
+      const geometry = new THREE.BoxGeometry(size, height, size);
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        transparent: true,
+        opacity: isDisabled ? 0.3 : 0.9,
+        emissive: isDisabled ? 0x000000 : 0x111111,
+        emissiveIntensity: 0.1,
+        roughness: 0.4,
+        metalness: 0.3,
       });
       
-      // Array of materials: right, left, top, bottom, front, back
-      const materials = [
-        sideMaterial, sideMaterial,  // right, left
-        topMaterial, bottomMaterial,  // top, bottom
-        sideMaterial, sideMaterial,  // front, back
-      ];
+      const cubeMesh = new THREE.Mesh(geometry, material);
+      cubeMesh.position.set(x, height / 2, z);
       
-      const cardMesh = new THREE.Mesh(cardGeometry, materials);
-      cardMesh.position.set(x, 0, z);
-      // Store position in userData so we can always reference it
-      cardMesh.userData = { 
+      // Store data in userData
+      cubeMesh.userData = { 
         cardIndex: i, 
         isFaceUp: false,
-        originalPos: { x, y: 0, z },
+        originalPos: { x, y: height / 2, z },
         isDisabled: isDisabled,
-        bucket: blockBytes[i]
+        bucket: bucket,
+        originalY: height / 2,
+        size: size,
+        height: height
       };
       
-      // For disabled cards, position them slightly lower and mark as matched
-      if (isDisabled) {
-        cardMesh.position.y = -0.2;
-        if (gameRef.current.cards[i]) {
-          gameRef.current.cards[i].isMatched = true; // Auto-match disabled cards
-        }
+      // For disabled cards, mark as matched
+      if (isDisabled && gameRef.current.cards[i]) {
+        gameRef.current.cards[i].isMatched = true;
       }
       
-      cardsGroup.add(cardMesh);
+      cardsGroup.add(cubeMesh);
     }
 
     // Mouse interaction
@@ -533,17 +510,19 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
         container.style.cursor = "default";
       }
       
-      // Apply hover
+      // Apply hover (only for non-disabled, non-flipped cards)
       if (intersects.length > 0 && gameRef.current.isPlaying && !gameRef.current.isGameOver) {
         const mesh = intersects[0].object as THREE.Mesh;
         const cardIndex = mesh.userData.cardIndex;
         
         if (cardIndex !== undefined && cardIndex >= 0 && cardIndex < gameRef.current.cards.length) {
           const card = gameRef.current.cards[cardIndex];
+          const isDisabled = mesh.userData.isDisabled;
           
-          if (card && !card.isFlipped && !card.isMatched) {
+          if (card && !card.isFlipped && !card.isMatched && !isDisabled) {
             hoveredCard = cardIndex;
-            mesh.position.y = 0.3;
+            // Lift cube up slightly
+            mesh.position.y = mesh.userData.originalPos.y + 0.3;
             container.style.cursor = "pointer";
           }
         }
@@ -594,6 +573,9 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Get number color for the flipped card overlay (white for visibility on all bucket colors)
+  const getNumberColor = (_bucket: number): string => "#ffffff";
+
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="absolute inset-0" style={{ top: "var(--header-total)" }} />
@@ -605,10 +587,16 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
             <div 
               className="w-20 h-20 rounded-lg flex items-center justify-center mb-3 shadow-2xl animate-bounce"
               style={{ 
-                backgroundColor: `#${(BUCKET_COLORS[matchAnimation.bucket - 1] || BUCKET_COLORS[0]).toString(16).padStart(6, "0")}`
+                backgroundColor: `#${BUCKET_COLORS[3].toString(16).padStart(6, "0")}`,
+                boxShadow: '0 0 30px rgba(203, 120, 37, 0.8)'
               }}
             >
-              <span className="text-black font-bold text-4xl">{BUCKET_SYMBOLS[matchAnimation.bucket - 1]}</span>
+              <span 
+                className="text-white font-bold text-4xl drop-shadow-lg"
+                style={{ color: getNumberColor(matchAnimation.bucket) }}
+              >
+                {BUCKET_SYMBOLS[matchAnimation.bucket - 1]}
+              </span>
             </div>
             <div className="px-6 py-2 bg-primary text-black font-mono font-bold text-xl rounded">
               MATCH!
@@ -637,13 +625,14 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
               <div className="flex items-center text-zinc-600">→</div>
               <div className="text-center">
                 <div 
-                  className="w-16 h-20 rounded border-2 flex items-center justify-center mb-2 mx-auto"
+                  className="w-16 h-20 rounded border-2 flex items-center justify-center mb-2 mx-auto shadow-lg"
                   style={{ 
-                    backgroundColor: `#${BUCKET_COLORS[2].toString(16).padStart(6, "0")}`,
-                    borderColor: `#${BUCKET_COLORS[2].toString(16).padStart(6, "0")}`
+                    backgroundColor: `#${BUCKET_COLORS[3].toString(16).padStart(6, "0")}`,
+                    borderColor: `#${BUCKET_COLORS[3].toString(16).padStart(6, "0")}`,
+                    boxShadow: '0 0 20px rgba(203, 120, 37, 0.5)'
                   }}
                 >
-                  <span className="text-black font-bold text-xl">{BUCKET_SYMBOLS[2]}</span>
+                  <span className="text-white font-bold text-2xl drop-shadow-md">{BUCKET_SYMBOLS[2]}</span>
                 </div>
                 <span className="font-mono text-[10px] text-zinc-500">Revealed</span>
               </div>
@@ -747,10 +736,16 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
                 <div 
                   className="w-12 h-12 rounded-lg flex items-center justify-center shadow-lg"
                   style={{ 
-                    backgroundColor: `#${BUCKET_COLORS[card.bucket - 1]?.toString(16).padStart(6, "0") || BUCKET_COLORS[0].toString(16).padStart(6, "0")}`
+                    backgroundColor: `#${BUCKET_COLORS[3].toString(16).padStart(6, "0")}`,
+                    boxShadow: '0 0 15px rgba(203, 120, 37, 0.6)'
                   }}
                 >
-                  <span className="text-black font-bold text-2xl">{BUCKET_SYMBOLS[card.bucket - 1]}</span>
+                  <span 
+                    className="font-bold text-2xl drop-shadow-md"
+                    style={{ color: getNumberColor(card.bucket) }}
+                  >
+                    {BUCKET_SYMBOLS[card.bucket - 1]}
+                  </span>
                 </div>
               </div>
             );
@@ -789,14 +784,14 @@ export function MemoryMatchGame({ blockBytes, blockHeight }: MemoryMatchGameProp
           <div className="absolute bottom-6 left-6 z-10">
             <div className="br-card p-3 bg-bg/80">
               <div className="font-mono text-[10px] uppercase text-zinc-500 mb-2">Match by Number</div>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 {BUCKET_SYMBOLS.map((symbol, i) => (
                   <div key={i} className="flex flex-col items-center">
                     <div 
-                      className="w-8 h-8 rounded flex items-center justify-center mb-1" 
-                      style={{ backgroundColor: `#${BUCKET_COLORS[i].toString(16).padStart(6, "0")}` }}
+                      className="w-7 h-8 rounded flex items-center justify-center mb-1" 
+                      style={{ backgroundColor: `#${BUCKET_COLORS[3].toString(16).padStart(6, "0")}` }}
                     >
-                      <span className="text-black font-bold text-sm">{symbol}</span>
+                      <span className="text-white font-bold text-sm drop-shadow">{symbol}</span>
                     </div>
                   </div>
                 ))}
