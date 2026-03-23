@@ -12,6 +12,8 @@ import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
 
+
+
 const supportsWebGL2 =
   typeof document !== "undefined" &&
   !!document.createElement("canvas").getContext("webgl2");
@@ -138,6 +140,14 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
     return () => clearTimeout(timer);
   }, [isometric, status, offloaded]);
 
+  // Reset quality tier when user toggles 3D (in case it downgraded to static during idle)
+  useEffect(() => {
+    if (qualityTier === "static") {
+      monitorRef.current.reset("full");
+      setQualityTier("full");
+    }
+  }, [isometric, qualityTier]);
+
   // Offload/restore renderer based on viewport proximity
   useEffect(() => {
     // Only offload cards that have finished rendering and have a snapshot
@@ -168,6 +178,8 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       }
     }
   }, [qualityTier]);
+
+
 
   const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const card = e.currentTarget.getBoundingClientRect();

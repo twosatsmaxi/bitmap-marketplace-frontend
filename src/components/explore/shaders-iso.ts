@@ -3,6 +3,10 @@
  * Same animation logic as flat shaders, but projects tiles as extruded blocks
  * from a fixed isometric camera angle. Three visible faces per block:
  * top (bright), right (medium), left (dark).
+ * 
+ * 2D→3D Transition: Two-stage animation
+ * - Stage 1 (0.0-0.5): Rotate from flat 2D to isometric while keeping tiles flat
+ * - Stage 2 (0.5-1.0): Extrude 3D height from flat isometric tiles
  */
 
 export const isoVertexShader = `#version 300 es
@@ -26,7 +30,7 @@ uniform float u_flickerIndex; // -1 = none
 uniform float u_scale;        // 1.0 normal, 0.0 imploded
 uniform float u_enableRepulsion;
 uniform float u_enableFlicker;
-uniform float u_tileHeightScale; // 0.0 = flat, 1.0 = full extrusion
+uniform float u_tileHeightScale; // 0.0 = flat 2D, 1.0 = full 3D
 
 out float v_brightness;
 out float v_alpha;
@@ -53,18 +57,33 @@ void main() {
   float dy = a_cubePos.y;
   float faceId = a_cubePos.z;
 
-  // Block height: capped and scaled
-  float blockHeight = min(size, 8.0) * u_tileHeightScale;
+  // ---- 2D→3D Transition stages ----
+  float transition = clamp(u_tileHeightScale, 0.0, 1.0);
+  // Stage 1 (0.0-0.5): rotation only
+  // Stage 2 (0.5-1.0): height extrusion
+  float rotationProgress;
+  float heightProgress;
+  
+  if (transition <= 0.0) {
+    rotationProgress = 0.0;
+    heightProgress = 0.0;
+  } else if (transition >= 1.0) {
+    rotationProgress = 1.0;
+    heightProgress = 1.0;
+  } else if (transition < 0.5) {
+    // First half: rotation from 0 to 1, no height
+    rotationProgress = transition * 2.0;  // 0 -> 1
+    heightProgress = 0.0;
+  } else {
+    // Second half: rotation stays at 1, height grows
+    rotationProgress = 1.0;
+    heightProgress = (transition - 0.5) * 2.0;  // 0 -> 1
+  }
 
-  // Compute iso viewport scaling (used for projection and mouse inverse)
-  float isoSpanX = (u_layoutWidth + u_usedHeight) * COS30;
-  float isoSpanY = (u_layoutWidth + u_usedHeight) * SIN30 + 8.0 * u_tileHeightScale;
-  float isoSpan  = max(isoSpanX, isoSpanY);
-  float isoScale = u_canvasSize / (isoSpan * 1.15);
-
-  float centerIsoX = (u_layoutWidth - u_usedHeight) * COS30 * 0.5;
-  float centerIsoY = (u_layoutWidth + u_usedHeight) * SIN30 * 0.5
-                   - 4.0 * u_tileHeightScale;
+  // ---- Grid calculations for flat mode (same as flat shader) ----
+  float draw = max(u_layoutWidth, u_usedHeight);
+  float gridSize = u_canvasSize / draw;
+  float offsetY = (u_canvasSize - u_usedHeight * gridSize) * 0.5;
 
   // ---- Timing (identical to flat shader) ----
   float baseDuration  = 1400.0;
@@ -99,12 +118,30 @@ void main() {
   float shrinkFactor = 1.0;
   v_proximityGlow = 0.0;
 
+  // ============================================
+  // ISOMETRIC 3D CALCULATION (exactly like original)
+  // ============================================
+  
+  // Block height: capped and scaled
+  // Original: blockHeight = min(size, 8.0) * u_tileHeightScale
+  // We use heightProgress for smooth growth during transition
+  float isoBlockHeight = min(size, 8.0) * heightProgress;
+
+  // Compute iso viewport scaling (using heightProgress for dynamic viewport)
+  float isoSpanX = (u_layoutWidth + u_usedHeight) * COS30;
+  float isoSpanY = (u_layoutWidth + u_usedHeight) * SIN30 + 8.0 * heightProgress;
+  float isoSpan  = max(isoSpanX, isoSpanY);
+  float isoScale = u_canvasSize / (isoSpan * 1.15);
+
+  float centerIsoX = (u_layoutWidth - u_usedHeight) * COS30 * 0.5;
+  float centerIsoY = (u_layoutWidth + u_usedHeight) * SIN30 * 0.5
+                   - 4.0 * heightProgress;
+
   // Mouse repulsion: inverse-project mouse to grid space, then repel
+  // EXACTLY like original: check u_enableRepulsion only
   if (u_enableRepulsion > 0.5 && overallProg >= 1.0 && u_mouse.x >= 0.0) {
-    // Screen pixels → centered iso space
     float mIsoX = (u_mouse.x - u_canvasSize * 0.5) / isoScale + centerIsoX;
     float mIsoY = (u_mouse.y - u_canvasSize * 0.5) / isoScale + centerIsoY;
-    // Inverse iso projection at z=0 ground plane
     float mx = (mIsoX / COS30 + mIsoY / SIN30) * 0.5;
     float my = (mIsoY / SIN30 - mIsoX / COS30) * 0.5;
 
@@ -129,7 +166,7 @@ void main() {
     }
   }
 
-  // ---- Entry animation: fly in from outside ----
+  // Entry animation: fly in from outside
   float angle = sin(index * 1234.56) * 6.283185307;
   float distFromCenter = max(u_layoutWidth, u_usedHeight)
                        * (1.2 + cos(index * 789.1) * 0.5);
@@ -139,78 +176,147 @@ void main() {
   float curX = startX + (tx - startX) * eased;
   float curY = startY + (ty - startY) * eased;
 
-  // ---- Padding & shrink in grid space ----
+  // Padding & shrink in grid space
   float pad = 0.12;
   float innerSize = size - pad * 2.0;
   float effSize   = innerSize * shrinkFactor;
-  float effHeight = blockHeight * shrinkFactor;
-
-  if (effSize <= 0.0) {
-    gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
-    v_alpha = 0.0;
-    v_brightness = 1.0;
-    v_proximityGlow = 0.0;
-    v_faceBrightness = 1.0;
-    return;
-  }
+  float effHeight = isoBlockHeight * shrinkFactor;
 
   // Shrink toward tile center
   float bx = curX + pad + (innerSize - effSize) * 0.5;
   float by = curY + pad + (innerSize - effSize) * 0.5;
 
-  // ---- 3D corner from face ID ----
+  // 3D corner from face ID
   vec3 corner;
   if (faceId < 0.5) {
-    // Top face: z = effHeight
     corner = vec3(bx + dx * effSize, by + dy * effSize, effHeight);
   } else if (faceId < 1.5) {
-    // Right face: x = bx + effSize
     corner = vec3(bx + effSize, by + dx * effSize, dy * effHeight);
   } else {
-    // Left face: y = by + effSize
     corner = vec3(bx + dx * effSize, by + effSize, dy * effHeight);
   }
 
-  // ---- Isometric projection ----
-  float isoX = (corner.x - corner.y) * COS30;
-  float isoY = (corner.x + corner.y) * SIN30 - corner.z;
+  // Isometric projection
+  float cornerIsoX = (corner.x - corner.y) * COS30;
+  float cornerIsoY = (corner.x + corner.y) * SIN30 - corner.z;
 
-  // Screen pixel position
-  float px = (isoX - centerIsoX) * isoScale + u_canvasSize * 0.5;
-  float py = (isoY - centerIsoY) * isoScale + u_canvasSize * 0.5;
+  float isoPx = (cornerIsoX - centerIsoX) * isoScale + u_canvasSize * 0.5;
+  float isoPy = (cornerIsoY - centerIsoY) * isoScale + u_canvasSize * 0.5;
 
-  // Implode scale (shrink toward canvas center)
+  // ============================================
+  // FLAT 2D CALCULATION (for blending)
+  // ============================================
+  
+  // When rotationProgress = 0, we need flat 2D position
+  // Calculate fresh without mouse repulsion (flat view doesn't have repulsion)
+  float flatTx = x;
+  float flatTy = y;
+  
+  // Entry animation for flat (same calculation, no mouse repulsion)
+  float flatCurX = startX + (flatTx - startX) * eased;
+  float flatCurY = startY + (flatTy - startY) * eased;
+  
+  // Flat uses different padding
+  float flatPad = 0.25;
+  float flatInnerSize = size - flatPad * 2.0;
+  // No shrink in flat mode (or use 1.0)
+  float flatEffSize = flatInnerSize;
+  
+  // Position with flat padding
+  float flatBx = flatCurX + flatPad + (flatInnerSize - flatEffSize) * 0.5;
+  float flatBy = flatCurY + flatPad + (flatInnerSize - flatEffSize) * 0.5;
+  
+  // Pixel coordinates
+  float flatPx = flatBx * gridSize;
+  float flatPy = flatBy * gridSize + offsetY;
+  float flatPw = flatEffSize * gridSize;
+  
+  // Snap to integer pixels
+  flatPx = floor(flatPx);
+  flatPy = floor(flatPy);
+  flatPw = ceil(flatPw);
+  
+  // Quad vertex in pixels
+  float flatVx = flatPx + dx * flatPw;
+  float flatVy = flatPy + dy * flatPw;
+
+  // ============================================
+  // BLEND between flat and isometric
+  // ============================================
+  float finalPx;
+  float finalPy;
+  
+  if (rotationProgress <= 0.0) {
+    finalPx = flatVx;
+    finalPy = flatVy;
+  } else if (rotationProgress >= 1.0) {
+    finalPx = isoPx;
+    finalPy = isoPy;
+  } else {
+    finalPx = mix(flatVx, isoPx, rotationProgress);
+    finalPy = mix(flatVy, isoPy, rotationProgress);
+  }
+
+  // Implode scale
   float cx = u_canvasSize * 0.5;
   float cy = u_canvasSize * 0.5;
-  px = cx + (px - cx) * u_scale;
-  py = cy + (py - cy) * u_scale;
+  finalPx = cx + (finalPx - cx) * u_scale;
+  finalPy = cy + (finalPy - cy) * u_scale;
 
-  // Depth: higher (x+y+z) = closer to camera = smaller depth value
-  float maxRange = u_layoutWidth + u_usedHeight + 8.0 * u_tileHeightScale;
-  float depth = 1.0 - 2.0 * (corner.x + corner.y + corner.z)
-              / max(maxRange, 1.0);
+  // Depth
+  float depth;
+  if (rotationProgress <= 0.0) {
+    depth = 0.0;
+  } else {
+    float maxRange = u_layoutWidth + u_usedHeight + 8.0 * heightProgress;
+    float isoDepth = 1.0 - 2.0 * (corner.x + corner.y + corner.z) / max(maxRange, 1.0);
+    if (rotationProgress >= 1.0) {
+      depth = isoDepth;
+    } else {
+      depth = isoDepth * rotationProgress;
+    }
+  }
 
   gl_Position = vec4(
-    (px / u_canvasSize) * 2.0 - 1.0,
-    1.0 - (py / u_canvasSize) * 2.0,
+    (finalPx / u_canvasSize) * 2.0 - 1.0,
+    1.0 - (finalPy / u_canvasSize) * 2.0,
     depth,
     1.0
   );
 
   // ---- Face-dependent shading ----
   if (faceId < 0.5) {
-    v_faceBrightness = 1.0;  // top — full light
+    v_faceBrightness = 1.0;  // top is always 1.0
   } else if (faceId < 1.5) {
-    v_faceBrightness = 0.7;  // right — medium
+    // right: 1.0 in flat, 0.7 in iso
+    if (rotationProgress <= 0.0) v_faceBrightness = 1.0;
+    else if (rotationProgress >= 1.0) v_faceBrightness = 0.7;
+    else v_faceBrightness = 1.0 - rotationProgress * 0.3;
   } else {
-    v_faceBrightness = 0.5;  // left — dark
+    // left: 1.0 in flat, 0.5 in iso
+    if (rotationProgress <= 0.0) v_faceBrightness = 1.0;
+    else if (rotationProgress >= 1.0) v_faceBrightness = 0.5;
+    else v_faceBrightness = 1.0 - rotationProgress * 0.5;
   }
+
+  // Side faces visible only when tile has height
+  float sideFaceAlpha;
+  if (heightProgress <= 0.0) sideFaceAlpha = 0.0;
+  else if (heightProgress >= 1.0) sideFaceAlpha = 1.0;
+  else sideFaceAlpha = heightProgress;
 
   // Flicker
   bool isFlicker = u_enableFlicker > 0.5 && abs(index - u_flickerIndex) < 0.5;
   float glowBrightness = 1.0 + v_proximityGlow * 1.2;
   v_brightness = isFlicker ? 1.6 : glowBrightness;
-  v_alpha      = isFlicker ? 1.0 : min(1.0, currentProg * 1.5);
+  
+  float baseAlpha = isFlicker ? 1.0 : min(1.0, currentProg * 1.5);
+  
+  if (faceId > 0.5) {
+    v_alpha = baseAlpha * sideFaceAlpha;
+  } else {
+    v_alpha = baseAlpha;
+  }
 }
 `;
 

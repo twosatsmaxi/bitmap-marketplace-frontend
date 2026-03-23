@@ -51,11 +51,12 @@ function renderFrame(
 ) {
   const { gl, canvas: offscreen } = shared;
 
-  // Select flat or isometric program/buffers/uniforms
-  const prog    = isometric ? shared.isoProgram  : shared.program;
-  const bufs    = isometric ? shared.isoBuffers   : shared.buffers;
-  const unis    = isometric ? shared.isoUniforms  : shared.uniforms;
-  const vertCount = isometric ? 18 : 6;
+  // Always use isometric program for smooth 2D→3D transition
+  // tileHeightScale controls the morph: 0=flat, 1=full 3D
+  const prog    = shared.isoProgram;
+  const bufs    = shared.isoBuffers;
+  const unis    = shared.isoUniforms;
+  const vertCount = 18;
 
   // Ensure offscreen matches size
   if (offscreen.width !== canvasSize || offscreen.height !== canvasSize) {
@@ -81,22 +82,18 @@ function renderFrame(
   gl.uniform1f(unis.u_scale, scale);
   gl.uniform1f(unis.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
   gl.uniform1f(unis.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
-  if (isometric && unis.u_tileHeightScale != null) {
+  if (unis.u_tileHeightScale != null) {
     gl.uniform1f(unis.u_tileHeightScale, tileHeightScale);
   }
 
-  // Depth buffer: enable for isometric, disable for flat
-  if (isometric) {
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LESS);
-  } else {
-    gl.disable(gl.DEPTH_TEST);
-  }
+  // Always use depth buffer for smooth 2D→3D transition
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LESS);
 
   // Draw
   gl.viewport(0, 0, canvasSize, canvasSize);
   gl.clearColor(BG_R, BG_G, BG_B, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | (isometric ? gl.DEPTH_BUFFER_BIT : 0));
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.bindVertexArray(bufs.vao);
   gl.drawArraysInstanced(gl.TRIANGLES, 0, vertCount, count);
 
@@ -110,6 +107,16 @@ function easeOutQuad(t: number): number {
   return t * (2 - t);
 }
 
+/** Ease in-out cubic for more natural 2D→3D growth */
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/** Ease out quart for smoother finish */
+function easeOutQuart(t: number): number {
+  return 1 - Math.pow(1 - t, 4);
+}
+
 export default function WebGLBitmapRenderer({
   height,
   canvasSize = 300,
@@ -118,7 +125,7 @@ export default function WebGLBitmapRenderer({
   animationStyle = "bitfeed",
   enableRepulsion = true,
   enableFlicker = true,
-  isometric = false,
+  isometric = false,  // Default to 2D flat view (matching reference image style)
   inView = true,
   skipEntryAnimation = false,
 }: WebGLBitmapRendererProps) {
@@ -137,6 +144,7 @@ export default function WebGLBitmapRenderer({
   const featuresRef = useRef({ enableRepulsion, enableFlicker, isometric });
   featuresRef.current = { enableRepulsion, enableFlicker, isometric };
   const loopActiveRef = useRef(false);
+  // Start with flat 2D view (0.0), transition to isometric 3D (1.0) when isometric=true
   const tileHeightScaleRef = useRef(isometric ? 1.0 : 0.0);
   const isometricTransitionRef = useRef<number | null>(null);
   const inViewRef = useRef(inView);
@@ -507,12 +515,15 @@ export default function WebGLBitmapRenderer({
   }, [height]);
 
   // Animate tileHeightScale when isometric prop changes
+  // Two-stage transition: 
+  // - Stage 1 (0.0-0.5): Rotate from flat 2D to isometric
+  // - Stage 2 (0.5-1.0): Extrude 3D height
   useEffect(() => {
     const target = isometric ? 1.0 : 0.0;
     const start = tileHeightScaleRef.current;
     if (Math.abs(target - start) < 0.001) return;
 
-    const duration = 600; // ms
+    const duration = 1800; // ms - slower, more dramatic two-stage transition (rotate then extrude)
     const startTime = performance.now();
 
     // Cancel any existing transition
@@ -523,7 +534,8 @@ export default function WebGLBitmapRenderer({
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / duration);
-      const eased = easeOutQuad(progress);
+      // Use easeOutQuart for smoother finish during the height extrusion phase
+      const eased = easeOutQuart(progress);
       
       tileHeightScaleRef.current = start + (target - start) * eased;
 
