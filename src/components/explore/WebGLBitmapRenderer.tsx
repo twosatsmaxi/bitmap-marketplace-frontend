@@ -523,13 +523,15 @@ export default function WebGLBitmapRenderer({
     const start = tileHeightScaleRef.current;
     if (Math.abs(target - start) < 0.001) return;
 
-    const duration = 1800; // ms - slower, more dramatic two-stage transition (rotate then extrude)
-    const startTime = performance.now();
-
     // Cancel any existing transition
     if (isometricTransitionRef.current) {
       cancelAnimationFrame(isometricTransitionRef.current);
     }
+
+    // Use shorter duration for interrupted (partial) transitions
+    const distance = Math.abs(target - start);
+    const duration = distance < 0.8 ? Math.max(300, Math.round(1800 * distance)) : 1800;
+    const startTime = performance.now();
 
     const animate = (now: number) => {
       const elapsed = now - startTime;
