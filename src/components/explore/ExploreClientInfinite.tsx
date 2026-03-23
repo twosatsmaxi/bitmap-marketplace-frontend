@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
 import { Zap, Box, Square } from "lucide-react";
 import BlockCard from "./BlockCard";
@@ -95,7 +95,6 @@ function buildHeights(anchor: number, latest: number, count: number): number[] {
 }
 
 export default function ExploreClientInfinite({ latestBlock }: { latestBlock: number }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
@@ -105,8 +104,6 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   // Track what filter we last wrote to URL (to prevent init effect from resetting state)
   const lastUrlFilterRef = useRef<string | null>(null);
-  // Skip URL-write effect on first mount so it doesn't clear filter from URL before URL-read effect can initialize state
-  const hasInitializedRef = useRef(false);
 
   const urlFilter = searchParams.get("filter");
 
@@ -153,12 +150,9 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   useEffect(() => { savedAnchorHeight = anchorHeight; }, [anchorHeight]);
 
   // Sync filter to URL (only when activeFilter changes)
+  // Uses window.history.replaceState instead of router.replace to avoid
+  // triggering a Next.js navigation cycle that causes a race condition on mobile
   useEffect(() => {
-    // Skip on first mount — let the URL-read effect initialize activeFilter first
-    if (!hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      return;
-    }
     const params = new URLSearchParams(searchParams.toString());
     const currentFilter = params.get("filter");
     if (currentFilter === activeFilter) return;
@@ -169,8 +163,8 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     }
     // Remember what we're about to write to URL
     lastUrlFilterRef.current = activeFilter;
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [activeFilter, pathname, router, searchParams]);
+    window.history.replaceState(window.history.state, '', `${pathname}?${params.toString()}`);
+  }, [activeFilter, pathname, searchParams]);
 
   // SWR Infinite fetcher - ONLY for filter mode
   const getKey = useCallback(
