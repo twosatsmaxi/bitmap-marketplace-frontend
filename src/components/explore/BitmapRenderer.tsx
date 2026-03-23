@@ -13,6 +13,8 @@ interface BitmapRendererProps {
   onResult?: (squares: WorkerSquare[], layoutWidth: number, usedHeight: number) => void;
   animationStyle?: AnimationStyle;
   skipEntryAnimation?: boolean;
+  maxDpr?: number;
+  mobileMode?: boolean;
 }
 
 export default function BitmapRenderer({
@@ -22,6 +24,8 @@ export default function BitmapRenderer({
   onResult,
   animationStyle = "bitfeed",
   skipEntryAnimation = false,
+  maxDpr,
+  mobileMode = false,
 }: BitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -33,34 +37,85 @@ export default function BitmapRenderer({
     usedHeight: number;
   } | null>(null);
 
-  // DPR-scaled size for crisp rendering on high-density displays
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  // DPR-scaled size for crisp rendering — capped on mobile to reduce GPU load
+  const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const dpr = maxDpr ? Math.min(rawDpr, maxDpr) : rawDpr;
   const scaledSize = Math.round(canvasSize * dpr);
 
-  // Handle Mouse Tracking
+  // Handle Mouse/Touch Tracking
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const getCanvasCoords = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-      mousePosRef.current = {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
       };
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = getCanvasCoords(e.clientX, e.clientY);
     };
 
     const handleMouseLeave = () => {
       mousePosRef.current = null;
     };
 
+    // Touch: activate repulsion after long-press (200ms stationary)
+    let touchTimer: ReturnType<typeof setTimeout> | null = null;
+    let touchActive = false;
+    let touchStartPos = { x: 0, y: 0 };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchStartPos = { x: t.clientX, y: t.clientY };
+      touchActive = false;
+      touchTimer = setTimeout(() => {
+        touchActive = true;
+        mousePosRef.current = getCanvasCoords(t.clientX, t.clientY);
+      }, 200);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartPos.x;
+      const dy = t.clientY - touchStartPos.y;
+      // Cancel long-press if finger moved too far (scrolling)
+      if (!touchActive && Math.abs(dx) + Math.abs(dy) > 10 && touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        return;
+      }
+      if (touchActive) {
+        mousePosRef.current = getCanvasCoords(t.clientX, t.clientY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (touchTimer) clearTimeout(touchTimer);
+      touchTimer = null;
+      touchActive = false;
+      mousePosRef.current = null;
+    };
+
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: true });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
+    canvas.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     return () => {
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+      canvas.removeEventListener("touchcancel", handleTouchEnd);
+      if (touchTimer) clearTimeout(touchTimer);
     };
   }, []);
 
@@ -79,7 +134,7 @@ export default function BitmapRenderer({
           if (ctx) {
             if (skipEntryAnimation) {
               // Render final frame immediately — no 3s animation
-              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1, 0, 4000, -1, null);
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1, 0, 4000, -1, null, mobileMode);
             } else {
               const start = performance.now();
               const run = (now: number) => {
@@ -90,7 +145,7 @@ export default function BitmapRenderer({
                 // Occasional flicker (approx 1% chance per frame)
                 const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
 
-                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current);
+                drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current, mobileMode);
 
                 // Continue loop if mouse is over or animating
                 if (progress < 1 || mousePosRef.current) {
@@ -148,7 +203,7 @@ export default function BitmapRenderer({
               ctx.scale(1 - progress, 1 - progress);
               ctx.translate(-scaledSize / 2, -scaledSize / 2);
 
-              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1);
+              drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1, 0, 0, -1, null, mobileMode);
               
               ctx.restore();
 

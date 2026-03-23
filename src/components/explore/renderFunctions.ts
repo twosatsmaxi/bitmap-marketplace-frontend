@@ -16,7 +16,8 @@ export function drawBitfeedVacuum(
   startTime: number = 0,
   currentTime: number = 0,
   flickerIndex: number = -1,
-  mousePos: { x: number; y: number } | null = null
+  mousePos: { x: number; y: number } | null = null,
+  mobileMode: boolean = false,
 ) {
   ctx.fillStyle = "#0d1117";
   ctx.fillRect(0, 0, canvasSize, canvasSize);
@@ -46,14 +47,14 @@ export function drawBitfeedVacuum(
       const dx = tx + sq.r / 2 - mx;
       const dy = ty + sq.r / 2 - my;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const radius = 18; // grid units
+      const radius = mobileMode ? 10 : 18; // grid units — smaller on mobile
       if (dist < radius && dist > 0.001) {
         const t = Math.max(0, Math.min(1, dist / radius));
         const smooth = t * t * (3 - 2 * t);
 
         if (sq.r === 1) {
-          // Single blocks: glow only, no repulsion or shrink
-          proximityGlow = 1.0 - smooth;
+          // Single blocks: glow only on desktop, skip on mobile
+          if (!mobileMode) proximityGlow = 1.0 - smooth;
         } else {
           const force = (1 - dist / radius) * 5; // Strength of push
           tx += (dx / dist) * force;
@@ -106,14 +107,17 @@ export function drawBitfeedVacuum(
     const brightness = isFlicker ? 1.6 : glowBrightness;
     ctx.fillStyle = `rgb(${Math.min(255, baseR * brightness)}, ${Math.min(255, baseG * brightness)}, ${Math.min(255, baseB * brightness)})`;
 
-    if (isFlicker) {
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, 0.8)`;
-    } else if (proximityGlow > 0.01) {
-      ctx.shadowBlur = 8 * proximityGlow;
-      ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, ${proximityGlow * 0.9})`;
-    } else {
-      ctx.shadowBlur = 0;
+    // Skip expensive shadowBlur on mobile — barely visible at small card sizes
+    if (!mobileMode) {
+      if (isFlicker) {
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, 0.8)`;
+      } else if (proximityGlow > 0.01) {
+        ctx.shadowBlur = 8 * proximityGlow;
+        ctx.shadowColor = `rgba(${baseR}, ${baseG}, ${baseB}, ${proximityGlow * 0.9})`;
+      } else {
+        ctx.shadowBlur = 0;
+      }
     }
 
     ctx.fillRect(px, py, pw, pw);
