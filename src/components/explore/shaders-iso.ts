@@ -206,21 +206,56 @@ void main() {
   // ============================================
   // FLAT 2D CALCULATION (for blending)
   // ============================================
-  
-  // When rotationProgress = 0, we need flat 2D position
-  // Calculate fresh without mouse repulsion (flat view doesn't have repulsion)
+
+  // Apply mouse repulsion to flat view too
   float flatTx = x;
   float flatTy = y;
-  
-  // Entry animation for flat (same calculation, no mouse repulsion)
+  float flatShrinkFactor = 1.0;
+  float flatProximityGlow = 0.0;
+
+  if (u_enableRepulsion > 0.5 && overallProg >= 1.0 && u_mouse.x >= 0.0) {
+    // Inverse-project mouse from pixel coords to grid space (flat)
+    float mFlatX = u_mouse.x / gridSize;
+    float mFlatY = (u_mouse.y - offsetY) / gridSize;
+
+    float fddx = flatTx + size * 0.5 - mFlatX;
+    float fddy = flatTy + size * 0.5 - mFlatY;
+    float fdist = sqrt(fddx * fddx + fddy * fddy);
+    float fradius = 18.0;
+    if (fdist < fradius && fdist > 0.001) {
+      float fsFactor = smoothstep(0.0, fradius, fdist);
+      if (size <= 1.0) {
+        flatProximityGlow = 1.0 - fsFactor;
+      } else {
+        float fforce = (1.0 - fdist / fradius) * 5.0;
+        flatTx += (fddx / fdist) * fforce;
+        flatTy += (fddy / fdist) * fforce;
+        flatShrinkFactor = fsFactor;
+        if (size <= 4.0) {
+          flatProximityGlow = 1.0 - flatShrinkFactor;
+          flatShrinkFactor = max(flatShrinkFactor, 0.5);
+        }
+      }
+    }
+  }
+
+  // Blend proximity glow between flat and iso based on transition
+  if (rotationProgress <= 0.0) {
+    v_proximityGlow = flatProximityGlow;
+  } else if (rotationProgress >= 1.0) {
+    // already set from iso path
+  } else {
+    v_proximityGlow = mix(flatProximityGlow, v_proximityGlow, rotationProgress);
+  }
+
+  // Entry animation for flat
   float flatCurX = startX + (flatTx - startX) * eased;
   float flatCurY = startY + (flatTy - startY) * eased;
-  
+
   // Flat uses different padding
   float flatPad = 0.25;
   float flatInnerSize = size - flatPad * 2.0;
-  // No shrink in flat mode (or use 1.0)
-  float flatEffSize = flatInnerSize;
+  float flatEffSize = flatInnerSize * flatShrinkFactor;
   
   // Position with flat padding
   float flatBx = flatCurX + flatPad + (flatInnerSize - flatEffSize) * 0.5;
