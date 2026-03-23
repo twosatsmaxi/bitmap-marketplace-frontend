@@ -140,6 +140,14 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
     return () => clearTimeout(timer);
   }, [isometric, status, offloaded]);
 
+  // Reset quality tier when user toggles 3D (in case it downgraded to static during idle)
+  useEffect(() => {
+    if (qualityTier === "static") {
+      monitorRef.current.reset("full");
+      setQualityTier("full");
+    }
+  }, [isometric, qualityTier]);
+
   // Offload/restore renderer based on viewport proximity
   useEffect(() => {
     // Only offload cards that have finished rendering and have a snapshot

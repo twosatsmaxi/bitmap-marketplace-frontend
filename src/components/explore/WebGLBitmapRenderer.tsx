@@ -84,7 +84,6 @@ function renderFrame(
   gl.uniform1f(unis.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
   if (unis.u_tileHeightScale != null) {
     gl.uniform1f(unis.u_tileHeightScale, tileHeightScale);
-    // console.log('[Shader] tileHeightScale:', tileHeightScale.toFixed(3));
   }
 
   // Always use depth buffer for smooth 2D→3D transition
@@ -113,6 +112,11 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+/** Ease out quart for smoother finish */
+function easeOutQuart(t: number): number {
+  return 1 - Math.pow(1 - t, 4);
+}
+
 export default function WebGLBitmapRenderer({
   height,
   canvasSize = 300,
@@ -121,7 +125,7 @@ export default function WebGLBitmapRenderer({
   animationStyle = "bitfeed",
   enableRepulsion = true,
   enableFlicker = true,
-  isometric = false,
+  isometric = false,  // Default to 2D flat view (matching reference image style)
   inView = true,
   skipEntryAnimation = false,
 }: WebGLBitmapRendererProps) {
@@ -140,6 +144,7 @@ export default function WebGLBitmapRenderer({
   const featuresRef = useRef({ enableRepulsion, enableFlicker, isometric });
   featuresRef.current = { enableRepulsion, enableFlicker, isometric };
   const loopActiveRef = useRef(false);
+  // Start with flat 2D view (0.0), transition to isometric 3D (1.0) when isometric=true
   const tileHeightScaleRef = useRef(isometric ? 1.0 : 0.0);
   const isometricTransitionRef = useRef<number | null>(null);
   const inViewRef = useRef(inView);
@@ -510,13 +515,15 @@ export default function WebGLBitmapRenderer({
   }, [height]);
 
   // Animate tileHeightScale when isometric prop changes
+  // Two-stage transition: 
+  // - Stage 1 (0.0-0.5): Rotate from flat 2D to isometric
+  // - Stage 2 (0.5-1.0): Extrude 3D height
   useEffect(() => {
     const target = isometric ? 1.0 : 0.0;
     const start = tileHeightScaleRef.current;
-    console.log('[3D Transition] isometric:', isometric, 'target:', target, 'start:', start);
     if (Math.abs(target - start) < 0.001) return;
 
-    const duration = 900; // ms - slightly longer for more natural feel
+    const duration = 1200; // ms - longer for two-stage transition (rotate then extrude)
     const startTime = performance.now();
 
     // Cancel any existing transition
@@ -527,13 +534,10 @@ export default function WebGLBitmapRenderer({
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / duration);
-      const eased = easeInOutCubic(progress);
+      // Use easeOutQuart for smoother finish during the height extrusion phase
+      const eased = easeOutQuart(progress);
       
       tileHeightScaleRef.current = start + (target - start) * eased;
-      
-      if (progress % 0.2 < 0.05) {  // Log periodically
-        console.log('[3D Animation] progress:', progress.toFixed(2), 'tileHeightScale:', tileHeightScaleRef.current.toFixed(3));
-      }
 
       // Trigger a re-render if loop isn't active
       const prev = prevDataRef.current;
