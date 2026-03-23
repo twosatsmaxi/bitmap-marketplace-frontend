@@ -103,6 +103,11 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  // Track what filter we last wrote to URL (to prevent init effect from resetting state)
+  const lastUrlFilterRef = useRef<string | null>(null);
+  // Skip URL-write effect on first mount so it doesn't clear filter from URL before URL-read effect can initialize state
+  const hasInitializedRef = useRef(false);
+
   const urlFilter = searchParams.get("filter");
 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -122,8 +127,13 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     return Math.max(0, Math.min(halvingIV, latestBlock));
   });
   
-  // Sync with URL after mount
+  // Sync with URL after mount (but not when we just updated the URL ourselves)
   useEffect(() => {
+    // Skip if we just set this URL ourselves
+    if (urlFilter === lastUrlFilterRef.current) {
+      return;
+    }
+    // Update filter from URL
     if (urlFilter) {
       setActiveFilter(urlFilter);
     }
@@ -144,6 +154,11 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
 
   // Sync filter to URL (only when activeFilter changes)
   useEffect(() => {
+    // Skip on first mount — let the URL-read effect initialize activeFilter first
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      return;
+    }
     const params = new URLSearchParams(searchParams.toString());
     const currentFilter = params.get("filter");
     if (currentFilter === activeFilter) return;
@@ -152,6 +167,8 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
     } else {
       params.delete("filter");
     }
+    // Remember what we're about to write to URL
+    lastUrlFilterRef.current = activeFilter;
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [activeFilter, pathname, router, searchParams]);
 

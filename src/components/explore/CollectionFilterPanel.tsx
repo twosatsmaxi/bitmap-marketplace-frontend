@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { CollectionFilterMeta } from "./types";
+import { useRef, useLayoutEffect } from "react";
 
 type FilterCategory = "historical" | "punk" | "numeric";
 
@@ -19,6 +20,32 @@ const CATEGORY_ICONS: Record<FilterCategory, string> = {
   historical: "◆",
   punk: "◈",
   numeric: "◇",
+};
+
+// FilterChip defined outside component to prevent remounts on re-render
+interface FilterChipProps {
+  c: CategorizedFilterMeta;
+  activeFilter: string | null;
+  onToggle: (id: string) => void;
+}
+
+const FilterChip = ({ c, activeFilter, onToggle }: FilterChipProps) => {
+  const active = activeFilter === c.id;
+  return (
+    <button
+      key={c.id}
+      type="button"
+      onClick={() => onToggle(c.id)}
+      className={cn(
+        "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
+        active
+          ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
+          : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
+      )}
+    >
+      {c.label}
+    </button>
+  );
 };
 
 export default function CollectionFilterPanel({
@@ -44,24 +71,23 @@ export default function CollectionFilterPanel({
 
   const rowOrder: FilterCategory[] = ["historical", "punk", "numeric"];
 
-  const FilterChip = ({ c }: { c: CategorizedFilterMeta }) => {
-    const active = activeFilter === c.id;
-    return (
-      <button
-        key={c.id}
-        type="button"
-        onClick={() => onToggle(c.id)}
-        className={cn(
-          "flex-shrink-0 rounded-full border px-3 py-1.5 md:px-3 md:py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] transition-all active:scale-95",
-          active
-            ? "border-primary bg-primary/[0.15] text-primary shadow-[0_0_10px_rgba(247,147,26,0.25)]"
-            : "border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:border-[rgba(247,162,59,0.45)] hover:text-primary"
-        )}
-      >
-        {c.label}
-      </button>
-    );
-  };
+  // Preserve scroll position of the filter row across re-renders
+  const row1Ref = useRef<HTMLDivElement>(null);
+  const scrollLeftRef = useRef<number>(0);
+
+  // Save scroll position before browser paints
+  useLayoutEffect(() => {
+    if (row1Ref.current) {
+      scrollLeftRef.current = row1Ref.current.scrollLeft;
+    }
+  });
+
+  // Restore scroll position after render
+  useLayoutEffect(() => {
+    if (row1Ref.current && scrollLeftRef.current > 0) {
+      row1Ref.current.scrollLeft = scrollLeftRef.current;
+    }
+  });
 
   return (
     <div className="br-card p-3 md:p-4 lg:p-5">
@@ -98,20 +124,20 @@ export default function CollectionFilterPanel({
       {/* 2 Rows of filters */}
       <div className="mt-3 flex flex-col gap-2">
         {/* Row 1: Historical + Punk (with divider) */}
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-          {byCategory["historical"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+        <div ref={row1Ref} className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+          {byCategory["historical"]?.map((c) => <FilterChip key={c.id} c={c} activeFilter={activeFilter} onToggle={onToggle} />)}
           
           {/* Divider between groups */}
           <div className="flex items-center mx-1 md:mx-2">
             <div className="h-4 w-px bg-[rgba(255,255,255,0.12)]" />
           </div>
           
-          {byCategory["punk"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+          {byCategory["punk"]?.map((c) => <FilterChip key={c.id} c={c} activeFilter={activeFilter} onToggle={onToggle} />)}
         </div>
         
         {/* Row 2: Numeric */}
         <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-          {byCategory["numeric"]?.map((c) => <FilterChip key={c.id} c={c} />)}
+          {byCategory["numeric"]?.map((c) => <FilterChip key={c.id} c={c} activeFilter={activeFilter} onToggle={onToggle} />)}
           
           {/* More soon inline */}
           <div className="flex items-center gap-2 ml-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
