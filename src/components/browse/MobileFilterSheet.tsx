@@ -4,7 +4,7 @@ import type { BrowseFilters, BitmapType, RarityTier } from "@/lib/types";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BottomSheet from "@/components/ui/BottomSheet";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 interface MobileFilterSheetProps {
   isOpen: boolean;
@@ -24,13 +24,16 @@ export default function MobileFilterSheet({
 }: MobileFilterSheetProps) {
   // Local state for draft filters (apply on confirm)
   const [draftFilters, setDraftFilters] = useState<BrowseFilters>(filters);
+  const prevIsOpenRef = useRef(isOpen);
 
-  // Reset draft when sheet opens
-  useMemo(() => {
-    if (isOpen) {
+  // Reset draft only when sheet opens (transition from closed -> open)
+  useEffect(() => {
+    const wasOpen = prevIsOpenRef.current;
+    if (isOpen && !wasOpen) {
       setDraftFilters(filters);
     }
-  }, [isOpen, filters]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]); // Only depend on isOpen, not filters
 
   const activeCount = useMemo(() => {
     return (
