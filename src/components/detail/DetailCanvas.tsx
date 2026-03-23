@@ -28,7 +28,10 @@ export default function DetailCanvas({ blockNumber }: DetailCanvasProps) {
 
   return (
     <div className="br-card p-2 md:p-3">
-      <div className="relative aspect-square w-full rounded-lg bg-[#090c11] overflow-hidden">
+      <div
+        className="relative aspect-square w-full rounded-lg bg-[#090c11] overflow-hidden"
+        style={{ viewTransitionName: `bitmap-${blockNumber}` } as React.CSSProperties}
+      >
         {/* Renderer with retry key to force remount */}
         <div
           key={retryKey}

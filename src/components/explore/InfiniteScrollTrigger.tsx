@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import BlockCardSkeleton from "./BlockCardSkeleton";
 
 interface InfiniteScrollTriggerProps {
   onIntersect: () => void;
@@ -49,26 +50,10 @@ export default function InfiniteScrollTrigger({
       className="col-span-full flex items-center justify-center py-8 md:py-12"
     >
       {isLoading ? (
-        <div className="flex flex-col items-center gap-4">
-          {/* Pixel block loading animation */}
-          <div className="flex items-end gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "w-3 h-3 border border-[rgba(247,147,26,0.4)]",
-                  "animate-pulse"
-                )}
-                style={{
-                  animationDelay: `${i * 150}ms`,
-                  backgroundColor: `rgba(247,147,26,${0.15 + i * 0.15})`,
-                }}
-              />
-            ))}
-          </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            Loading blocks
-          </span>
+        <div className="col-span-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <BlockCardSkeleton key={`scroll-skeleton-${i}`} />
+          ))}
         </div>
       ) : (
         // Load More button - visible when not loading

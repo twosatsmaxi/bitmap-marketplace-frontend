@@ -21,6 +21,10 @@ const TIER_FEATURES: Record<QualityTier, QualityFeatures> = {
   static: { repulsion: false, flicker: false, animated: false },
 };
 
+interface QualityMonitorOptions {
+  mobile?: boolean;
+}
+
 export class QualityMonitor {
   private frameTimes: number[] = [];
   private lastFrameTime = 0;
@@ -28,9 +32,14 @@ export class QualityMonitor {
   private highCount = 0;
   private _tier: QualityTier;
   private _locked = false;
+  private downgradeFrames: number;
+  private upgradeFrames: number;
 
-  constructor(initialTier: QualityTier = "full") {
+  constructor(initialTier: QualityTier = "full", options?: QualityMonitorOptions) {
     this._tier = initialTier;
+    // Mobile devices: faster reactions to jank (less frames before tier change)
+    this.downgradeFrames = options?.mobile ? 10 : DOWNGRADE_FRAMES;
+    this.upgradeFrames = options?.mobile ? 40 : UPGRADE_FRAMES;
   }
 
   get tier(): QualityTier {
@@ -68,14 +77,14 @@ export class QualityMonitor {
     if (fps < DOWNGRADE_FPS) {
       this.lowCount++;
       this.highCount = 0;
-      if (this.lowCount >= DOWNGRADE_FRAMES) {
+      if (this.lowCount >= this.downgradeFrames) {
         this.lowCount = 0;
         return this.downgrade();
       }
     } else if (fps > UPGRADE_FPS) {
       this.highCount++;
       this.lowCount = 0;
-      if (this.highCount >= UPGRADE_FRAMES) {
+      if (this.highCount >= this.upgradeFrames) {
         this.highCount = 0;
         return this.upgrade();
       }

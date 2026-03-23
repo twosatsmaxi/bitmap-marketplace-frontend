@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { useInView } from "@/hooks/useInView";
+import { useDeviceCapabilities } from "@/hooks/useDeviceCapabilities";
 import { cn } from "@/lib/utils";
 import WebGLBitmapRenderer from "./WebGLBitmapRenderer";
 import BitmapRenderer from "./BitmapRenderer";
@@ -11,12 +12,6 @@ import { QualityMonitor } from "./quality-monitor";
 import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
-
-
-
-const supportsWebGL2 =
-  typeof document !== "undefined" &&
-  !!document.createElement("canvas").getContext("webgl2");
 
 interface BlockCardProps {
   height: number;
@@ -40,14 +35,46 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+/** Async snapshot capture — uses toBlob on mobile to avoid blocking main thread */
+function captureSnapshot(
+  canvas: HTMLCanvasElement,
+  isMobile: boolean,
+  staticImageRef: React.MutableRefObject<string | null>,
+  setSnapshotUrl: (url: string | null) => void,
+) {
+  try {
+    if (isMobile && typeof canvas.toBlob === "function") {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          // Revoke previous blob URL to prevent memory leaks
+          if (staticImageRef.current?.startsWith("blob:")) {
+            URL.revokeObjectURL(staticImageRef.current);
+          }
+          const url = URL.createObjectURL(blob);
+          staticImageRef.current = url;
+          setSnapshotUrl(url);
+        },
+        "image/webp",
+        0.65,
+      );
+    } else {
+      const url = canvas.toDataURL("image/webp", 0.8);
+      staticImageRef.current = url;
+      setSnapshotUrl(url);
+    }
+  } catch {
+    // toDataURL/toBlob may fail on tainted canvases — ignore
+  }
+}
+
 export default memo(function BlockCard({ height, meta, listingStatus, price, isometric, index }: BlockCardProps) {
+  const { isMobile, maxDpr, initialQualityTier, hasCoarsePointer } = useDeviceCapabilities();
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [qualityTier, setQualityTier] = useState<QualityTier>(
-    supportsWebGL2 ? "full" : "canvas2d"
-  );
+  const [qualityTier, setQualityTier] = useState<QualityTier>(initialQualityTier);
   const monitorRef = useRef<QualityMonitor>(
-    new QualityMonitor(supportsWebGL2 ? "full" : "canvas2d")
+    new QualityMonitor(initialQualityTier, { mobile: isMobile })
   );
   const staticImageRef = useRef<string | null>(null);
   const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
@@ -107,18 +134,12 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       if (!rendererContainerRef.current) return;
       const canvas = rendererContainerRef.current.querySelector("canvas");
       if (!canvas) return;
-      try {
-        const url = canvas.toDataURL("image/webp", 0.8);
-        staticImageRef.current = url;
-        setSnapshotUrl(url);
-        hasAnimatedRef.current = true;
-      } catch {
-        // toDataURL may fail on tainted canvases — ignore
-      }
+      captureSnapshot(canvas, isMobile, staticImageRef, setSnapshotUrl);
+      hasAnimatedRef.current = true;
     }, 3500); // Wait for 3s entry animation + 0.5s buffer
 
     return () => clearTimeout(timer);
-  }, [status, offloaded]);
+  }, [status, offloaded, isMobile]);
 
   // Re-capture snapshot when isometric changes while renderer is mounted
   useEffect(() => {
@@ -128,25 +149,19 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       if (!rendererContainerRef.current) return;
       const canvas = rendererContainerRef.current.querySelector("canvas");
       if (!canvas) return;
-      try {
-        const url = canvas.toDataURL("image/webp", 0.8);
-        staticImageRef.current = url;
-        setSnapshotUrl(url);
-      } catch {
-        // ignore
-      }
+      captureSnapshot(canvas, isMobile, staticImageRef, setSnapshotUrl);
     }, 700); // Wait for isometric transition (600ms) + buffer
 
     return () => clearTimeout(timer);
-  }, [isometric, status, offloaded]);
+  }, [isometric, status, offloaded, isMobile]);
 
   // Reset quality tier when user toggles 3D (in case it downgraded to static during idle)
   useEffect(() => {
     if (qualityTier === "static") {
-      monitorRef.current.reset("full");
-      setQualityTier("full");
+      monitorRef.current.reset(initialQualityTier);
+      setQualityTier(initialQualityTier);
     }
-  }, [isometric, qualityTier]);
+  }, [isometric, qualityTier, initialQualityTier]);
 
   // Offload/restore renderer based on viewport proximity
   useEffect(() => {
@@ -165,37 +180,35 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
     if (qualityTier === "static" && !staticImageRef.current && rendererContainerRef.current) {
       const canvas = rendererContainerRef.current.querySelector("canvas");
       if (canvas) {
-        try {
-          staticImageRef.current = canvas.toDataURL("image/png");
-          setSnapshotUrl(staticImageRef.current);
-          // Force re-render to show the static image
-          setQualityTier("static");
-        } catch {
-          // Security error — stay on canvas2d instead
-          monitorRef.current.lock();
-          setQualityTier("canvas2d");
-        }
+        captureSnapshot(canvas, isMobile, staticImageRef, setSnapshotUrl);
       }
     }
-  }, [qualityTier]);
+  }, [qualityTier, isMobile]);
 
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (staticImageRef.current?.startsWith("blob:")) {
+        URL.revokeObjectURL(staticImageRef.current);
+      }
+    };
+  }, []);
 
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (hasCoarsePointer) return; // Skip tilt on touch devices
     const card = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - card.left;
     const mouseY = e.clientY - card.top;
 
-    // Tilt limit: 8 degrees
     const rotateX = ((mouseY - card.height / 2) / (card.height / 2)) * -8;
     const rotateY = ((mouseX - card.width / 2) / (card.width / 2)) * 8;
 
     setTilt({ x: rotateX, y: rotateY });
-  };
+  }, [hasCoarsePointer]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setTilt({ x: 0, y: 0 });
-  };
+  }, []);
 
   // Determine whether to show the renderer or the snapshot
   const showSnapshot = offloaded && snapshotUrl;
@@ -207,10 +220,14 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       href={`/bitmap/${height}.bitmap`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)] active:scale-[0.98]"
+      className="br-card group flex flex-col overflow-hidden p-0 transition-all hover:border-[rgba(255,255,255,0.15)] active:scale-[0.97]"
       style={{
-        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: "transform 0.1s ease-out, border-color 0.2s ease",
+        transform: hasCoarsePointer
+          ? undefined
+          : `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: hasCoarsePointer
+          ? "transform 0.15s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease"
+          : "transform 0.1s ease-out, border-color 0.2s ease",
       }}
       {...(index !== undefined ? { "data-block-index": index } : {})}
     >
@@ -222,7 +239,10 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       </div>
 
       {/* Canvas area */}
-      <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+      <div
+        className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden"
+        style={{ viewTransitionName: `bitmap-${height}` } as React.CSSProperties}
+      >
         {/* Snapshot layer — visible when offloaded or as backdrop during renderer re-mount */}
         {snapshotUrl && (
           <img
@@ -259,6 +279,8 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
                 canvasSize={300}
                 onStatus={setStatus}
                 skipEntryAnimation={skipEntryAnimation}
+                maxDpr={maxDpr}
+                mobileMode={isMobile}
               />
             ) : (
               <WebGLBitmapRenderer
@@ -270,6 +292,8 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
                 isometric={isometric}
                 inView={isInView}
                 skipEntryAnimation={skipEntryAnimation}
+                maxDpr={maxDpr}
+                mobileMode={isMobile}
               />
             )}
           </div>

@@ -27,6 +27,8 @@ interface WebGLBitmapRendererProps {
   isometric?: boolean;
   inView?: boolean;
   skipEntryAnimation?: boolean;
+  maxDpr?: number;
+  mobileMode?: boolean;
 }
 
 /** Render one frame into the shared GL context, then copy to the 2D canvas. */
@@ -128,6 +130,8 @@ export default function WebGLBitmapRenderer({
   isometric = false,  // Default to 2D flat view (matching reference image style)
   inView = true,
   skipEntryAnimation = false,
+  maxDpr,
+  mobileMode = false,
 }: WebGLBitmapRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
@@ -152,8 +156,9 @@ export default function WebGLBitmapRenderer({
   const skipEntryAnimationRef = useRef(skipEntryAnimation);
   skipEntryAnimationRef.current = skipEntryAnimation;
   
-  // DPR-scaled size for crisp rendering on high-density displays
-  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  // DPR-scaled size for crisp rendering — capped on mobile to reduce GPU load
+  const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const dpr = maxDpr ? Math.min(rawDpr, maxDpr) : rawDpr;
   const scaledSize = Math.round(canvasSize * dpr);
 
   // Scroll-triggered animation refs
@@ -220,27 +225,68 @@ export default function WebGLBitmapRenderer({
     animationRef.current = requestAnimationFrame(run);
   }, [scaledSize]);
 
-  // Mouse tracking
+  // Mouse/Touch tracking
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const getCanvasCoords = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-      mousePosRef.current = {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
       };
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = getCanvasCoords(e.clientX, e.clientY);
     };
 
     const handleMouseLeave = () => {
       mousePosRef.current = null;
     };
 
-    // Restart render loop when mouse re-enters after it stopped
-    const handleMouseEnter = () => {
+    // Touch: activate repulsion after long-press (200ms stationary)
+    let touchTimer: ReturnType<typeof setTimeout> | null = null;
+    let touchActive = false;
+    let touchStartPos = { x: 0, y: 0 };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchStartPos = { x: t.clientX, y: t.clientY };
+      touchActive = false;
+      touchTimer = setTimeout(() => {
+        touchActive = true;
+        mousePosRef.current = getCanvasCoords(t.clientX, t.clientY);
+        startInteractionLoop();
+      }, 200);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartPos.x;
+      const dy = t.clientY - touchStartPos.y;
+      if (!touchActive && Math.abs(dx) + Math.abs(dy) > 10 && touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+        return;
+      }
+      if (touchActive) {
+        mousePosRef.current = getCanvasCoords(t.clientX, t.clientY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (touchTimer) clearTimeout(touchTimer);
+      touchTimer = null;
+      touchActive = false;
+      mousePosRef.current = null;
+    };
+
+    // Restart render loop when mouse re-enters or touch activates after it stopped
+    const startInteractionLoop = () => {
       if (loopActiveRef.current) return;
       const prev = prevDataRef.current;
       const data = instanceDataRef.current;
@@ -292,13 +338,24 @@ export default function WebGLBitmapRenderer({
       animationRef.current = requestAnimationFrame(tick);
     };
 
+    const handleMouseEnter = () => startInteractionLoop();
+
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
     canvas.addEventListener("mouseenter", handleMouseEnter);
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: true });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
+    canvas.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     return () => {
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
       canvas.removeEventListener("mouseenter", handleMouseEnter);
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+      canvas.removeEventListener("touchcancel", handleTouchEnd);
+      if (touchTimer) clearTimeout(touchTimer);
     };
   }, [scaledSize]);
 

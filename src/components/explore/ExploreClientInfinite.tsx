@@ -5,6 +5,7 @@ import { useSearchParams, usePathname } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
 import { Zap, Box, Square } from "lucide-react";
 import BlockCard from "./BlockCard";
+import BlockCardSkeleton from "./BlockCardSkeleton";
 import BlockSearch from "./BlockSearch";
 import CollectionFilterPanel from "./CollectionFilterPanel";
 import InfiniteScrollTrigger from "./InfiniteScrollTrigger";
@@ -394,10 +395,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {Array.from({ length: GRID_SIZE }).map((_, i) => (
-            <div
-              key={`skeleton-${i}`}
-              className="aspect-square border border-[rgba(120,72,18,0.3)] bg-black/20 animate-pulse"
-            />
+            <BlockCardSkeleton key={`skeleton-${i}`} />
           ))}
         </div>
       </div>
@@ -520,10 +518,7 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         {/* Skeleton loaders while loading */}
         {isLoading && (
           Array.from({ length: GRID_SIZE }).map((_, i) => (
-            <div
-              key={`skeleton-${i}`}
-              className="aspect-square border border-[rgba(120,72,18,0.3)] bg-black/20 animate-pulse"
-            />
+            <BlockCardSkeleton key={`skeleton-${i}`} />
           ))
         )}
 

@@ -10,6 +10,7 @@ import { ArrowLeft } from "lucide-react";
 import DetailCanvas from "@/components/detail/DetailCanvas";
 import PriceHistoryChart from "@/components/detail/PriceHistoryChart";
 import BitmapPreview from "@/components/detail/BitmapPreview";
+import SwipeNavigator from "@/components/detail/SwipeNavigator";
 
 export const revalidate = 60;
 
@@ -70,6 +71,7 @@ export default async function BitmapDetailPage({ params }: PageProps) {
     .slice(0, 4);
 
   return (
+    <SwipeNavigator blockNumber={bitmap.blockNumber}>
     <div className="min-h-screen bg-bg pb-24 md:pb-0">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Header: Back Navigation + Title */}
@@ -159,5 +161,6 @@ export default async function BitmapDetailPage({ params }: PageProps) {
       {/* Mobile Action Bar */}
       <MobileActionBar bitmap={bitmap} />
     </div>
+    </SwipeNavigator>
   );
 }

@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import StatsBar from "@/components/layout/StatsBar";
+import ViewTransitionProvider from "@/components/layout/ViewTransitionProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -74,7 +75,9 @@ export default function RootLayout({
       <body className="bg-bg text-text-primary min-h-screen safe-area-inset-left safe-area-inset-right">
         <Navbar />
         <StatsBar />
-        <main className="pt-[var(--header-total)]">{children}</main>
+        <main className="pt-[var(--header-total)]">
+          <ViewTransitionProvider>{children}</ViewTransitionProvider>
+        </main>
       </body>
     </html>
   );
