@@ -299,11 +299,11 @@ void main() {
     else v_faceBrightness = 1.0 - rotationProgress * 0.5;
   }
 
-  // Side faces fade in as we rotate to isometric
+  // Side faces visible only when tile has height
   float sideFaceAlpha;
-  if (rotationProgress <= 0.0) sideFaceAlpha = 0.0;
-  else if (rotationProgress >= 1.0) sideFaceAlpha = 1.0;
-  else sideFaceAlpha = rotationProgress;
+  if (heightProgress <= 0.0) sideFaceAlpha = 0.0;
+  else if (heightProgress >= 1.0) sideFaceAlpha = 1.0;
+  else sideFaceAlpha = heightProgress;
 
   // Flicker
   bool isFlicker = u_enableFlicker > 0.5 && abs(index - u_flickerIndex) < 0.5;

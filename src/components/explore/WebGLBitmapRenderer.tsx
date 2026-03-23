@@ -523,7 +523,7 @@ export default function WebGLBitmapRenderer({
     const start = tileHeightScaleRef.current;
     if (Math.abs(target - start) < 0.001) return;
 
-    const duration = 1200; // ms - longer for two-stage transition (rotate then extrude)
+    const duration = 1800; // ms - slower, more dramatic two-stage transition (rotate then extrude)
     const startTime = performance.now();
 
     // Cancel any existing transition
