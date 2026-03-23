@@ -51,11 +51,12 @@ function renderFrame(
 ) {
   const { gl, canvas: offscreen } = shared;
 
-  // Select flat or isometric program/buffers/uniforms
-  const prog    = isometric ? shared.isoProgram  : shared.program;
-  const bufs    = isometric ? shared.isoBuffers   : shared.buffers;
-  const unis    = isometric ? shared.isoUniforms  : shared.uniforms;
-  const vertCount = isometric ? 18 : 6;
+  // Always use isometric program for smooth 2D→3D transition
+  // tileHeightScale controls the morph: 0=flat, 1=full 3D
+  const prog    = shared.isoProgram;
+  const bufs    = shared.isoBuffers;
+  const unis    = shared.isoUniforms;
+  const vertCount = 18;
 
   // Ensure offscreen matches size
   if (offscreen.width !== canvasSize || offscreen.height !== canvasSize) {
@@ -85,18 +86,14 @@ function renderFrame(
     gl.uniform1f(unis.u_tileHeightScale, tileHeightScale);
   }
 
-  // Depth buffer: enable for isometric, disable for flat
-  if (isometric) {
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LESS);
-  } else {
-    gl.disable(gl.DEPTH_TEST);
-  }
+  // Always use depth buffer for smooth 2D→3D transition
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LESS);
 
   // Draw
   gl.viewport(0, 0, canvasSize, canvasSize);
   gl.clearColor(BG_R, BG_G, BG_B, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | (isometric ? gl.DEPTH_BUFFER_BIT : 0));
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.bindVertexArray(bufs.vao);
   gl.drawArraysInstanced(gl.TRIANGLES, 0, vertCount, count);
 
@@ -108,6 +105,11 @@ function renderFrame(
 /** Ease out quad for smooth transitions */
 function easeOutQuad(t: number): number {
   return t * (2 - t);
+}
+
+/** Ease in-out cubic for more natural 2D→3D growth */
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 export default function WebGLBitmapRenderer({
@@ -512,7 +514,7 @@ export default function WebGLBitmapRenderer({
     const start = tileHeightScaleRef.current;
     if (Math.abs(target - start) < 0.001) return;
 
-    const duration = 600; // ms
+    const duration = 900; // ms - slightly longer for more natural feel
     const startTime = performance.now();
 
     // Cancel any existing transition
@@ -523,7 +525,7 @@ export default function WebGLBitmapRenderer({
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / duration);
-      const eased = easeOutQuad(progress);
+      const eased = easeInOutCubic(progress);
       
       tileHeightScaleRef.current = start + (target - start) * eased;
 

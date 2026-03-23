@@ -12,6 +12,8 @@ import StatusPill from "@/components/ui/StatusPill";
 import PriceDisplay from "@/components/ui/PriceDisplay";
 import type { ListingStatus } from "@/lib/types";
 
+
+
 const supportsWebGL2 =
   typeof document !== "undefined" &&
   !!document.createElement("canvas").getContext("webgl2");
@@ -168,6 +170,8 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       }
     }
   }, [qualityTier]);
+
+
 
   const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const card = e.currentTarget.getBoundingClientRect();

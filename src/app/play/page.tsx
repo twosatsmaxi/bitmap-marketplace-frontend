@@ -281,8 +281,8 @@ function VisualizerContent() {
                 onTransactionClick={handleTxClick}
               />
 
-              {/* Legend Panel - Using panel-frame for consistent styling */}
-              <div className="absolute right-4 md:right-6 z-10" style={{ top: "calc(var(--header-total) + 1rem)" }}>
+              {/* Legend Panel - Positioned lower on mobile to avoid overlap with block number */}
+              <div className="absolute right-4 md:right-6 z-10" style={{ top: "calc(var(--header-total) + 5rem)" }}>
                 <div className="panel-frame p-4 min-w-[140px]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-1.5 h-1.5 bg-primary" />
@@ -317,9 +317,9 @@ function VisualizerContent() {
                 </div>
               </div>
 
-              {/* Transaction Detail Panel */}
+              {/* Transaction Detail Panel - Responsive positioning */}
               {selectedTxIndex !== null && selectedBucket && (
-                <div className="absolute bottom-6 right-4 md:right-6 z-10 w-72">
+                <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-6 z-10 md:w-72">
                   <div className="panel-frame p-4">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-2">

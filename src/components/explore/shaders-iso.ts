@@ -158,17 +158,24 @@ void main() {
   float bx = curX + pad + (innerSize - effSize) * 0.5;
   float by = curY + pad + (innerSize - effSize) * 0.5;
 
+  // ---- 2D→3D transition: blocks grow from flat to full 3D ----
+  // u_tileHeightScale: 0 = flat 2D tiles, 1 = full isometric 3D blocks
+  float grow = smoothstep(0.0, 1.0, u_tileHeightScale);
+  
+  // Current extrusion height (0 to full height)
+  float currentHeight = effHeight * grow;
+  
   // ---- 3D corner from face ID ----
   vec3 corner;
   if (faceId < 0.5) {
-    // Top face: z = effHeight
-    corner = vec3(bx + dx * effSize, by + dy * effSize, effHeight);
+    // Top face: z = currentHeight
+    corner = vec3(bx + dx * effSize, by + dy * effSize, currentHeight);
   } else if (faceId < 1.5) {
     // Right face: x = bx + effSize
-    corner = vec3(bx + effSize, by + dx * effSize, dy * effHeight);
+    corner = vec3(bx + effSize, by + dx * effSize, dy * currentHeight);
   } else {
     // Left face: y = by + effSize
-    corner = vec3(bx + dx * effSize, by + effSize, dy * effHeight);
+    corner = vec3(bx + dx * effSize, by + effSize, dy * currentHeight);
   }
 
   // ---- Isometric projection ----
