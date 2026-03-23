@@ -82,8 +82,9 @@ function renderFrame(
   gl.uniform1f(unis.u_scale, scale);
   gl.uniform1f(unis.u_enableRepulsion, enableRepulsion ? 1.0 : 0.0);
   gl.uniform1f(unis.u_enableFlicker, enableFlicker ? 1.0 : 0.0);
-  if (isometric && unis.u_tileHeightScale != null) {
+  if (unis.u_tileHeightScale != null) {
     gl.uniform1f(unis.u_tileHeightScale, tileHeightScale);
+    // console.log('[Shader] tileHeightScale:', tileHeightScale.toFixed(3));
   }
 
   // Always use depth buffer for smooth 2D→3D transition
@@ -512,6 +513,7 @@ export default function WebGLBitmapRenderer({
   useEffect(() => {
     const target = isometric ? 1.0 : 0.0;
     const start = tileHeightScaleRef.current;
+    console.log('[3D Transition] isometric:', isometric, 'target:', target, 'start:', start);
     if (Math.abs(target - start) < 0.001) return;
 
     const duration = 900; // ms - slightly longer for more natural feel
@@ -528,6 +530,10 @@ export default function WebGLBitmapRenderer({
       const eased = easeInOutCubic(progress);
       
       tileHeightScaleRef.current = start + (target - start) * eased;
+      
+      if (progress % 0.2 < 0.05) {  // Log periodically
+        console.log('[3D Animation] progress:', progress.toFixed(2), 'tileHeightScale:', tileHeightScaleRef.current.toFixed(3));
+      }
 
       // Trigger a re-render if loop isn't active
       const prev = prevDataRef.current;
