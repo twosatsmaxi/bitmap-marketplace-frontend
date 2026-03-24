@@ -28,7 +28,7 @@ export function useDeviceCapabilities(): DeviceCapabilities {
   if (prefersReducedMotion) {
     initialQualityTier = "static";
   } else if (isMobile) {
-    initialQualityTier = "canvas2d";
+    initialQualityTier = supportsWebGL2 ? "reduced" : "canvas2d";
   } else if (isTablet) {
     initialQualityTier = supportsWebGL2 ? "reduced" : "canvas2d";
   } else {
