@@ -31,14 +31,14 @@ interface GameState {
 }
 
 const INITIAL_SPEED = 180;
-const FOOD_COLOR = 0x00ff88;
+const FOOD_COLOR = 0x88ff00;
 const SNAKE_HEAD_COLOR = 0x00ffff;
 const SNAKE_BODY_COLOR = 0xf7931a;
-const OBSTACLE_COLOR = 0xcc1100;
+const OBSTACLE_COLOR = 0x111111;
 const WALL_COLOR = 0x8b4513;
 const DEATH_FLASH_MS = 1200;
 const OBSTACLE_RATIO = 0.08;
-const CLEAR_RATIO = 0.45;
+const MAX_VISIBLE_BLOCKS = 500;
 
 export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -144,7 +144,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     }
   }, []);
 
-  // Set up blocks as food (green tint) or obstacles (red tint)
+  // Set up blocks as food (green tint) or obstacles (black)
   const setupBlockRoles = useCallback(() => {
     const game = gameRef.current;
     const maxIdx = visibleCountRef.current || blockBytes.length;
@@ -155,40 +155,57 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     const safeX = startPos ? startPos.x : 0;
     const safeZ = startPos ? startPos.z : 0;
 
-    // First: clear random blocks for open paths
-    const clearedSet = new Set<number>();
+    // Collect all non-safe-zone block indices
+    const safeIndices: number[] = [];
+    const otherIndices: number[] = [];
     for (let i = 0; i < maxIdx; i++) {
       const pos = getTxPosition(i);
       if (!pos) continue;
-      if (Math.abs(pos.x - safeX) <= 3 && Math.abs(pos.z - safeZ) <= 3) continue;
-      if (Math.random() < CLEAR_RATIO) {
-        clearedSet.add(i);
-        const mesh = txMeshesRef.current.get(i);
-        if (mesh) mesh.visible = false;
+      if (Math.abs(pos.x - safeX) <= 3 && Math.abs(pos.z - safeZ) <= 3) {
+        safeIndices.push(i);
+      } else {
+        otherIndices.push(i);
       }
     }
 
-    // Remaining visible blocks: mark some as obstacles, rest are food
-    for (let i = 0; i < maxIdx; i++) {
-      if (clearedSet.has(i)) continue;
+    // If more than MAX_VISIBLE_BLOCKS, randomly pick which to keep
+    const targetVisible = Math.min(MAX_VISIBLE_BLOCKS, safeIndices.length + otherIndices.length);
+    const keepFromOther = Math.max(0, targetVisible - safeIndices.length);
+
+    // Shuffle other indices and pick keepFromOther
+    for (let i = otherIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [otherIndices[i], otherIndices[j]] = [otherIndices[j], otherIndices[i]];
+    }
+    const keptOther = new Set(otherIndices.slice(0, keepFromOther));
+    const hiddenOther = otherIndices.slice(keepFromOther);
+
+    // Hide blocks that weren't selected
+    hiddenOther.forEach(i => {
+      const mesh = txMeshesRef.current.get(i);
+      if (mesh) mesh.visible = false;
+    });
+
+    // Tint kept blocks: safe zone = food, others = food or obstacle
+    const allKept = [...safeIndices, ...otherIndices.slice(0, keepFromOther)];
+    for (const i of allKept) {
       const mesh = txMeshesRef.current.get(i);
       if (!mesh) continue;
       const pos = getTxPosition(i);
       if (!pos) continue;
 
-      // Safe zone around spawn — no obstacles
       const inSafeZone = Math.abs(pos.x - safeX) <= 4 && Math.abs(pos.z - safeZ) <= 4;
 
       if (!inSafeZone && Math.random() < OBSTACLE_RATIO) {
-        // Mark as obstacle — red tint
+        // Obstacle — black
         game.obstacles.add(i);
         const mat = mesh.material as THREE.MeshStandardMaterial;
         mat.color.setHex(OBSTACLE_COLOR);
-        mat.emissive.setHex(OBSTACLE_COLOR);
-        mat.emissiveIntensity = 1.0;
+        mat.emissive.setHex(0x440000);
+        mat.emissiveIntensity = 1.5;
         mat.opacity = 0.95;
       } else {
-        // Mark as food — green tint
+        // Food — green
         const mat = mesh.material as THREE.MeshStandardMaterial;
         mat.color.setHex(FOOD_COLOR);
         mat.emissive.setHex(FOOD_COLOR);
@@ -631,14 +648,14 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
         }
       }
 
-      // --- Pulse obstacle blocks ---
+      // --- Pulse obstacle blocks (dark with red glow) ---
       if (game.isPlaying) {
         game.obstacles.forEach((idx) => {
           const mesh = txMeshesRef.current.get(idx);
           if (mesh && mesh.visible) {
-            const pulse = 1 + Math.sin(time * 0.004) * 0.15;
+            const pulse = 1 + Math.sin(time * 0.004) * 0.2;
             mesh.scale.set(1, pulse, 1);
-            (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 + Math.sin(time * 0.006) * 0.4;
+            (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0 + Math.sin(time * 0.006) * 0.5;
           }
         });
       }
@@ -755,7 +772,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
             <h1 className="font-mono text-4xl font-bold text-primary mb-2">SLITHER</h1>
             <p className="font-mono text-zinc-400 mb-2">on Block {blockHeight.toLocaleString()}</p>
             <p className="font-mono text-sm text-zinc-500 mb-2">{blockBytes.length.toLocaleString()} transactions</p>
-            <p className="font-mono text-sm text-zinc-500 mb-2">Eat the green blocks. Avoid the red ones.</p>
+            <p className="font-mono text-sm text-zinc-500 mb-2">Eat the green blocks. Avoid the dark ones.</p>
             <p className="font-mono text-sm text-zinc-500 mb-8">
               {isMobile ? 'Use joystick to steer' : 'WASD / Arrows to steer · Scroll to zoom'}
             </p>
