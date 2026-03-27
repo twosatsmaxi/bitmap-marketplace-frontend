@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -169,7 +169,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
   const synthRef = useRef(new GameSynth());
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const rendererRef = useRef<THREE.WebGPURenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<any>(null);
   const playerRef = useRef<THREE.Group | null>(null);
@@ -185,6 +185,17 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const [isMobile, setIsMobile] = useState(false);
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
+
+  // Camera orbit touch state (for mobile — any touch not on UI)
+  const cameraTouchRef = useRef<{
+    touchId: number | null; lastX: number; lastY: number;
+    startX: number; startY: number; isDragging: boolean;
+    velocityX: number; velocityY: number;
+  }>({
+    touchId: null, lastX: 0, lastY: 0,
+    startX: 0, startY: 0, isDragging: false,
+    velocityX: 0, velocityY: 0,
+  });
 
   // Detect mobile/touch device
   useEffect(() => {
@@ -248,6 +259,79 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     joystickRef.current.dz = 0;
     if (joystickKnobRef.current) {
       joystickKnobRef.current.style.transform = 'translate(0px, 0px)';
+    }
+  }, []);
+
+  // Camera orbit touch handlers (mobile — swipe anywhere not on UI)
+  const CAMERA_DEAD_ZONE = 3; // px — ignore micro-movements (taps)
+  const CAMERA_SENSITIVITY_X = 0.004;
+  const CAMERA_SENSITIVITY_Y = 0.0025;
+  const CAMERA_INERTIA_DECAY = 0.92;
+
+  const handleCameraStart = useCallback((e: TouchEvent) => {
+    if (cameraTouchRef.current.touchId !== null) return;
+    if (showUpgrade) return; // lock camera during upgrade selection
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.closest('[data-ui]')) return;
+    const cam = cameraTouchRef.current;
+    cam.touchId = touch.identifier;
+    cam.lastX = touch.clientX;
+    cam.lastY = touch.clientY;
+    cam.startX = touch.clientX;
+    cam.startY = touch.clientY;
+    cam.isDragging = false;
+    cam.velocityX = 0;
+    cam.velocityY = 0;
+  }, [showUpgrade]);
+
+  const handleCameraMove = useCallback((e: TouchEvent) => {
+    const cam = cameraTouchRef.current;
+    if (cam.touchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier !== cam.touchId) continue;
+
+      const dx = touch.clientX - cam.lastX;
+      const dy = touch.clientY - cam.lastY;
+
+      // Dead zone — only start rotating after exceeding threshold from start
+      if (!cam.isDragging) {
+        const totalDx = touch.clientX - cam.startX;
+        const totalDy = touch.clientY - cam.startY;
+        if (Math.abs(totalDx) < CAMERA_DEAD_ZONE && Math.abs(totalDy) < CAMERA_DEAD_ZONE) return;
+        cam.isDragging = true;
+      }
+
+      // Non-linear sensitivity — slow = precise, fast = big rotation
+      const speed = Math.sqrt(dx * dx + dy * dy);
+      const curve = Math.min(speed / 10, 2);
+      const sx = dx * CAMERA_SENSITIVITY_X * (0.5 + curve * 0.5);
+      const sy = dy * CAMERA_SENSITIVITY_Y * (0.5 + curve * 0.5);
+
+      const controls = controlsRef.current;
+      if (controls) {
+        controls.rotateLeft(sx);
+        controls.rotateUp(sy);
+      }
+
+      // Track velocity for inertia
+      cam.velocityX = sx;
+      cam.velocityY = sy;
+      cam.lastX = touch.clientX;
+      cam.lastY = touch.clientY;
+      break;
+    }
+  }, []);
+
+  const handleCameraEnd = useCallback((e: TouchEvent) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === cameraTouchRef.current.touchId) {
+        cameraTouchRef.current.touchId = null;
+        cameraTouchRef.current.isDragging = false;
+        // velocityX/Y preserved for inertia in game loop
+        break;
+      }
     }
   }, []);
 
@@ -315,6 +399,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    let aborted = false;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x09090b);
@@ -340,14 +425,19 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     controls.minPolarAngle = Math.PI / 4;
     controls.mouseButtons = { LEFT: undefined, MIDDLE: undefined, RIGHT: undefined };
     controls.zoomSpeed = 1.2;
-    // On mobile, disable rotate so touch doesn't fight with joystick — keep pinch zoom only
+    // On mobile, disable built-in rotate (we handle it via custom touch handlers) — keep pinch zoom
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     controls.enableRotate = !isTouchDevice;
     if (isTouchDevice) {
       controls.touches = { ONE: THREE.TOUCH.DOLLY_PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+      // Custom camera orbit via touch — swipe anywhere not on UI
+      container.addEventListener('touchstart', handleCameraStart, { passive: true });
+      container.addEventListener('touchmove', handleCameraMove, { passive: true });
+      container.addEventListener('touchend', handleCameraEnd, { passive: true });
+      container.addEventListener('touchcancel', handleCameraEnd, { passive: true });
     }
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGPURenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
@@ -535,6 +625,16 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       controls.target.x += (game.playerPos.x - controls.target.x) * 3 * dt;
       controls.target.z += (game.playerPos.z - controls.target.z) * 3 * dt;
+
+      // Camera inertia — drift after finger lifts, then decay
+      const cam = cameraTouchRef.current;
+      if (cam.touchId === null && (Math.abs(cam.velocityX) > 0.0001 || Math.abs(cam.velocityY) > 0.0001)) {
+        controls.rotateLeft(cam.velocityX);
+        controls.rotateUp(cam.velocityY);
+        cam.velocityX *= CAMERA_INERTIA_DECAY;
+        cam.velocityY *= CAMERA_INERTIA_DECAY;
+      }
+
       controls.update();
 
       // Skip combat during upgrade selection
@@ -773,18 +873,26 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       renderer.render(scene, camera);
     };
 
-    frameIdRef.current = requestAnimationFrame(animate);
+    // WebGPURenderer requires async init (falls back to WebGL if WebGPU unavailable)
+    renderer.init().then(() => {
+      if (!aborted) frameIdRef.current = requestAnimationFrame(animate);
+    });
 
     return () => {
+      aborted = true;
       cancelAnimationFrame(frameIdRef.current);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", onResize);
+      container.removeEventListener('touchstart', handleCameraStart);
+      container.removeEventListener('touchmove', handleCameraMove);
+      container.removeEventListener('touchend', handleCameraEnd);
+      container.removeEventListener('touchcancel', handleCameraEnd);
       controls.dispose();
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, [blockBytes, highScore, resetGame, showUpgrade]);
+  }, [blockBytes, highScore, resetGame, showUpgrade, handleCameraStart, handleCameraMove, handleCameraEnd]);
 
   return (
     <div className="relative w-full h-full z-0">
@@ -801,7 +909,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Quick Upgrade Selection - Bottom Overlay */}
       {showUpgrade && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
+        <div data-ui className="absolute bottom-0 left-0 right-0 z-20 p-4">
           <div className="max-w-2xl mx-auto text-center space-y-3">
             <h2 className="font-mono text-2xl font-bold text-black bg-primary px-4 py-2 inline-block">
               LEVEL UP! ({gameRef.current.pendingUpgrades} remaining)
@@ -834,7 +942,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Start Screen - Only show when gameOver is false */}
       {showStart && !gameOver && (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
           <div className="text-center space-y-3">
             <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
               SATOSHI SURVIVORS
@@ -860,7 +968,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             </p>
             <br/>
             <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
-              {isMobile ? '🕹️ Use joystick to move • Pinch to zoom' : '⌨️ WASD to move • Scroll to zoom'}
+              {isMobile ? '🕹️ Joystick to move • Swipe to look • Pinch to zoom' : '⌨️ WASD to move • Scroll to zoom'}
             </p>
             <br/>
             {highScore > 0 && (
@@ -881,7 +989,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Game Over Screen - Only show when not in start screen */}
       {gameOver && !showStart && (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
           <div className="text-center space-y-3">
             <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
               GAME OVER
@@ -914,7 +1022,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {!showStart && !gameOver && (
         <>
-          <div className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2">
+          <div data-ui className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2">
             <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
               <span className="font-mono text-[10px] md:text-xs text-zinc-500">LVL</span>
               <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1">{level}</span>
@@ -924,7 +1032,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
               <span className="font-mono text-[10px] md:text-xs text-zinc-500 ml-1">sats</span>
             </div>
           </div>
-          <div className="absolute top-16 md:top-20 left-3 md:left-6 z-10">
+          <div data-ui className="absolute top-16 md:top-20 left-3 md:left-6 z-10">
             <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
               <span className="font-mono text-[10px] md:text-xs text-zinc-500">WAVE</span>
               <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1">{wave}</span>
@@ -946,6 +1054,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           {isMobile && (
             <div
               ref={joystickContainerRef}
+              data-ui
               onTouchStart={handleJoystickStart}
               onTouchMove={handleJoystickMove}
               onTouchEnd={handleJoystickEnd}
@@ -960,7 +1069,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             </div>
           )}
           {!showUpgrade && (
-            <button onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
+            <button data-ui onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
           )}
         </>
       )}

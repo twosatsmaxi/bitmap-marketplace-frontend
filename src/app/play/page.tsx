@@ -35,7 +35,7 @@ const BUCKET_LABELS: Record<number, string> = {
 // Mode configuration with icons
 const MODES = {
   visualize: { label: "Visualize", shortLabel: "Viz", icon: BarChart3, color: "#f7931a" },
-  snake: { label: "Helicopter", shortLabel: "Heli", icon: Gamepad2, color: "#10b981" },
+  snake: { label: "Slither", shortLabel: "Slither", icon: Gamepad2, color: "#10b981" },
   survivors: { label: "Survivors", shortLabel: "Surv", icon: Zap, color: "#ef4444" },
   memory: { label: "Bit Recall", shortLabel: "Recall", icon: Brain, color: "#8b5cf6" },
 };
@@ -142,8 +142,8 @@ function VisualizerContent() {
   // Block size classifications (must be before effects that use them)
   const isSmallBlock = blockData && blockData.meta.tx_count <= 20 && blockData.meta.tx_count >= 2;
   const isVerySmallBlock = blockData && blockData.meta.tx_count < 10;
-  // Helicopter/Snake game works best with 20-40 txs (playable grid, not too long)
-  const isHelicopterBlock = blockData && blockData.meta.tx_count >= 20 && blockData.meta.tx_count <= 40;
+  // Helicopter/Snake game: works on any block (random block clearing creates open paths)
+  const isHelicopterBlock = !!blockData;
   // Survivors needs 30+ txs for enough enemy spawn points and arena space
   const isSurvivorsBlock = blockData && blockData.meta.tx_count >= 30;
 
