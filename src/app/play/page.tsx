@@ -8,7 +8,8 @@ import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { BackButton } from "@/components/mempool/BackButton";
 import { useChainTip } from "@/hooks/useChainTip";
-import { Gamepad2, BarChart3, Sparkles, Brain, Zap } from "lucide-react";
+import { Gamepad2, BarChart3, Sparkles, Brain, Zap, Maximize2, Palette } from "lucide-react";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 
 interface BlockMeta {
   height: number;
@@ -33,10 +34,10 @@ const BUCKET_LABELS: Record<number, string> = {
 
 // Mode configuration with icons
 const MODES = {
-  visualize: { label: "Visualize", icon: BarChart3, color: "#f7931a" },
-  snake: { label: "Helicopter", icon: Gamepad2, color: "#10b981" },
-  survivors: { label: "Survivors", icon: Zap, color: "#ef4444" },
-  memory: { label: "Bit Recall", icon: Brain, color: "#8b5cf6" },
+  visualize: { label: "Visualize", shortLabel: "Viz", icon: BarChart3, color: "#f7931a" },
+  snake: { label: "Helicopter", shortLabel: "Heli", icon: Gamepad2, color: "#10b981" },
+  survivors: { label: "Survivors", shortLabel: "Surv", icon: Zap, color: "#ef4444" },
+  memory: { label: "Bit Recall", shortLabel: "Recall", icon: Brain, color: "#8b5cf6" },
 };
 
 function VisualizerContent() {
@@ -49,6 +50,10 @@ function VisualizerContent() {
   const [selectedTxIndex, setSelectedTxIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [gameMode, setGameMode] = useState<"visualize" | "snake" | "survivors" | "memory">("visualize");
+  const mobile = useIsMobile();
+  const [legendOpen, setLegendOpen] = useState(true);
+  // Collapse legend by default on mobile
+  useEffect(() => { setLegendOpen(!mobile); }, [mobile]);
 
   // Read bitmap from query params on mount
   useEffect(() => {
@@ -200,16 +205,17 @@ function VisualizerContent() {
                 key={mode}
                 onClick={() => setGameMode(mode)}
                 className={`
-                  group flex items-center gap-2 px-3 py-2
+                  group flex items-center gap-2 px-3 py-2 min-h-[44px]
                   font-mono text-[10px] md:text-xs uppercase tracking-wider
                   border transition-all duration-200
-                  ${isActive 
-                    ? "bg-primary border-primary text-black font-bold" 
+                  ${isActive
+                    ? "bg-primary border-primary text-black font-bold"
                     : "bg-surface border-border text-text-secondary hover:border-primary/50 hover:text-primary"
                   }
                 `}
               >
                 <Icon className={`w-3.5 h-3.5 ${isActive ? "text-black" : "text-text-secondary group-hover:text-primary"}`} />
+                <span className="sm:hidden">{modeConfig.shortLabel}</span>
                 <span className="hidden sm:inline">{modeConfig.label}</span>
               </button>
             );
@@ -281,47 +287,56 @@ function VisualizerContent() {
                 onTransactionClick={handleTxClick}
               />
 
-              {/* Legend Panel - Positioned lower on mobile to avoid overlap with block number */}
+              {/* Legend Panel - Collapsible on mobile */}
               <div className="absolute right-4 md:right-6 z-10" style={{ top: "calc(var(--header-total) + 5rem)" }}>
-                <div className="panel-frame p-4 min-w-[140px]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1.5 h-1.5 bg-primary" />
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">
-                      Output Value
-                    </span>
+                <button
+                  onClick={() => setLegendOpen(!legendOpen)}
+                  className="md:hidden mb-1 w-10 h-10 ml-auto flex items-center justify-center panel-frame"
+                  aria-label="Toggle legend"
+                >
+                  <Palette className="w-4 h-4 text-text-secondary" />
+                </button>
+                {legendOpen && (
+                  <div className="panel-frame p-3 md:p-4 min-w-[120px] md:min-w-[140px]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1.5 h-1.5 bg-primary" />
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">
+                        Output Value
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {[
+                        { label: "10+ BTC", color: "#ffeb3b", bucket: 6 },
+                        { label: "1 – 10 BTC", color: "#ffc12a", bucket: 5 },
+                        { label: "0.1 – 1 BTC", color: "#f7931a", bucket: 4 },
+                        { label: "0.01 – 0.1", color: "#b87326", bucket: 3 },
+                        { label: "0.001 – 0.01", color: "#a05a1a", bucket: 2 },
+                        { label: "< 0.001", color: "#7e4912", bucket: 1 },
+                      ].map(({ label, color, bucket }) => (
+                        <div
+                          key={label}
+                          className="flex items-center gap-2.5 group cursor-pointer"
+                          onClick={() => setSelectedTxIndex(bucket - 1)}
+                        >
+                          <div
+                            className="w-3 h-3 border border-white/10 transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="font-mono text-[10px] text-text-secondary group-hover:text-text-primary transition-colors">
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {[
-                      { label: "10+ BTC", color: "#ffeb3b", bucket: 6 },
-                      { label: "1 – 10 BTC", color: "#ffc12a", bucket: 5 },
-                      { label: "0.1 – 1 BTC", color: "#f7931a", bucket: 4 },
-                      { label: "0.01 – 0.1", color: "#b87326", bucket: 3 },
-                      { label: "0.001 – 0.01", color: "#a05a1a", bucket: 2 },
-                      { label: "< 0.001", color: "#7e4912", bucket: 1 },
-                    ].map(({ label, color, bucket }) => (
-                      <div 
-                        key={label} 
-                        className="flex items-center gap-2.5 group cursor-pointer"
-                        onClick={() => setSelectedTxIndex(bucket - 1)}
-                      >
-                        <div 
-                          className="w-3 h-3 border border-white/10 transition-transform group-hover:scale-110" 
-                          style={{ backgroundColor: color }} 
-                        />
-                        <span className="font-mono text-[10px] text-text-secondary group-hover:text-text-primary transition-colors">
-                          {label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Transaction Detail Panel - Responsive positioning */}
+              {/* Transaction Detail Panel - Compact bottom sheet on mobile */}
               {selectedTxIndex !== null && selectedBucket && (
-                <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-6 z-10 md:w-72">
-                  <div className="panel-frame p-4">
-                    <div className="flex items-start justify-between mb-4">
+                <div className="absolute bottom-0 md:bottom-6 left-0 right-0 md:left-auto md:right-6 z-10 md:w-72 max-h-[40vh] safe-area-inset-bottom">
+                  <div className="panel-frame p-3 md:p-4 rounded-t-lg md:rounded-none">
+                    <div className="flex items-center justify-between mb-2 md:mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 border border-primary/50 bg-primary/10 flex items-center justify-center">
                           <span className="font-mono text-[10px] text-primary font-bold">
@@ -339,13 +354,13 @@ function VisualizerContent() {
                       </div>
                       <button
                         onClick={() => setSelectedTxIndex(null)}
-                        className="w-6 h-6 flex items-center justify-center border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 transition-colors"
+                        className="w-10 h-10 md:w-6 md:h-6 flex items-center justify-center border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 transition-colors"
                         aria-label="Close"
                       >
                         <span className="text-text-secondary text-sm leading-none">×</span>
                       </button>
                     </div>
-                    <div className="border-t border-border pt-3">
+                    <div className="border-t border-border pt-2 md:pt-3">
                       <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-secondary mb-1">
                         Value Bucket
                       </div>

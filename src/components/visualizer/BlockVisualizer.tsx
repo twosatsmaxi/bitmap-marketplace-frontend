@@ -54,6 +54,40 @@ const MEMORY_PAIR_COLORS = [
 /** Symbols for memory game pairs */
 const MEMORY_PAIR_SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
+/** Create a CanvasTexture with a letter on a colored background for cube face */
+function createLabelTexture(letter: string, bgColor: number): THREE.CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Background color
+  const hex = "#" + bgColor.toString(16).padStart(6, "0");
+  ctx.fillStyle = hex;
+  ctx.fillRect(0, 0, size, size);
+
+  // Letter — rotated to tilt toward the camera's default viewing angle
+  ctx.save();
+  ctx.translate(size / 2, size / 2);
+  ctx.rotate(-Math.PI / 4); // 45 degrees counterclockwise
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 80px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.7)";
+  ctx.shadowBlur = 8;
+  ctx.fillText(letter, 0, 0);
+  // Double-stroke for stronger contrast
+  ctx.shadowBlur = 0;
+  ctx.fillText(letter, 0, 0);
+  ctx.restore();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 /** Generate shuffled pair assignments for memory game */
 function generatePairAssignments(count: number): number[] {
   const pairs = Math.floor(count / 2);
@@ -89,7 +123,6 @@ export function BlockVisualizer({
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [matchAnimation, setMatchAnimation] = useState<{ active: boolean; bucket: number }>({ active: false, bucket: 0 });
-  const [revealedLabels, setRevealedLabels] = useState<Map<number, { x: number; y: number; label: string; color: string }>>(new Map());
 
   // Game state refs
   const gameStateRef = useRef({
@@ -175,7 +208,6 @@ export function BlockVisualizer({
     setScore(0);
     setTimeElapsed(0);
     setMatchAnimation({ active: false, bucket: 0 });
-    setRevealedLabels(new Map());
 
     // Reset all cubes to hidden state and regenerate pair assignments
     if (txGroupRef.current && gameMode === "memory") {
@@ -266,25 +298,30 @@ export function BlockVisualizer({
 
         if (progress >= 0.3 && !mesh.userData.isRevealed) {
           mesh.userData.isRevealed = true;
-          material.color.setHex(targetColor);
-          material.emissive.setHex(targetColor);
-          material.emissiveIntensity = 0.4;
-          material.needsUpdate = true;
-          // Project 3D position to screen for HTML label overlay
-          if (cameraRef.current && containerRef.current) {
-            const pos = mesh.position.clone();
-            pos.y += 1.5; // above the cube
-            pos.project(cameraRef.current);
-            const rect = containerRef.current.getBoundingClientRect();
-            const x = (pos.x * 0.5 + 0.5) * rect.width;
-            const y = (-pos.y * 0.5 + 0.5) * rect.height;
-            const hex = "#" + targetColor.toString(16).padStart(6, "0");
-            setRevealedLabels(prev => {
-              const next = new Map(prev);
-              next.set(index, { x, y, label: pairLabel, color: hex });
-              return next;
-            });
-          }
+          // Apply CanvasTexture with letter to front-facing side, color to other faces
+          const labelTexture = createLabelTexture(pairLabel, targetColor);
+          const sideMat = new THREE.MeshStandardMaterial({
+            color: targetColor,
+            emissive: targetColor,
+            emissiveIntensity: 0.4,
+            transparent: true,
+            opacity: 0.9,
+            roughness: 0.4,
+            metalness: 0.3,
+          });
+          const faceMat = new THREE.MeshStandardMaterial({
+            map: labelTexture,
+            emissive: targetColor,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.9,
+            roughness: 0.3,
+            metalness: 0.2,
+          });
+          // BoxGeometry face order: +x, -x, +y (top), -y (bottom), +z, -z
+          // Put label on top face (+y), texture is rotated to face camera
+          mesh.userData.originalMaterial = material;
+          mesh.material = [sideMat, sideMat, faceMat, sideMat, sideMat, sideMat];
         }
 
         if (progress < 1) {
@@ -382,16 +419,23 @@ export function BlockVisualizer({
                 
                 if (progress >= 0.5 && m.userData.isRevealed) {
                   m.userData.isRevealed = false;
-                  mat.color.setHex(HIDDEN_COLOR);
-                  mat.emissive.setHex(HIDDEN_EMISSIVE);
-                  mat.emissiveIntensity = 0.1;
-                  mat.needsUpdate = true;
-                  // Remove HTML label
-                  setRevealedLabels(prev => {
-                    const next = new Map(prev);
-                    next.delete(idx);
-                    return next;
-                  });
+                  // Restore original single material
+                  if (m.userData.originalMaterial) {
+                    if (Array.isArray(m.material)) {
+                      m.material.forEach((mt: THREE.Material) => {
+                        if ((mt as THREE.MeshStandardMaterial).map) {
+                          (mt as THREE.MeshStandardMaterial).map!.dispose();
+                        }
+                        mt.dispose();
+                      });
+                    }
+                    m.material = m.userData.originalMaterial;
+                  }
+                  const singleMat = m.material as THREE.MeshStandardMaterial;
+                  singleMat.color.setHex(HIDDEN_COLOR);
+                  singleMat.emissive.setHex(HIDDEN_EMISSIVE);
+                  singleMat.emissiveIntensity = 0.1;
+                  singleMat.needsUpdate = true;
                 }
 
                 if (progress < 1) {
@@ -589,9 +633,61 @@ export function BlockVisualizer({
       renderer.setSize(container.clientWidth, container.clientHeight);
     };
 
+    // Touch handling for mobile
+    let touchStartTime = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return; // only single-finger taps
+      touchStartTime = Date.now();
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const elapsed = Date.now() - touchStartTime;
+      if (elapsed > 300) return; // too long, was a gesture
+
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (Math.sqrt(dx * dx + dy * dy) > 10) return; // too much movement, was a drag
+
+      // It's a tap — run raycaster at tap position
+      const rect = container.getBoundingClientRect();
+      mouseRef.current.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycasterRef.current.setFromCamera(mouseRef.current, camera);
+      const intersects = raycasterRef.current.intersectObjects(txGroup.children);
+      if (intersects.length > 0) {
+        const hitMesh = intersects[0].object as THREE.Mesh;
+        const isDisabled = hitMesh.userData.isDisabled;
+        if (!isDisabled && clickHandlerRef.current.fn) {
+          // Brief visual feedback
+          hitMesh.position.y = hitMesh.userData.originalY + 0.3;
+          hitMesh.scale.setScalar(1.1);
+          setTimeout(() => {
+            const game = gameStateRef.current;
+            const isMatched = game.matchedCards.has(hitMesh.userData.index);
+            if (!isMatched) {
+              hitMesh.position.y = hitMesh.userData.originalY;
+              hitMesh.scale.setScalar(1);
+            }
+          }, 200);
+
+          const index = parseInt(hitMesh.name, 10);
+          clickHandlerRef.current.fn(index);
+        }
+      }
+    };
+
     container.addEventListener("mousemove", handleMouseMove);
     container.addEventListener("click", handleClick);
     window.addEventListener("resize", handleResize);
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     // Animation loop
     let disposed = false;
@@ -656,7 +752,7 @@ export function BlockVisualizer({
         }
       }
       
-      // Update timer in memory mode
+      // Update timer and label positions in memory mode
       if (gameMode === "memory" && gameStateRef.current.isPlaying && !gameOver) {
         const elapsed = Math.floor((Date.now() - gameStateRef.current.startTime) / 1000);
         setTimeElapsed(elapsed);
@@ -676,6 +772,8 @@ export function BlockVisualizer({
       container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("click", handleClick);
       window.removeEventListener("resize", handleResize);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchend", handleTouchEnd);
       controls.dispose();
       renderer.dispose();
       domElement.remove();
@@ -702,34 +800,6 @@ export function BlockVisualizer({
       {/* Memory Game UI Overlay */}
       {gameMode === "memory" && (
         <>
-          {/* Floating pair labels above revealed cubes */}
-          {revealedLabels.size > 0 && (
-            <div className="absolute inset-0 z-20 pointer-events-none" style={{ top: "var(--header-total)" }}>
-              {Array.from(revealedLabels.entries()).map(([idx, { x, y, label, color }]) => (
-                <div
-                  key={idx}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${x}px`,
-                    top: `${y}px`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <div
-                    className="font-mono font-bold text-[11px] leading-none w-5 h-5 flex items-center justify-center rounded-full"
-                    style={{
-                      color: "#fff",
-                      backgroundColor: color,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Match Animation - subtle HUD notification */}
           {matchAnimation.active && (
             <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
@@ -768,7 +838,7 @@ export function BlockVisualizer({
 
                 <div className="bg-zinc-900/50 rounded-lg p-4 mb-6">
                   <p className="font-mono text-sm text-zinc-300 mb-2">
-                    <span className="text-primary font-bold">1.</span> Click cubes to reveal their color
+                    <span className="text-primary font-bold">1.</span> Tap cubes to reveal their color
                   </p>
                   <p className="font-mono text-sm text-zinc-300 mb-2">
                     <span className="text-primary font-bold">2.</span> Find two cubes with the same color
@@ -821,14 +891,14 @@ export function BlockVisualizer({
           {/* HUD */}
           {!showStartScreen && !gameOver && (
             <>
-              <div className="absolute top-20 right-6 z-10 flex gap-2 pointer-events-none">
-                <div className="br-card px-3 py-2">
-                  <span className="font-mono text-xs text-zinc-500 block">TIME</span>
-                  <span className="font-mono text-xl font-bold text-white">{formatTime(timeElapsed)}</span>
+              <div className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2 pointer-events-none">
+                <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
+                  <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">TIME</span>
+                  <span className="font-mono text-base md:text-xl font-bold text-white">{formatTime(timeElapsed)}</span>
                 </div>
-                <div className="br-card px-3 py-2">
-                  <span className="font-mono text-xs text-zinc-500 block">MOVES</span>
-                  <span className="font-mono text-xl font-bold text-primary">{moves}</span>
+                <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
+                  <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">MOVES</span>
+                  <span className="font-mono text-base md:text-xl font-bold text-primary">{moves}</span>
                 </div>
               </div>
               
