@@ -811,7 +811,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
                 <button
                   key={i}
                   onClick={() => applyUpgrade(i)}
-                  className="flex-1 max-w-[160px] p-3 bg-primary hover:bg-primary/80 transition-all hover:scale-105 active:scale-95"
+                  className="flex-1 max-w-[160px] p-3 min-h-[56px] bg-primary hover:bg-primary/80 transition-all hover:scale-105 active:scale-95"
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-1">{u.icon}</div>
@@ -826,7 +826,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
               ))}
             </div>
             <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
-              Click to upgrade • You can still move with WASD
+              Tap to upgrade • {isMobile ? 'Use joystick to move' : 'Move with WASD'}
             </p>
           </div>
         </div>

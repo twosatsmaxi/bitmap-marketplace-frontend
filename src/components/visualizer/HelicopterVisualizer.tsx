@@ -36,6 +36,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   const [highScore, setHighScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [showStart, setShowStart] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Game state in ref to avoid re-renders
   const gameRef = useRef<GameState>({
@@ -64,6 +65,20 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   const targetPosRef = useRef(new THREE.Vector3());
   const cameraPosRef = useRef(new THREE.Vector3());
   const offsetRef = useRef(new THREE.Vector3(8, 22, 8));
+
+  // Joystick refs
+  const joystickRef = useRef<{ active: boolean; dx: number; dz: number }>({ active: false, dx: 0, dz: 0 });
+  const joystickOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const joystickContainerRef = useRef<HTMLDivElement>(null);
+  const joystickKnobRef = useRef<HTMLDivElement>(null);
+
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // Calculate grid position from index
   const getTxPosition = useCallback((index: number): Position | null => {
@@ -101,6 +116,79 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     const idx = validIndices[Math.floor(Math.random() * validIndices.length)];
     return getTxPosition(idx);
   }, [blockBytes.length, getTxPosition]);
+
+  // Joystick touch handlers — snap to discrete snake directions
+  const handleJoystickStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    joystickOriginRef.current = { x: centerX, y: centerY };
+    joystickRef.current.active = true;
+
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    const maxR = rect.width / 2 - 20;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+    }
+    // Snap to discrete direction for snake game
+    const norm = Math.min(dist / maxR, 1);
+    if (norm > 0.4) {
+      const current = gameRef.current.direction;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // Horizontal dominant
+        if (dx > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
+        else if (dx < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
+      } else {
+        // Vertical dominant
+        if (dy > 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
+        else if (dy < 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+      }
+    }
+  }, []);
+
+  const handleJoystickMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!joystickRef.current.active) return;
+    const touch = e.touches[0];
+    const origin = joystickOriginRef.current;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const maxR = rect.width / 2 - 20;
+    const dx = touch.clientX - origin.x;
+    const dy = touch.clientY - origin.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+    }
+    const norm = Math.min(dist / maxR, 1);
+    if (norm > 0.4) {
+      const current = gameRef.current.direction;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
+        else if (dx < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
+      } else {
+        if (dy > 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
+        else if (dy < 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+      }
+    }
+  }, []);
+
+  const handleJoystickEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    joystickRef.current.active = false;
+    if (joystickKnobRef.current) {
+      joystickKnobRef.current.style.transform = 'translate(0px, 0px)';
+    }
+  }, []);
 
   // Start game
   const startGame = useCallback(() => {
@@ -428,7 +516,10 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
             <h1 className="font-mono text-4xl font-bold text-primary mb-2">HELICOPTER</h1>
             <p className="font-mono text-zinc-400 mb-2">on Block {blockHeight.toLocaleString()}</p>
             <p className="font-mono text-sm text-zinc-500 mb-2">{blockBytes.length.toLocaleString()} transactions</p>
-            <p className="font-mono text-sm text-zinc-500 mb-8">Slither through the block. Collect satoshis.</p>
+            <p className="font-mono text-sm text-zinc-500 mb-2">Slither through the block. Collect satoshis.</p>
+            <p className="font-mono text-sm text-zinc-500 mb-8">
+              {isMobile ? 'Use joystick to steer' : 'WASD / Arrows to steer'}
+            </p>
             {highScore > 0 && (
               <p className="font-mono text-sm text-zinc-400 mb-4">High Score: {highScore}</p>
             )}
@@ -479,15 +570,42 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
             </div>
           </div>
 
-          <div className="absolute bottom-6 left-6 z-10">
-            <div className="br-card p-3 bg-bg/80">
-              <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
-              <div className="font-mono text-xs text-zinc-300 space-y-1">
-                <div>WASD / Arrows — Move</div>
-                <div>ESC — Exit to Menu</div>
+          {isMobile ? (
+            <>
+              <div
+                ref={joystickContainerRef}
+                onTouchStart={handleJoystickStart}
+                onTouchMove={handleJoystickMove}
+                onTouchEnd={handleJoystickEnd}
+                className="absolute bottom-8 left-6 z-20 w-[120px] h-[120px] rounded-full border-2 border-primary/40 bg-bg/30 flex items-center justify-center touch-none"
+                style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+              >
+                <div
+                  ref={joystickKnobRef}
+                  className="w-12 h-12 rounded-full bg-primary/70 border-2 border-primary transition-none pointer-events-none"
+                  style={{ willChange: 'transform' }}
+                />
+              </div>
+              <div className="absolute bottom-6 left-[160px] z-10">
+                <div className="br-card p-3 bg-bg/80">
+                  <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
+                  <div className="font-mono text-xs text-zinc-300 space-y-1">
+                    <div>Joystick — Move</div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="absolute bottom-6 left-6 z-10">
+              <div className="br-card p-3 bg-bg/80">
+                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
+                <div className="font-mono text-xs text-zinc-300 space-y-1">
+                  <div>WASD / Arrows — Move</div>
+                  <div>ESC — Exit to Menu</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <button
             onClick={resetGame}

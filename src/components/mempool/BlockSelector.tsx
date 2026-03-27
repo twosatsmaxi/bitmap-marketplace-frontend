@@ -83,9 +83,9 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
   }, [maxHeight]);
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 z-10 mt-8 md:mt-0" style={{ top: "calc(var(--header-total) + 1rem)" }}>
-      {/* Title row - stack on mobile, row on desktop */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4">
+    <div className="absolute left-1/2 -translate-x-1/2 z-10 mt-4 md:mt-0" style={{ top: "calc(var(--header-total) + 1rem)" }}>
+      {/* Title row */}
+      <div className="flex flex-row items-center justify-center gap-2 md:gap-4">
         <div className="flex items-baseline gap-1">
           {isEditing ? (
             <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
       {/* Subtle hint text */}
       <p className="text-center mt-2">
         <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-text-secondary/40">
-          Click number to edit
+          Tap to edit
         </span>
       </p>
     </div>
