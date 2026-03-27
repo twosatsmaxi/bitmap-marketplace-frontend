@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
+import { captureThreeScene } from "@/lib/scorecard";
+import { ShareScoreCard } from "@/components/ui/ShareScoreCard";
 
 interface HelicopterVisualizerProps {
   blockBytes: Uint8Array;
@@ -40,6 +42,74 @@ const DEATH_FLASH_MS = 1200;
 const OBSTACLE_RATIO = 0.08;
 const MAX_VISIBLE_BLOCKS = 500;
 
+// --- Sound effects via Web Audio API ---
+let audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext {
+  if (!audioCtx) audioCtx = new AudioContext();
+  return audioCtx;
+}
+
+function playEatSound(combo: number) {
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  // Rising pitch based on combo/streak
+  const baseFreq = 440 + Math.min(combo, 20) * 15;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(baseFreq, now);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.08);
+  gain.gain.setValueAtTime(0.12, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.15);
+}
+
+function playDeathSound() {
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  // Low rumble + descending tone
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(300, now);
+  osc.frequency.exponentialRampToValueAtTime(60, now + 0.5);
+  gain.gain.setValueAtTime(0.15, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.5);
+  // Noise burst
+  const noise = ctx.createOscillator();
+  const noiseGain = ctx.createGain();
+  noise.type = "square";
+  noise.frequency.setValueAtTime(80, now);
+  noiseGain.gain.setValueAtTime(0.08, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  noise.connect(noiseGain).connect(ctx.destination);
+  noise.start(now);
+  noise.stop(now + 0.3);
+}
+
+function playStartSound() {
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  // Quick ascending arpeggio
+  [440, 554, 659].forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    const t = now + i * 0.1;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  });
+}
+
 export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
@@ -76,6 +146,10 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   const visibleCountRef = useRef(0);
   const spacingRef = useRef(2.5);
   const deathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const capturedSceneRef = useRef<string | null>(null);
+  const lastDeathStatsRef = useRef<{ score: number; deaths: number; bestScore: number; snakeLength: number } | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const deathFlashRemainingRef = useRef(0);
 
   // Snake mesh pool
   const snakeMeshPoolRef = useRef<THREE.Mesh[]>([]);
@@ -232,15 +306,27 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   // Handle death → respawn
   const handleDeath = useCallback(() => {
     const game = gameRef.current;
+    // Capture scene before death state changes visuals
+    capturedSceneRef.current = captureThreeScene(rendererRef.current, sceneRef.current, cameraRef.current);
+    lastDeathStatsRef.current = {
+      score: game.score,
+      deaths: game.deaths + 1,
+      bestScore: Math.max(game.score, game.bestScore),
+      snakeLength: game.snake.length,
+    };
     game.isDead = true;
     game.deaths++;
     if (game.score > game.bestScore) game.bestScore = game.score;
     setDeaths(game.deaths);
     setHighScore(game.bestScore);
     setShowDeathFlash(true);
+    playDeathSound();
 
     if (deathTimerRef.current) clearTimeout(deathTimerRef.current);
+    deathFlashRemainingRef.current = DEATH_FLASH_MS;
+    const deathStartTime = Date.now();
     deathTimerRef.current = setTimeout(() => {
+      deathFlashRemainingRef.current = 0;
       const maxIdx = visibleCountRef.current || blockBytes.length;
       const startIndex = Math.floor(maxIdx / 2);
       const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
@@ -254,6 +340,35 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       setShowDeathFlash(false);
       setSnakeLength(1);
     }, DEATH_FLASH_MS);
+  }, [blockBytes.length, getTxPosition]);
+
+  const handleShareFromDeathFlash = useCallback(() => {
+    // Pause respawn timer
+    if (deathTimerRef.current) {
+      clearTimeout(deathTimerRef.current);
+      deathTimerRef.current = null;
+    }
+    setShowShareCard(true);
+  }, []);
+
+  const handleShareClose = useCallback(() => {
+    setShowShareCard(false);
+    // Resume respawn immediately
+    const game = gameRef.current;
+    if (game.isDead) {
+      const maxIdx = visibleCountRef.current || blockBytes.length;
+      const startIndex = Math.floor(maxIdx / 2);
+      const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
+      game.snake = [startPos];
+      game.previousPositions = [startPos];
+      game.direction = { x: 1, z: 0 };
+      game.nextDirection = { x: 1, z: 0 };
+      game.speed = INITIAL_SPEED;
+      game.isDead = false;
+      game.moveProgress = 0;
+      setShowDeathFlash(false);
+      setSnakeLength(1);
+    }
   }, [blockBytes.length, getTxPosition]);
 
   // Joystick handlers
@@ -356,6 +471,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     setSnakeLength(1);
     setShowDeathFlash(false);
     setShowStart(false);
+    playStartSound();
   }, [blockBytes.length, getTxPosition, setupBlockRoles]);
 
   const resetGame = useCallback(() => {
@@ -630,6 +746,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
                   game.eatenBlocks.add(newPos.index);
                   blockMesh.visible = false;
                   game.score += 10;
+                  playEatSound(game.snake.length);
                   requestAnimationFrame(() => {
                     setScore(game.score);
                     setSnakeLength(game.snake.length);
@@ -797,8 +914,32 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
               YOU DIED
             </h1>
             <p className="font-mono text-lg text-zinc-400 mt-2">Score: {score}</p>
+            <button
+              onClick={handleShareFromDeathFlash}
+              className="mt-3 px-4 py-1.5 bg-zinc-800/80 text-zinc-300 font-mono text-xs font-bold hover:bg-zinc-700 transition-colors pointer-events-auto"
+            >
+              SHARE
+            </button>
           </div>
         </div>
+      )}
+
+      {capturedSceneRef.current && lastDeathStatsRef.current && (
+        <ShareScoreCard
+          isOpen={showShareCard}
+          onClose={handleShareClose}
+          gameName="SLITHER"
+          stats={[
+            { label: "Score", value: `${lastDeathStatsRef.current.score}` },
+            { label: "Snake Length", value: `${lastDeathStatsRef.current.snakeLength}` },
+            { label: "Deaths", value: `${lastDeathStatsRef.current.deaths}` },
+            { label: "Best Score", value: `${lastDeathStatsRef.current.bestScore}` },
+          ]}
+          blockHeight={blockHeight}
+          sceneCapture={capturedSceneRef.current}
+          isHighScore={lastDeathStatsRef.current.score >= lastDeathStatsRef.current.bestScore && lastDeathStatsRef.current.score > 0}
+          tweetText={`Scored ${lastDeathStatsRef.current.score} in SLITHER on Block ${blockHeight.toLocaleString()}! Play at bitmap.game`}
+        />
       )}
 
       {/* Enhanced HUD */}

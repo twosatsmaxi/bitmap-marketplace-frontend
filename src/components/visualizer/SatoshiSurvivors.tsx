@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three/webgpu";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { captureThreeScene } from "@/lib/scorecard";
+import { ShareScoreCard } from "@/components/ui/ShareScoreCard";
 
 interface SatoshiSurvivorsProps {
   blockBytes: Uint8Array;
@@ -176,6 +178,8 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const blocksRef = useRef<THREE.Mesh[]>([]);
   const frameIdRef = useRef(0);
   const colsRef = useRef(0);
+  const capturedSceneRef = useRef<string | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
   const spacing = 2.5;
   const multiShotRef = useRef(1);
 
@@ -841,6 +845,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           e.mesh.rotation.z = Math.sin(time * 0.01 + e.index) * 0.15;
         } else {
           game.gameOver = true;
+          capturedSceneRef.current = captureThreeScene(rendererRef.current, sceneRef.current, cameraRef.current);
           setGameOver(true);
           if (game.score > highScore) setHighScore(game.score);
         }
@@ -1012,12 +1017,32 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
               <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
                 PLAY AGAIN
               </button>
+              <button onClick={() => setShowShareCard(true)} className="px-8 py-4 bg-zinc-800 text-zinc-200 font-mono font-bold text-xl hover:bg-zinc-700 transition-colors">
+                SHARE
+              </button>
               <button onClick={resetGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
                 MENU
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {capturedSceneRef.current && (
+        <ShareScoreCard
+          isOpen={showShareCard}
+          onClose={() => setShowShareCard(false)}
+          gameName="SATOSHI SURVIVORS"
+          stats={[
+            { label: "Score", value: `${score} sats` },
+            { label: "Level", value: `${level}` },
+            { label: "Wave", value: `${wave}` },
+          ]}
+          blockHeight={blockHeight}
+          sceneCapture={capturedSceneRef.current}
+          isHighScore={score === highScore && score > 0}
+          tweetText={`I scored ${score} sats in SATOSHI SURVIVORS on Block ${blockHeight.toLocaleString()}! Play at bitmap.game`}
+        />
       )}
 
       {!showStart && !gameOver && (
