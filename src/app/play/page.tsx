@@ -188,8 +188,8 @@ function VisualizerContent() {
   return (
     <>
       {/* Mode Toggle - Top Left */}
-      <div className="absolute top-[calc(var(--header-total)+1rem)] left-4 md:left-6 z-20">
-        <div className="flex flex-col gap-1.5">
+      <div className={`absolute top-[calc(var(--header-total)+1rem)] left-2 md:left-6 ${gameMode === "visualize" || gameMode === "memory" ? "z-20" : "z-[5]"}`}>
+        <div className="flex flex-col gap-1">
           {(Object.keys(MODES) as Array<keyof typeof MODES>).map((mode) => {
             // Skip modes that aren't available for this block
             if (mode === "snake" && !isHelicopterBlock) return null;
@@ -205,8 +205,8 @@ function VisualizerContent() {
                 key={mode}
                 onClick={() => setGameMode(mode)}
                 className={`
-                  group flex items-center gap-2 px-3 py-2 min-h-[44px]
-                  font-mono text-[10px] md:text-xs uppercase tracking-wider
+                  group flex items-center gap-1.5 px-2 py-1.5 min-h-[40px] sm:gap-2 sm:px-3 sm:py-2 sm:min-h-[44px]
+                  font-mono text-[9px] sm:text-[10px] md:text-xs uppercase tracking-wider
                   border transition-all duration-200
                   ${isActive
                     ? "bg-primary border-primary text-black font-bold"

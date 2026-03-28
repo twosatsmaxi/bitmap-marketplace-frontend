@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Blocks } from "lucide-react";
+import { Blocks, Pencil } from "lucide-react";
 
 interface BlockSelectorProps {
   currentHeight: number;
@@ -83,7 +83,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
   }, [maxHeight]);
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 z-10 mt-4 md:mt-0" style={{ top: "calc(var(--header-total) + 1rem)" }}>
+    <div className="absolute left-[55%] -translate-x-1/2 sm:left-1/2 z-10 mt-4 md:mt-0" style={{ top: "calc(var(--header-total) + 1rem)" }}>
       {/* Title row */}
       <div className="flex flex-row items-center justify-center gap-2 md:gap-4">
         <div className="flex items-baseline gap-1">
@@ -127,10 +127,11 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
               </div>
               <span className="font-heading text-2xl md:text-3xl font-bold">
                 <span className="text-primary group-hover:text-primary/80 transition-colors">
-                  {currentHeight.toLocaleString()}
+                  {currentHeight.toLocaleString("en-US")}
                 </span>
                 <span className="text-text-secondary/50">.bitmap</span>
               </span>
+              <Pencil className="w-3 h-3 text-text-secondary/0 group-hover:text-text-secondary/50 transition-colors" />
             </button>
           )}
         </div>
@@ -140,7 +141,7 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
             <div className="hidden md:block h-5 w-px bg-border" />
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-[10px] md:text-xs text-text-secondary">
-                {txCount.toLocaleString()}
+                {txCount.toLocaleString("en-US")}
               </span>
               <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.15em] text-text-secondary/60">
                 txns
@@ -150,12 +151,6 @@ export function BlockSelector({ currentHeight, onHeightChange, txCount, disabled
         )}
       </div>
       
-      {/* Subtle hint text */}
-      <p className="text-center mt-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-text-secondary/40">
-          Tap to edit
-        </span>
-      </p>
     </div>
   );
 }
