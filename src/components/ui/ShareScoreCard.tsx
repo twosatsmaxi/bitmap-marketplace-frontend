@@ -84,16 +84,30 @@ export function ShareScoreCard({
   const handleShare = useCallback(async () => {
     if (!canvasRef.current) return;
 
-    // Copy to clipboard, then open Twitter intent directly
+    // On mobile, try native share first (can attach image directly to X)
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isMobile) {
+      const shared = await nativeShare(canvasRef.current, tweetText);
+      if (shared) {
+        setStatus("Shared!");
+        setTimeout(() => setStatus(null), 2000);
+        return;
+      }
+    }
+
+    // Desktop: copy image to clipboard, then open Twitter intent
     const copied = await copyScoreCardToClipboard(canvasRef.current);
     if (copied) {
       setStatus("Image copied! Paste it in your tweet");
     } else {
-      setStatus("Download the image, then attach to your tweet");
+      // Last resort: auto-download the image, then open intent
+      const slug = gameName.toLowerCase().replace(/\s+/g, "-");
+      downloadScoreCard(canvasRef.current, `${slug}-block-${blockHeight}.png`);
+      setStatus("Image saved! Attach it to your tweet");
     }
     openTwitterIntent(tweetText);
     setTimeout(() => setStatus(null), 4000);
-  }, [tweetText]);
+  }, [tweetText, gameName, blockHeight]);
 
   if (!isOpen) return null;
 

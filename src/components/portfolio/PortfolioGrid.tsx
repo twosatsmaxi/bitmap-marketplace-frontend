@@ -148,21 +148,30 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
     if (needsFetch.length === 0) return;
 
     let cancelled = false;
+    const CONCURRENCY = 6;
     async function loadMeta() {
-      const results = await Promise.all(
-        needsFetch.map(async (height) => {
-          const meta = await fetchMeta(height);
-          return { height, meta };
-        })
-      );
-      if (cancelled) return;
-      setBlockMeta((prev) => {
-        const next = new Map(prev);
-        results.forEach(({ height, meta }) => {
-          if (meta) next.set(height, meta);
-        });
-        return next;
-      });
+      const results: { height: number; meta: BlockMeta | null }[] = [];
+      for (let i = 0; i < needsFetch.length; i += CONCURRENCY) {
+        if (cancelled) return;
+        const batch = needsFetch.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(
+          batch.map(async (height) => {
+            const meta = await fetchMeta(height);
+            return { height, meta };
+          })
+        );
+        results.push(...batchResults);
+        // Update state progressively so cards render as meta arrives
+        if (!cancelled) {
+          setBlockMeta((prev) => {
+            const next = new Map(prev);
+            batchResults.forEach(({ height, meta }) => {
+              if (meta) next.set(height, meta);
+            });
+            return next;
+          });
+        }
+      }
     }
     loadMeta();
     return () => { cancelled = true; };
