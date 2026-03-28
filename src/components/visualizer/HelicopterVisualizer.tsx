@@ -36,9 +36,9 @@ const INITIAL_SPEED = 180;
 const FOOD_COLOR = 0x88ff00;
 const SNAKE_HEAD_COLOR = 0x00ffff;
 const SNAKE_BODY_COLOR = 0xf7931a;
-const OBSTACLE_COLOR = 0x111111;
+const OBSTACLE_COLOR = 0x8b00ff;
+const OBSTACLE_GLOW_COLOR = 0xaa44ff;
 const WALL_COLOR = 0x8b4513;
-const DEATH_FLASH_MS = 1200;
 const OBSTACLE_RATIO = 0.08;
 const MAX_VISIBLE_BLOCKS = 500;
 
@@ -148,7 +148,6 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   const capturedSceneRef = useRef<string | null>(null);
   const lastDeathStatsRef = useRef<{ score: number; deaths: number; bestScore: number; snakeLength: number } | null>(null);
   const [showShareCard, setShowShareCard] = useState(false);
-  const deathFlashRemainingRef = useRef(0);
 
   // Snake mesh pool
   const snakeMeshPoolRef = useRef<THREE.Mesh[]>([]);
@@ -159,6 +158,9 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
 
   // Wall meshes
   const wallMeshesRef = useRef<THREE.Mesh[]>([]);
+
+  // Bomb meshes for obstacles
+  const bombMeshesRef = useRef<Map<number, THREE.Group>>(new Map());
 
   // Prefers reduced motion
   const prefersReducedMotionRef = useRef(false);
@@ -220,12 +222,53 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     }
   }, []);
 
-  // Set up blocks as food (green tint) or obstacles (black)
+  // Create an obstacle cube mesh (purple, larger than food blocks)
+  const createObstacleMesh = useCallback((x: number, z: number): THREE.Group => {
+    const group = new THREE.Group();
+    const sp = spacingRef.current;
+    const size = sp * 0.75;
+    const height = sp * 0.75;
+
+    const geo = new THREE.BoxGeometry(size, height, size);
+    const mat = new THREE.MeshStandardMaterial({
+      color: OBSTACLE_COLOR,
+      emissive: OBSTACLE_GLOW_COLOR,
+      emissiveIntensity: 0.8,
+      metalness: 0.2,
+      roughness: 0.4,
+      transparent: true,
+      opacity: 0.92,
+    });
+    const cube = new THREE.Mesh(geo, mat);
+    cube.position.y = height / 2;
+    group.add(cube);
+
+    group.position.set(x, -2, z);
+    return group;
+  }, []);
+
+  // Remove all bomb meshes from scene
+  const clearBombMeshes = useCallback(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    bombMeshesRef.current.forEach((group) => {
+      scene.remove(group);
+      group.traverse((child) => {
+        if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
+        if ((child as THREE.Mesh).material) ((child as THREE.Mesh).material as THREE.Material).dispose();
+      });
+    });
+    bombMeshesRef.current.clear();
+  }, []);
+
+  // Set up blocks as food (green tint) or obstacles (bombs)
   const setupBlockRoles = useCallback(() => {
     const game = gameRef.current;
+    const scene = sceneRef.current;
     const maxIdx = visibleCountRef.current || blockBytes.length;
     game.obstacles.clear();
     game.eatenBlocks.clear();
+    clearBombMeshes();
 
     const startPos = getTxPosition(Math.floor(maxIdx / 2));
     const safeX = startPos ? startPos.x : 0;
@@ -262,7 +305,9 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       if (mesh) mesh.visible = false;
     });
 
-    // Tint kept blocks: safe zone = food, others = food or obstacle
+    const sp = spacingRef.current;
+
+    // Tint kept blocks: safe zone = food, others = food or bomb obstacle
     const allKept = [...safeIndices, ...otherIndices.slice(0, keepFromOther)];
     for (const i of allKept) {
       const mesh = txMeshesRef.current.get(i);
@@ -273,13 +318,15 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       const inSafeZone = Math.abs(pos.x - safeX) <= 4 && Math.abs(pos.z - safeZ) <= 4;
 
       if (!inSafeZone && Math.random() < OBSTACLE_RATIO) {
-        // Obstacle — black
+        // Obstacle — hide block, place bomb mesh
         game.obstacles.add(i);
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        mat.color.setHex(OBSTACLE_COLOR);
-        mat.emissive.setHex(0x440000);
-        mat.emissiveIntensity = 1.5;
-        mat.opacity = 0.95;
+        mesh.visible = false;
+
+        if (scene) {
+          const bombGroup = createObstacleMesh(pos.x * sp, pos.z * sp);
+          scene.add(bombGroup);
+          bombMeshesRef.current.set(i, bombGroup);
+        }
       } else {
         // Food — green
         const mat = mesh.material as THREE.MeshStandardMaterial;
@@ -289,11 +336,10 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
         mat.opacity = 0.8;
       }
     }
-  }, [blockBytes.length, getTxPosition]);
+  }, [blockBytes.length, getTxPosition, clearBombMeshes, createObstacleMesh]);
 
   // Restore all blocks to original colors when returning to menu
   const restoreBlocks = useCallback(() => {
-    const blockColors = [0x7e4912, 0xa05a1a, 0xb87326, 0xf7931a, 0xffc12a, 0xffeb3b];
     txMeshesRef.current.forEach((mesh) => {
       mesh.visible = true;
       const ud = (mesh as any).userData;
@@ -303,7 +349,8 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       mat.emissiveIntensity = 0.2;
       mat.opacity = 0.7;
     });
-  }, []);
+    clearBombMeshes();
+  }, [clearBombMeshes]);
 
   // Handle death → respawn
   const handleDeath = useCallback(() => {
@@ -323,55 +370,31 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     setHighScore(game.bestScore);
     setShowDeathFlash(true);
     playDeathSound();
+  }, []);
 
-    if (deathTimerRef.current) clearTimeout(deathTimerRef.current);
-    deathFlashRemainingRef.current = DEATH_FLASH_MS;
-    const deathStartTime = Date.now();
-    deathTimerRef.current = setTimeout(() => {
-      deathFlashRemainingRef.current = 0;
-      const maxIdx = visibleCountRef.current || blockBytes.length;
-      const startIndex = Math.floor(maxIdx / 2);
-      const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
-      game.snake = [startPos];
-      game.previousPositions = [startPos];
-      game.direction = { x: 1, z: 0 };
-      game.nextDirection = { x: 1, z: 0 };
-      game.speed = INITIAL_SPEED;
-      game.isDead = false;
-      game.moveProgress = 0;
-      setShowDeathFlash(false);
-      setSnakeLength(1);
-    }, DEATH_FLASH_MS);
+  const handlePlayAgain = useCallback(() => {
+    const game = gameRef.current;
+    const maxIdx = visibleCountRef.current || blockBytes.length;
+    const startIndex = Math.floor(maxIdx / 2);
+    const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
+    game.snake = [startPos];
+    game.previousPositions = [startPos];
+    game.direction = { x: 1, z: 0 };
+    game.nextDirection = { x: 1, z: 0 };
+    game.speed = INITIAL_SPEED;
+    game.isDead = false;
+    game.moveProgress = 0;
+    setShowDeathFlash(false);
+    setSnakeLength(1);
   }, [blockBytes.length, getTxPosition]);
 
   const handleShareFromDeathFlash = useCallback(() => {
-    // Pause respawn timer
-    if (deathTimerRef.current) {
-      clearTimeout(deathTimerRef.current);
-      deathTimerRef.current = null;
-    }
     setShowShareCard(true);
   }, []);
 
   const handleShareClose = useCallback(() => {
     setShowShareCard(false);
-    // Resume respawn immediately
-    const game = gameRef.current;
-    if (game.isDead) {
-      const maxIdx = visibleCountRef.current || blockBytes.length;
-      const startIndex = Math.floor(maxIdx / 2);
-      const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
-      game.snake = [startPos];
-      game.previousPositions = [startPos];
-      game.direction = { x: 1, z: 0 };
-      game.nextDirection = { x: 1, z: 0 };
-      game.speed = INITIAL_SPEED;
-      game.isDead = false;
-      game.moveProgress = 0;
-      setShowDeathFlash(false);
-      setSnakeLength(1);
-    }
-  }, [blockBytes.length, getTxPosition]);
+  }, []);
 
   // Joystick handlers
   const handleJoystickStart = useCallback((e: React.TouchEvent) => {
@@ -768,14 +791,17 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
         }
       }
 
-      // --- Pulse obstacle blocks (dark with red glow) — skip if reduced motion ---
+      // --- Animate obstacle cubes — skip if reduced motion ---
       if (game.isPlaying && !prefersReducedMotionRef.current) {
-        game.obstacles.forEach((idx) => {
-          const mesh = txMeshesRef.current.get(idx);
-          if (mesh && mesh.visible) {
-            const pulse = 1 + Math.sin(time * 0.004) * 0.2;
-            mesh.scale.set(1, pulse, 1);
-            (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0 + Math.sin(time * 0.006) * 0.5;
+        bombMeshesRef.current.forEach((group) => {
+          // Gentle bob up/down
+          const bob = Math.sin(time * 0.003) * 0.15;
+          group.position.y = -2 + bob;
+          // Glow pulse
+          const cube = group.children[0] as THREE.Mesh;
+          if (cube) {
+            const glow = 0.5 + Math.sin(time * 0.005) * 0.4;
+            (cube.material as THREE.MeshStandardMaterial).emissiveIntensity = glow;
           }
         });
       }
@@ -858,6 +884,15 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       });
       txMeshesRef.current.clear();
 
+      // Dispose bomb meshes
+      bombMeshesRef.current.forEach((group) => {
+        group.traverse((child) => {
+          if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
+          if ((child as THREE.Mesh).material) ((child as THREE.Mesh).material as THREE.Material).dispose();
+        });
+      });
+      bombMeshesRef.current.clear();
+
       // Dispose snake pool meshes (geometries are shared via snakeGeoRef, materials via shared refs)
       snakeMeshPoolRef.current = [];
 
@@ -900,21 +935,21 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
 
       {/* Start Screen */}
       {showStart && (
-        <div className="absolute inset-0 flex items-center justify-center bg-bg/90 z-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50">
           <div className="text-center">
-            <h1 className="font-mono text-4xl font-bold text-primary mb-2">SLITHER</h1>
-            <p className="font-mono text-zinc-400 mb-2">on Block {blockHeight.toLocaleString()}</p>
-            <p className="font-mono text-sm text-zinc-500 mb-2">{blockBytes.length.toLocaleString()} transactions</p>
-            <p className="font-mono text-sm text-zinc-500 mb-2">Eat the green blocks. Avoid the dark ones.</p>
-            <p className="font-mono text-sm text-zinc-500 mb-8">
+            <h1 className="font-mono text-5xl font-black text-primary mb-3 drop-shadow-[0_0_20px_rgba(234,179,8,0.4)] tracking-widest">SLITHER</h1>
+            <p className="font-mono text-lg text-white/90 mb-2 drop-shadow-md">on Block {blockHeight.toLocaleString()}</p>
+            <p className="font-mono text-sm text-zinc-300 mb-2 drop-shadow-md">{blockBytes.length.toLocaleString()} transactions</p>
+            <p className="font-mono text-sm text-zinc-300 mb-2 drop-shadow-md">Eat the green blocks. Avoid the dark ones.</p>
+            <p className="font-mono text-sm text-zinc-300 mb-8 drop-shadow-md">
               {isMobile ? 'Use joystick to steer' : 'WASD / Arrows to steer · Scroll to zoom'}
             </p>
             {highScore > 0 && (
-              <p className="font-mono text-sm text-zinc-400 mb-4">High Score: {highScore}</p>
+              <p className="font-mono text-sm text-primary/90 mb-4 drop-shadow-md">High Score: {highScore}</p>
             )}
             <button
               onClick={startGame}
-              className="px-8 py-3 bg-primary text-black font-mono font-bold rounded hover:bg-primary/80 transition-colors"
+              className="px-10 py-4 bg-primary text-black font-mono font-bold text-lg rounded hover:bg-primary/80 transition-colors shadow-lg shadow-primary/20"
             >
               PLAY
             </button>
@@ -922,20 +957,31 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
         </div>
       )}
 
-      {/* Death Flash */}
+      {/* Game Over Screen */}
       {showDeathFlash && (
-        <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
-          <div className="text-center animate-pulse">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-40">
+          <div className="text-center space-y-3">
             <h1 className="font-mono text-5xl font-black text-red-500 drop-shadow-[0_0_30px_rgba(255,0,0,0.6)]">
               YOU DIED
             </h1>
-            <p className="font-mono text-lg text-zinc-400 mt-2">Score: {score}</p>
-            <button
-              onClick={handleShareFromDeathFlash}
-              className="mt-3 px-4 py-1.5 bg-zinc-800/80 text-zinc-300 font-mono text-xs font-bold hover:bg-zinc-700 transition-colors pointer-events-auto"
-            >
-              SHARE
-            </button>
+            <p className="font-mono text-2xl text-white">Score: {score}</p>
+            {highScore > 0 && score >= highScore && (
+              <p className="font-mono text-sm text-primary">New High Score!</p>
+            )}
+            <div className="flex gap-4 justify-center mt-4">
+              <button
+                onClick={handlePlayAgain}
+                className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors"
+              >
+                PLAY AGAIN
+              </button>
+              <button
+                onClick={handleShareFromDeathFlash}
+                className="px-8 py-4 bg-zinc-800 text-zinc-200 font-mono font-bold text-xl hover:bg-zinc-700 transition-colors"
+              >
+                SHARE
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -954,7 +1000,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
           blockHeight={blockHeight}
           sceneCapture={capturedSceneRef.current}
           isHighScore={lastDeathStatsRef.current.score >= lastDeathStatsRef.current.bestScore && lastDeathStatsRef.current.score > 0}
-          tweetText={`Scored ${lastDeathStatsRef.current.score} in SLITHER on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play`}
+          tweetText={`Scored ${lastDeathStatsRef.current.score} in SLITHER on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play?bitmap=${blockHeight}`}
         />
       )}
 

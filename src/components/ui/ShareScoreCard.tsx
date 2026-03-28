@@ -84,14 +84,7 @@ export function ShareScoreCard({
   const handleShare = useCallback(async () => {
     if (!canvasRef.current) return;
 
-    // Try native share on mobile first
-    const shared = await nativeShare(canvasRef.current, tweetText);
-    if (shared) {
-      onClose();
-      return;
-    }
-
-    // Copy to clipboard, then open Twitter intent
+    // Copy to clipboard, then open Twitter intent directly
     const copied = await copyScoreCardToClipboard(canvasRef.current);
     if (copied) {
       setStatus("Image copied! Paste it in your tweet");
@@ -100,7 +93,7 @@ export function ShareScoreCard({
     }
     openTwitterIntent(tweetText);
     setTimeout(() => setStatus(null), 4000);
-  }, [tweetText, onClose]);
+  }, [tweetText]);
 
   if (!isOpen) return null;
 

@@ -1025,8 +1025,8 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       {initError && (
         <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80">
           <div className="text-center space-y-3">
-            <h1 className="font-mono text-3xl font-bold text-red-400">Renderer Error</h1>
-            <p className="font-mono text-lg text-zinc-300 max-w-md">
+            <h1 className="font-heading text-3xl font-bold text-red-400" style={{ textShadow: '0 0 15px rgba(248,113,113,0.4)' }}>Renderer Error</h1>
+            <p className="text-lg text-zinc-400 max-w-md">
               Your browser does not support WebGPU or WebGL. Please try a different browser or device.
             </p>
           </div>
@@ -1036,7 +1036,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       {/* Upgrade Toast Notification */}
       {upgradeAnim && (
         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 animate-bounce">
-          <div className="br-card px-6 py-3 bg-primary text-black font-mono font-bold text-lg">
+          <div className="br-card px-6 py-3 bg-black/80 backdrop-blur-sm border border-primary/50 font-heading font-bold text-lg text-primary" style={{ textShadow: '0 0 12px rgba(247,147,26,0.5)' }}>
             {lastUpgrade}!
           </div>
         </div>
@@ -1044,22 +1044,23 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Quick Upgrade Selection - Bottom Overlay */}
       {showUpgrade && (
-        <div data-ui className="absolute bottom-0 left-0 right-0 z-20 p-4">
+        <div data-ui className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16">
           <div className="max-w-2xl mx-auto text-center space-y-3">
-            <h2 className="font-mono text-2xl font-bold text-black bg-primary px-4 py-2 inline-block">
-              LEVEL UP! ({gameRef.current.pendingUpgrades} remaining)
+            <h2 className="font-heading text-2xl font-bold text-primary tracking-wide" style={{ textShadow: '0 0 20px rgba(247,147,26,0.5)' }}>
+              LEVEL UP! <span className="text-zinc-400 text-lg font-mono">({gameRef.current.pendingUpgrades} remaining)</span>
             </h2>
             <div className="flex gap-3 justify-center">
               {UPGRADE_NAMES.slice(0, 3).map((u, i) => (
                 <button
                   key={i}
                   onClick={() => applyUpgrade(i)}
-                  className="flex-1 max-w-[160px] p-3 min-h-[56px] bg-primary hover:bg-primary/80 transition-all hover:scale-105 active:scale-95"
+                  className="flex-1 max-w-[160px] p-3 min-h-[56px] bg-black/70 backdrop-blur-sm border transition-all hover:scale-105 active:scale-95"
+                  style={{ borderColor: u.color + '66', boxShadow: `0 0 12px ${u.color}33` }}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-1">{u.icon}</div>
-                    <div className="font-mono font-bold text-black text-sm">{u.name}</div>
-                    <div className="font-mono text-xs text-black/70 mt-1">
+                    <div className="font-heading font-bold text-sm" style={{ color: u.color }}>{u.name}</div>
+                    <div className="font-mono text-xs text-zinc-400 mt-1">
                       {u.name === "DAMAGE UP" && "+40% dmg"}
                       {u.name === "FIRE RATE" && "+25% speed"}
                       {u.name === "BULLET SPEED" && "+25% velocity"}
@@ -1068,7 +1069,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
                 </button>
               ))}
             </div>
-            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
+            <p className="font-mono text-sm text-zinc-400">
               Tap to upgrade • {isMobile ? 'Use joystick to move' : 'Move with WASD'}
             </p>
           </div>
@@ -1077,80 +1078,76 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Start Screen - Only show when gameOver is false */}
       {showStart && !gameOver && (
-        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="text-center space-y-3">
-            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50 bg-black/85 backdrop-blur-sm">
+          <div className="text-center space-y-2">
+            <h1 className="font-heading text-5xl md:text-6xl font-bold text-primary tracking-tight" style={{ textShadow: '0 0 30px rgba(247,147,26,0.6), 0 0 60px rgba(247,147,26,0.2)' }}>
               SATOSHI SURVIVORS
             </h1>
-            <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+            <p className="font-heading text-2xl text-zinc-300 tracking-wide">
               The Blocks Are ALIVE
             </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
-              Block {blockHeight.toLocaleString()}
-            </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
-              🔊 Sound enabled!
-            </p>
-            <br/>
-            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block max-w-lg">
-              Transaction blocks will rise and chase you
-            </p>
-            <br/>
-            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block">
-              Destroy them to collect satoshis
-            </p>
-            <br/>
-            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
+            <div className="pt-2 space-y-1.5">
+              <p className="font-mono text-lg text-primary">
+                Block {blockHeight.toLocaleString()}
+              </p>
+              <p className="font-mono text-sm text-zinc-500">
+                🔊 Sound enabled
+              </p>
+            </div>
+            <div className="pt-3 space-y-1 max-w-md mx-auto">
+              <p className="text-base text-zinc-400">
+                Transaction blocks will rise and chase you
+              </p>
+              <p className="text-base text-zinc-400">
+                Destroy them to collect satoshis
+              </p>
+            </div>
+            <p className="font-mono text-sm text-zinc-500 pt-2">
               {isMobile ? '🕹️ Joystick to move • Swipe to look • Pinch to zoom' : '⌨️ WASD to move • Scroll to zoom'}
             </p>
-            <br/>
             {highScore > 0 && (
-              <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+              <p className="font-mono text-lg text-primary pt-1" style={{ textShadow: '0 0 10px rgba(247,147,26,0.4)' }}>
                 High Score: {highScore}
               </p>
             )}
-            <br/>
-            <button 
-              onClick={startGame} 
-              className="mt-4 px-12 py-4 bg-primary text-black font-mono font-bold text-2xl hover:bg-primary/80 transition-colors"
-            >
-              PLAY
-            </button>
+            <div className="pt-4">
+              <button
+                onClick={startGame}
+                className="px-12 py-4 bg-primary text-black font-heading font-bold text-2xl hover:bg-primary/80 transition-all hover:scale-105 active:scale-95" style={{ boxShadow: '0 0 20px rgba(247,147,26,0.3)' }}
+              >
+                PLAY
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Game Over Screen - Only show when not in start screen */}
       {gameOver && !showStart && (
-        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50 bg-black/85 backdrop-blur-sm">
           <div className="text-center space-y-3">
-            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+            <h1 className="font-heading text-5xl md:text-6xl font-bold text-red-400 tracking-tight" style={{ textShadow: '0 0 30px rgba(248,113,113,0.5)' }}>
               GAME OVER
             </h1>
-            <p className="font-mono text-4xl text-black bg-primary px-5 py-2 inline-block">
-              {score} sats
+            <p className="font-mono text-4xl font-bold text-primary" style={{ textShadow: '0 0 15px rgba(247,147,26,0.5)' }}>
+              {score} <span className="text-2xl text-zinc-400">sats</span>
             </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+            <p className="font-mono text-lg text-zinc-400">
               Level {level} • Wave {wave}
             </p>
-            <br/>
             {score === highScore && score > 0 && (
-              <p className="font-mono text-xl text-black bg-primary px-4 py-1 inline-block">
+              <p className="font-heading text-xl font-bold text-primary animate-pulse" style={{ textShadow: '0 0 15px rgba(247,147,26,0.6)' }}>
                 New High Score!
               </p>
             )}
-            <br/>
-            <div className="flex gap-4 justify-center mt-4">
-              <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+            <div className="flex gap-4 justify-center pt-4">
+              <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-heading font-bold text-xl hover:bg-primary/80 transition-all hover:scale-105 active:scale-95" style={{ boxShadow: '0 0 15px rgba(247,147,26,0.3)' }}>
                 PLAY AGAIN
               </button>
-              <button onClick={() => setShowShareCard(true)} className="px-8 py-4 bg-zinc-800 text-zinc-200 font-mono font-bold text-xl hover:bg-zinc-700 transition-colors">
+              <button onClick={() => setShowShareCard(true)} className="px-8 py-4 bg-zinc-800/80 backdrop-blur-sm text-zinc-200 font-heading font-bold text-xl hover:bg-zinc-700 transition-all hover:scale-105 active:scale-95 border border-zinc-700">
                 SHARE
               </button>
-              <button onClick={resetGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+              <button onClick={resetGame} className="px-8 py-4 bg-zinc-800/80 backdrop-blur-sm text-zinc-400 font-heading font-bold text-xl hover:bg-zinc-700 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 border border-zinc-700">
                 MENU
               </button>
             </div>
@@ -1171,34 +1168,34 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           blockHeight={blockHeight}
           sceneCapture={capturedSceneRef.current}
           isHighScore={score === highScore && score > 0}
-          tweetText={`I scored ${score} sats in SATOSHI SURVIVORS on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play`}
+          tweetText={`I scored ${score} sats in SATOSHI SURVIVORS on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play?bitmap=${blockHeight}`}
         />
       )}
 
       {!showStart && !gameOver && (
         <>
           <div data-ui className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2">
-            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
-              <span className="font-mono text-[10px] md:text-xs text-zinc-500">LVL</span>
-              <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1">{level}</span>
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500 uppercase">Lvl</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1" style={{ textShadow: '0 0 8px rgba(247,147,26,0.4)' }}>{level}</span>
             </div>
-            <div className="br-card px-2.5 md:px-4 py-1.5 md:py-2">
-              <span className="font-mono text-lg md:text-2xl font-bold text-primary">{score}</span>
+            <div className="br-card px-2.5 md:px-4 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-lg md:text-2xl font-bold text-primary" style={{ textShadow: '0 0 8px rgba(247,147,26,0.4)' }}>{score}</span>
               <span className="font-mono text-[10px] md:text-xs text-zinc-500 ml-1">sats</span>
             </div>
           </div>
           <div data-ui className="absolute top-16 md:top-20 left-3 md:left-6 z-10">
-            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
-              <span className="font-mono text-[10px] md:text-xs text-zinc-500">WAVE</span>
-              <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1">{wave}</span>
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500 uppercase">Wave</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1" style={{ textShadow: '0 0 8px rgba(248,113,113,0.4)' }}>{wave}</span>
             </div>
           </div>
           {/* Desktop controls hint */}
           {!isMobile && (
             <div className="absolute bottom-4 md:bottom-6 left-3 md:left-6 z-10 hidden sm:block">
-              <div className="br-card p-2.5 md:p-3 bg-bg/80">
-                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
-                <div className="font-mono text-xs text-zinc-300 space-y-1">
+              <div className="br-card p-2.5 md:p-3 bg-black/60 backdrop-blur-sm">
+                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Controls</div>
+                <div className="font-mono text-xs text-zinc-400 space-y-1">
                   <div>WASD — Move</div>
                   <div>Mouse wheel — Zoom</div>
                 </div>
@@ -1224,7 +1221,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             </div>
           )}
           {!showUpgrade && (
-            <button data-ui onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
+            <button data-ui onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card bg-black/60 backdrop-blur-sm font-mono text-xs md:text-sm text-zinc-500 hover:text-zinc-200 transition-colors">← Exit</button>
           )}
         </>
       )}

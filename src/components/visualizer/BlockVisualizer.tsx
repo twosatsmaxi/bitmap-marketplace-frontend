@@ -912,7 +912,7 @@ export function BlockVisualizer({
               blockHeight={blockHeight ?? 0}
               sceneCapture={capturedSceneRef.current}
               isHighScore={score === highScore && score > 0}
-              tweetText={`Completed BIT RECALL on Block ${(blockHeight ?? 0).toLocaleString()} with ${score} points! Play at bitmap.trade/play`}
+              tweetText={`Completed BIT RECALL on Block ${(blockHeight ?? 0).toLocaleString()} with ${score} points! Play at bitmap.trade/play?bitmap=${blockHeight ?? 0}`}
             />
           )}
           
