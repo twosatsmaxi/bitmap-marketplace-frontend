@@ -185,7 +185,7 @@ export async function generateScoreCard(
   ctx.fillStyle = BRANDING_COLOR;
   ctx.font = "500 14px 'JetBrains Mono', 'SF Mono', monospace";
   ctx.textAlign = "right";
-  ctx.fillText("bitmap.game", CARD_W - 24, CARD_H - 24);
+  ctx.fillText("bitmap.trade/play", CARD_W - 24, CARD_H - 24);
   ctx.textAlign = "left";
 
   return canvas;

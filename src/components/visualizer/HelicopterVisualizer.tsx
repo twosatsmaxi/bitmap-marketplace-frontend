@@ -140,7 +140,6 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const frameIdRef = useRef<number>(0);
   const txMeshesRef = useRef<Map<number, THREE.Mesh>>(new Map());
   const gridColsRef = useRef(0);
   const visibleCountRef = useRef(0);
@@ -160,6 +159,9 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
 
   // Wall meshes
   const wallMeshesRef = useRef<THREE.Mesh[]>([]);
+
+  // Prefers reduced motion
+  const prefersReducedMotionRef = useRef(false);
 
   // Reusable vectors
   const targetPosRef = useRef(new THREE.Vector3());
@@ -204,14 +206,14 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     return null;
   }, [blockBytes.length]);
 
-  // Grow snake mesh pool as needed
+  // Grow snake mesh pool as needed — uses shared body material (no cloning)
   const ensureSnakePool = useCallback((needed: number) => {
     const scene = sceneRef.current;
     const geo = snakeGeoRef.current;
     const mat = snakeBodyMatRef.current;
     if (!scene || !geo || !mat) return;
     while (snakeMeshPoolRef.current.length < needed) {
-      const mesh = new THREE.Mesh(geo, mat.clone());
+      const mesh = new THREE.Mesh(geo, mat);
       mesh.visible = false;
       scene.add(mesh);
       snakeMeshPoolRef.current.push(mesh);
@@ -633,9 +635,9 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     scene.add(headLight);
     headLightRef.current = headLight;
 
-    // Pre-allocate initial pool of 10
+    // Pre-allocate initial pool of 10 — shared body material (no cloning)
     for (let i = 0; i < 10; i++) {
-      const mesh = new THREE.Mesh(snakeGeo, bodyMat.clone());
+      const mesh = new THREE.Mesh(snakeGeo, bodyMat);
       mesh.visible = false;
       scene.add(mesh);
       snakeMeshPoolRef.current.push(mesh);
@@ -686,13 +688,14 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     };
     window.addEventListener("resize", onResize);
 
-    // Animation loop
+    // Check prefers-reduced-motion
+    prefersReducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Animation loop (using renderer.setAnimationLoop for proper lifecycle)
     let lastMove = 0;
     let lastTime = 0;
 
     const animate = (time: number) => {
-      frameIdRef.current = requestAnimationFrame(animate);
-
       const delta = time - lastTime;
       lastTime = time;
       if (delta > 100) return;
@@ -765,8 +768,8 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
         }
       }
 
-      // --- Pulse obstacle blocks (dark with red glow) ---
-      if (game.isPlaying) {
+      // --- Pulse obstacle blocks (dark with red glow) — skip if reduced motion ---
+      if (game.isPlaying && !prefersReducedMotionRef.current) {
         game.obstacles.forEach((idx) => {
           const mesh = txMeshesRef.current.get(idx);
           if (mesh && mesh.visible) {
@@ -799,20 +802,15 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
 
             if (i === 0) {
               mesh.material = snakeHeadMatRef.current!;
-              const pulse = 1 + Math.sin(time * 0.008) * 0.12;
+              const reducedMotion = prefersReducedMotionRef.current;
+              const pulse = reducedMotion ? 1 : 1 + Math.sin(time * 0.008) * 0.12;
               mesh.scale.set(pulse, pulse, pulse);
               if (headLightRef.current) {
                 headLightRef.current.position.set(lx * sp, 2, lz * sp);
               }
             } else {
-              const bodyMaterial = mesh.material as THREE.MeshStandardMaterial;
-              if (bodyMaterial === snakeHeadMatRef.current) {
-                mesh.material = snakeBodyMatRef.current!.clone();
-              }
-              const fade = 1 - (i / Math.max(len, 1)) * 0.6;
-              (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 * fade;
-              (mesh.material as THREE.MeshStandardMaterial).opacity = 0.95 * fade + 0.3;
-              (mesh.material as THREE.MeshStandardMaterial).transparent = true;
+              // Use shared body material — no cloning per segment
+              mesh.material = snakeBodyMatRef.current!;
               mesh.scale.set(1, 1, 1);
             }
           } else {
@@ -844,37 +842,55 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       renderer.render(scene, camera);
     };
 
-    frameIdRef.current = requestAnimationFrame(animate);
+    renderer.setAnimationLoop(animate);
 
     return () => {
-      cancelAnimationFrame(frameIdRef.current);
+      renderer.setAnimationLoop(null);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onResize);
       container.removeEventListener("wheel", onWheel);
       if (deathTimerRef.current) clearTimeout(deathTimerRef.current);
 
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-        container.removeChild(rendererRef.current.domElement);
-      }
-
+      // Dispose transaction block meshes
       txMeshesRef.current.forEach(mesh => {
         mesh.geometry.dispose();
         (mesh.material as THREE.Material).dispose();
       });
-      snakeMeshPoolRef.current.forEach(m => {
-        m.geometry.dispose();
-        (m.material as THREE.Material).dispose();
-      });
+      txMeshesRef.current.clear();
+
+      // Dispose snake pool meshes (geometries are shared via snakeGeoRef, materials via shared refs)
       snakeMeshPoolRef.current = [];
+
+      // Dispose wall meshes
       wallMeshesRef.current.forEach(m => {
         m.geometry.dispose();
         (m.material as THREE.Material).dispose();
       });
       wallMeshesRef.current = [];
-      if (snakeGeoRef.current) snakeGeoRef.current.dispose();
-      if (snakeHeadMatRef.current) snakeHeadMatRef.current.dispose();
-      if (snakeBodyMatRef.current) snakeBodyMatRef.current.dispose();
+
+      // Dispose shared snake geometry and materials
+      if (snakeGeoRef.current) { snakeGeoRef.current.dispose(); snakeGeoRef.current = null; }
+      if (snakeHeadMatRef.current) { snakeHeadMatRef.current.dispose(); snakeHeadMatRef.current = null; }
+      if (snakeBodyMatRef.current) { snakeBodyMatRef.current.dispose(); snakeBodyMatRef.current = null; }
+
+      // Dispose ground and grid (created in this effect)
+      ground.geometry.dispose();
+      (ground.material as THREE.Material).dispose();
+      gridHelper.geometry.dispose();
+      if (Array.isArray(gridHelper.material)) {
+        gridHelper.material.forEach(m => m.dispose());
+      } else {
+        (gridHelper.material as THREE.Material).dispose();
+      }
+
+      // Dispose wall shared material
+      wallMat.dispose();
+
+      // Dispose renderer last and remove DOM element
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        container.removeChild(rendererRef.current.domElement);
+      }
     };
   }, [blockBytes, ensureSnakePool, getIndexFromGrid, getTxPosition, handleDeath, resetGame]);
 
@@ -938,7 +954,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
           blockHeight={blockHeight}
           sceneCapture={capturedSceneRef.current}
           isHighScore={lastDeathStatsRef.current.score >= lastDeathStatsRef.current.bestScore && lastDeathStatsRef.current.score > 0}
-          tweetText={`Scored ${lastDeathStatsRef.current.score} in SLITHER on Block ${blockHeight.toLocaleString()}! Play at bitmap.game`}
+          tweetText={`Scored ${lastDeathStatsRef.current.score} in SLITHER on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play`}
         />
       )}
 
