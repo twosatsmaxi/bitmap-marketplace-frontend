@@ -11,21 +11,21 @@ interface MempoolSceneProps {
   onClearNew: () => void;
 }
 
-// Color based on fee rate
-function getFeeColor(feeRate: number): THREE.Color {
-  const color = new THREE.Color();
-  if (feeRate < 10) {
-    color.setHex(0x7e4912);
-  } else if (feeRate < 50) {
-    color.setHex(0xb87326);
-  } else if (feeRate < 100) {
-    color.setHex(0xf7931a);
-  } else if (feeRate < 500) {
-    color.setHex(0xffc12a);
-  } else {
-    color.setHex(0xffeb3b);
-  }
-  return color;
+// Pre-allocated fee colors — avoids creating new THREE.Color every call
+const FEE_COLORS = [
+  new THREE.Color(0x7e4912), // feeRate < 10
+  new THREE.Color(0xb87326), // feeRate < 50
+  new THREE.Color(0xf7931a), // feeRate < 100
+  new THREE.Color(0xffc12a), // feeRate < 500
+  new THREE.Color(0xffeb3b), // feeRate >= 500
+];
+
+function getFeeColorIndex(feeRate: number): number {
+  if (feeRate < 10) return 0;
+  if (feeRate < 50) return 1;
+  if (feeRate < 100) return 2;
+  if (feeRate < 500) return 3;
+  return 4;
 }
 
 // Size based on fee rate
@@ -39,11 +39,11 @@ interface Particle {
   id: string;
   position: THREE.Vector3;
   velocity: THREE.Vector3;
-  color: THREE.Color;
+  colorIndex: number;
   size: number;
   life: number;
   maxLife: number;
-  mesh: THREE.Mesh;
+  instanceIndex: number;
 }
 
 function WebGLErrorFallback() {
@@ -76,7 +76,6 @@ export function MempoolScene({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const mouseRef = useRef({ x: 0, y: 0 });
-  const frameIdRef = useRef<number>(0);
   const newTxQueueRef = useRef<MempoolTransaction[]>([]);
   const [webglError, setWebglError] = useState(false);
 
@@ -141,7 +140,7 @@ export function MempoolScene({
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    // Particle geometry (shared)
+    // Shared geometry and material for InstancedMesh
     const geometry = new THREE.CapsuleGeometry(1, 4, 4, 8);
     const material = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -149,6 +148,15 @@ export function MempoolScene({
       opacity: 0.8,
       blending: THREE.AdditiveBlending,
     });
+
+    // InstancedMesh: single draw call for all particles
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, maxParticles);
+    instancedMesh.count = 0;
+    instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(instancedMesh);
+
+    // Pre-allocate reusable dummy outside animation loop
+    const dummy = new THREE.Object3D();
 
     // Mouse tracking
     const handleMouseMove = (e: MouseEvent) => {
@@ -173,58 +181,97 @@ export function MempoolScene({
       const delta = (now - lastTime) / 1000;
       lastTime = now;
 
+      const particles = particlesRef.current;
+
       // Process new transactions
       while (newTxQueueRef.current.length > 0) {
         const tx = newTxQueueRef.current.shift();
         if (!tx) continue;
-        if (particlesRef.current.length >= maxParticles) break;
+        if (particles.length >= maxParticles) break;
 
-        const mesh = new THREE.Mesh(geometry, material.clone());
-        mesh.position.set(
+        const size = getParticleSize(tx);
+        const colorIdx = getFeeColorIndex(tx.feeRate);
+        const idx = particles.length;
+
+        const position = new THREE.Vector3(
           (Math.random() - 0.5) * 120,
           40 + Math.random() * 20,
           (Math.random() - 0.5) * 60
         );
-        mesh.rotation.x = Math.PI;
-        mesh.scale.setScalar(getParticleSize(tx));
-        (mesh.material as THREE.MeshBasicMaterial).color = getFeeColor(tx.feeRate);
-        scene.add(mesh);
 
-        particlesRef.current.push({
+        // Set instance transform
+        dummy.position.copy(position);
+        dummy.rotation.set(Math.PI, 0, 0);
+        dummy.scale.setScalar(size);
+        dummy.updateMatrix();
+        instancedMesh.setMatrixAt(idx, dummy.matrix);
+        instancedMesh.setColorAt(idx, FEE_COLORS[colorIdx]);
+
+        particles.push({
           id: tx.id,
-          position: mesh.position.clone(),
+          position,
           velocity: new THREE.Vector3(
             (Math.random() - 0.5) * 0.1,
             -(0.3 + Math.random() * 0.4 + tx.feeRate / 1000),
             (Math.random() - 0.5) * 0.1
           ),
-          color: getFeeColor(tx.feeRate),
-          size: getParticleSize(tx),
+          colorIndex: colorIdx,
+          size,
           life: 0,
           maxLife: 200 + Math.random() * 100,
-          mesh,
+          instanceIndex: idx,
         });
+
+        instancedMesh.count = particles.length;
       }
 
-      // Update particles
-      for (let i = particlesRef.current.length - 1; i >= 0; i--) {
-        const p = particlesRef.current[i];
+      // Update particles (iterate backwards for safe removal)
+      let needsColorUpdate = false;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
         p.life++;
+
+        // Check if particle is dead
+        if (p.life >= p.maxLife || p.position.y < -25) {
+          // Swap with last active particle
+          const lastIdx = particles.length - 1;
+          if (i < lastIdx) {
+            const last = particles[lastIdx];
+            // Copy last particle's transform to this slot
+            instancedMesh.getMatrixAt(last.instanceIndex, dummy.matrix);
+            instancedMesh.setMatrixAt(p.instanceIndex, dummy.matrix);
+            instancedMesh.setColorAt(p.instanceIndex, FEE_COLORS[last.colorIndex]);
+            last.instanceIndex = p.instanceIndex;
+            particles[i] = last;
+            needsColorUpdate = true;
+          }
+          particles.pop();
+          instancedMesh.count = particles.length;
+          continue;
+        }
 
         // Update position
         p.position.add(p.velocity);
-        p.mesh.position.copy(p.position);
 
-        // Fade out
+        // Fade out via scale shrink (InstancedMesh shares one material, can't fade individually)
+        let scale = p.size;
         if (p.life > p.maxLife * 0.7) {
-          const opacity = 1 - (p.life - p.maxLife * 0.7) / (p.maxLife * 0.3);
-          (p.mesh.material as THREE.MeshBasicMaterial).opacity = opacity * 0.8;
+          const t = 1 - (p.life - p.maxLife * 0.7) / (p.maxLife * 0.3);
+          scale = p.size * t;
         }
 
-        // Remove dead particles
-        if (p.life >= p.maxLife || p.position.y < -25) {
-          scene.remove(p.mesh);
-          particlesRef.current.splice(i, 1);
+        dummy.position.copy(p.position);
+        dummy.rotation.set(Math.PI, 0, 0);
+        dummy.scale.setScalar(scale);
+        dummy.updateMatrix();
+        instancedMesh.setMatrixAt(p.instanceIndex, dummy.matrix);
+      }
+
+      // Mark buffers for GPU upload
+      if (particles.length > 0) {
+        instancedMesh.instanceMatrix.needsUpdate = true;
+        if (needsColorUpdate && instancedMesh.instanceColor) {
+          instancedMesh.instanceColor.needsUpdate = true;
         }
       }
 
@@ -241,26 +288,24 @@ export function MempoolScene({
       (gridHelper.material as THREE.LineBasicMaterial).opacity = pulse;
 
       renderer.render(scene, camera);
-      frameIdRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    renderer.setAnimationLoop(animate);
 
     // Cleanup
     return () => {
-      cancelAnimationFrame(frameIdRef.current);
+      renderer.setAnimationLoop(null);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
-      
-      particlesRef.current.forEach((p) => {
-        scene.remove(p.mesh);
-      });
+
       particlesRef.current = [];
-      
+
+      scene.remove(instancedMesh);
+      instancedMesh.dispose();
       geometry.dispose();
       material.dispose();
       renderer.dispose();
-      
+
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }

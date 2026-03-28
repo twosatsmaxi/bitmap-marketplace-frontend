@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-// @ts-ignore
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 interface BlockVisualizerProps {
   /** 1 byte per tx — values 1-6 (log₁₀ output value buckets) */
@@ -39,13 +38,7 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     const container = containerRef.current;
     if (!container) return;
 
-    // WebGL check
-    const testCanvas = document.createElement("canvas");
-    const gl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
-    if (!gl) {
-      setWebglError(true);
-      return;
-    }
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Scene
     const scene = new THREE.Scene();
@@ -120,6 +113,9 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     const visibleCount = Math.min(txCount, 2000);
     const spacing = 2.5;
 
+    // Group transactions by bucket for instanced rendering
+    const bucketGroups = new Map<number, { indices: number[]; positions: { x: number; z: number }[] }>();
+
     for (let i = 0; i < visibleCount; i++) {
       const bucket = blockBytes[i];
       const col = i % cols;
@@ -127,9 +123,25 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
       const x = (col - cols / 2) * spacing;
       const z = (row - cols / 2) * spacing;
 
+      if (!bucketGroups.has(bucket)) {
+        bucketGroups.set(bucket, { indices: [], positions: [] });
+      }
+      const group = bucketGroups.get(bucket)!;
+      group.indices.push(i);
+      group.positions.push({ x, z });
+    }
+
+    // Mapping from (InstancedMesh uuid, instanceId) -> original transaction index
+    const instanceToTxIndex = new Map<string, Map<number, number>>();
+    // Store original heights per bucket for hover restoration
+    const bucketHeights = new Map<string, number>();
+    const dummy = new THREE.Object3D();
+
+    for (const [bucket, group] of bucketGroups) {
       const size = getBucketSize(bucket);
       const color = getBucketColor(bucket);
       const height = 0.3 + bucket * 0.4;
+      const count = group.indices.length;
 
       const geometry = new THREE.BoxGeometry(size, height, size);
       const material = new THREE.MeshStandardMaterial({
@@ -141,30 +153,56 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
         roughness: 0.4,
         metalness: 0.3,
       });
-      const mesh = new THREE.Mesh(geometry, material);
 
-      mesh.position.set(x, height / 2, z);
-      mesh.name = String(i);
-      mesh.userData = { index: i, bucket, originalY: height / 2 };
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+      instancedMesh.castShadow = true;
+      instancedMesh.receiveShadow = true;
 
-      txGroup.add(mesh);
+      const meshIndexMap = new Map<number, number>();
+
+      for (let j = 0; j < count; j++) {
+        const { x, z } = group.positions[j];
+        dummy.position.set(x, height / 2, z);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        instancedMesh.setMatrixAt(j, dummy.matrix);
+        instancedMesh.setColorAt(j, new THREE.Color(color));
+        meshIndexMap.set(j, group.indices[j]);
+      }
+
+      instancedMesh.instanceMatrix.needsUpdate = true;
+      instancedMesh.instanceColor!.needsUpdate = true;
+
+      instanceToTxIndex.set(instancedMesh.uuid, meshIndexMap);
+      bucketHeights.set(instancedMesh.uuid, height);
+
+      txGroup.add(instancedMesh);
     }
 
     // Interaction state
     const mouse = new THREE.Vector2();
+    const prevMouse = new THREE.Vector2();
     const raycaster = new THREE.Raycaster();
-    let hoveredName: string | null = null;
+    let mouseNeedsCast = false;
+    let hoveredMeshUuid: string | null = null;
+    let hoveredInstanceId: number | null = null;
+    let hoveredTxIndex: number | null = null;
 
     const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      const newX = (e.clientX / window.innerWidth) * 2 - 1;
+      const newY = -(e.clientY / window.innerHeight) * 2 + 1;
+      if (newX !== prevMouse.x || newY !== prevMouse.y) {
+        mouse.x = newX;
+        mouse.y = newY;
+        prevMouse.x = newX;
+        prevMouse.y = newY;
+        mouseNeedsCast = true;
+      }
     };
 
     const handleClick = () => {
-      if (hoveredName !== null && onClickRef.current) {
-        onClickRef.current(parseInt(hoveredName, 10));
+      if (hoveredTxIndex !== null && onClickRef.current) {
+        onClickRef.current(hoveredTxIndex);
       }
     };
 
@@ -178,50 +216,99 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
     window.addEventListener("click", handleClick);
     window.addEventListener("resize", handleResize);
 
+    // Temp objects for hover matrix manipulation
+    const hoverMatrix = new THREE.Matrix4();
+    const hoverPos = new THREE.Vector3();
+    const hoverQuat = new THREE.Quaternion();
+    const hoverScale = new THREE.Vector3();
+    const originalColor = new THREE.Color();
+
     // Animation loop
-    let disposed = false;
     const animate = () => {
-      if (disposed) return;
       controls.update();
 
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(txGroup.children);
+      if (mouseNeedsCast) {
+        mouseNeedsCast = false;
 
-      // Reset previous hover
-      if (hoveredName !== null) {
-        const prevMesh = txGroup.getObjectByName(hoveredName) as THREE.Mesh;
-        if (prevMesh) {
-          prevMesh.position.y = prevMesh.userData.originalY;
-          prevMesh.scale.setScalar(1);
-          (prevMesh.material as THREE.MeshStandardMaterial).opacity = 0.9;
-          (prevMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3;
+        // Reset previous hover
+        if (hoveredMeshUuid !== null && hoveredInstanceId !== null) {
+          const prevMesh = txGroup.children.find(
+            (c) => c.uuid === hoveredMeshUuid
+          ) as THREE.InstancedMesh | undefined;
+          if (prevMesh) {
+            const height = bucketHeights.get(prevMesh.uuid)!;
+            prevMesh.getMatrixAt(hoveredInstanceId, hoverMatrix);
+            hoverMatrix.decompose(hoverPos, hoverQuat, hoverScale);
+            hoverPos.y = height / 2;
+            hoverScale.set(1, 1, 1);
+            dummy.position.copy(hoverPos);
+            dummy.scale.copy(hoverScale);
+            dummy.quaternion.copy(hoverQuat);
+            dummy.updateMatrix();
+            prevMesh.setMatrixAt(hoveredInstanceId, dummy.matrix);
+            prevMesh.instanceMatrix.needsUpdate = true;
+
+            // Restore original bucket color
+            const txIdx = instanceToTxIndex.get(prevMesh.uuid)!.get(hoveredInstanceId)!;
+            const bucket = blockBytes[txIdx];
+            originalColor.setHex(getBucketColor(bucket));
+            prevMesh.setColorAt(hoveredInstanceId, originalColor);
+            prevMesh.instanceColor!.needsUpdate = true;
+          }
+          hoveredMeshUuid = null;
+          hoveredInstanceId = null;
+          hoveredTxIndex = null;
+          document.body.style.cursor = "default";
         }
-        hoveredName = null;
-        document.body.style.cursor = "default";
-      }
 
-      // Apply new hover
-      if (intersects.length > 0) {
-        const hitMesh = intersects[0].object as THREE.Mesh;
-        hoveredName = hitMesh.name;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(txGroup.children);
 
-        hitMesh.position.y = hitMesh.userData.originalY + 0.5;
-        hitMesh.scale.setScalar(1.1);
-        (hitMesh.material as THREE.MeshStandardMaterial).opacity = 1;
-        (hitMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.6;
-        document.body.style.cursor = "pointer";
+        // Apply new hover
+        if (intersects.length > 0 && intersects[0].instanceId !== undefined) {
+          const hitMesh = intersects[0].object as THREE.InstancedMesh;
+          const instId = intersects[0].instanceId;
+          hoveredMeshUuid = hitMesh.uuid;
+          hoveredInstanceId = instId;
+          hoveredTxIndex = instanceToTxIndex.get(hitMesh.uuid)?.get(instId) ?? null;
+
+          if (!prefersReducedMotion) {
+            const height = bucketHeights.get(hitMesh.uuid)!;
+            hitMesh.getMatrixAt(instId, hoverMatrix);
+            hoverMatrix.decompose(hoverPos, hoverQuat, hoverScale);
+            hoverPos.y = height / 2 + 0.5;
+            hoverScale.set(1.1, 1.1, 1.1);
+            dummy.position.copy(hoverPos);
+            dummy.scale.copy(hoverScale);
+            dummy.quaternion.copy(hoverQuat);
+            dummy.updateMatrix();
+            hitMesh.setMatrixAt(instId, dummy.matrix);
+            hitMesh.instanceMatrix.needsUpdate = true;
+          }
+
+          // Brighten color on hover
+          const txIdx = instanceToTxIndex.get(hitMesh.uuid)?.get(instId);
+          if (txIdx !== undefined) {
+            const bucket = blockBytes[txIdx];
+            const hoverColor = new THREE.Color(getBucketColor(bucket));
+            hoverColor.multiplyScalar(1.4);
+            hitMesh.setColorAt(instId, hoverColor);
+            hitMesh.instanceColor!.needsUpdate = true;
+          }
+
+          document.body.style.cursor = "pointer";
+        }
       }
 
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
     };
 
-    animate();
+    renderer.setAnimationLoop(animate);
 
     // Cleanup
     const domElement = renderer.domElement;
     return () => {
-      disposed = true;
+      renderer.setAnimationLoop(null);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("click", handleClick);
       window.removeEventListener("resize", handleResize);
@@ -229,7 +316,7 @@ export function BlockVisualizer({ blockBytes, onTransactionClick }: BlockVisuali
       renderer.dispose();
       domElement.remove();
       txGroup.children.forEach(child => {
-        if (child instanceof THREE.Mesh) {
+        if (child instanceof THREE.InstancedMesh) {
           child.geometry.dispose();
           (child.material as THREE.Material).dispose();
         }

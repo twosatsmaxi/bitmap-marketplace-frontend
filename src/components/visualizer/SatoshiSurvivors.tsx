@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three/webgpu";
-// @ts-ignore
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { captureThreeScene } from "@/lib/scorecard";
+import { ShareScoreCard } from "@/components/ui/ShareScoreCard";
 
 interface SatoshiSurvivorsProps {
   blockBytes: Uint8Array;
@@ -174,8 +175,15 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const controlsRef = useRef<any>(null);
   const playerRef = useRef<THREE.Group | null>(null);
   const blocksRef = useRef<THREE.Mesh[]>([]);
+  const blockInstanceRef = useRef<THREE.InstancedMesh | null>(null);
+  const blockDataRef = useRef<{ index: number; color: number; origX: number; origY: number; origZ: number; size: number; height: number }[]>([]);
+  const projectilePoolRef = useRef<{ mesh: THREE.Mesh; inUse: boolean }[]>([]);
   const frameIdRef = useRef(0);
   const colsRef = useRef(0);
+  const initErrorRef = useRef(false);
+  const [initError, setInitError] = useState(false);
+  const capturedSceneRef = useRef<string | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
   const spacing = 2.5;
   const multiShotRef = useRef(1);
 
@@ -338,17 +346,36 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
   const startGame = useCallback(() => {
     synthRef.current.init();
     
+    // Reset individual block meshes and re-sync instanced mesh
+    const dummy = new THREE.Object3D();
+    const tmpColor = new THREE.Color();
     blocksRef.current.forEach((block, i) => {
       const ud = (block as any).userData;
-      block.position.x = ud.origX;
-      block.position.y = ud.origY;
-      block.position.z = ud.origZ;
+      block.position.set(ud.origX, ud.origY, ud.origZ);
+      block.visible = false; // hide individual mesh, instanced mesh shows it
       (block.material as THREE.MeshStandardMaterial).color.setHex(ud.color);
       (block.material as THREE.MeshStandardMaterial).emissive.setHex(ud.color);
       (block.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
-    });
 
-    gameRef.current.projectiles.forEach(p => sceneRef.current?.remove(p.mesh));
+      // Reset instanced mesh transform
+      if (blockInstanceRef.current) {
+        dummy.position.set(ud.origX, ud.origY, ud.origZ);
+        dummy.scale.set(ud.size, ud.height, ud.size);
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+        blockInstanceRef.current.setMatrixAt(i, dummy.matrix);
+        tmpColor.setHex(ud.color);
+        blockInstanceRef.current.setColorAt!(i, tmpColor);
+      }
+    });
+    if (blockInstanceRef.current) {
+      blockInstanceRef.current.instanceMatrix.needsUpdate = true;
+      if (blockInstanceRef.current.instanceColor) blockInstanceRef.current.instanceColor.needsUpdate = true;
+    }
+
+    // Return pooled projectiles
+    gameRef.current.projectiles.forEach(p => { p.mesh.visible = false; });
+    projectilePoolRef.current.forEach(p => { p.inUse = false; p.mesh.visible = false; });
     gameRef.current.pickups.forEach(p => sceneRef.current?.remove(p.mesh));
     
     multiShotRef.current = 1;
@@ -462,10 +489,20 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     grid.material.transparent = true;
     scene.add(grid);
 
-    // Create transaction blocks
+    // Create transaction blocks using InstancedMesh for performance
     const visible = Math.min(txCount, 2000);
     blocksRef.current = [];
-    
+    blockDataRef.current = [];
+
+    // Use a single unit box geometry; per-instance scale handles varying sizes
+    const sharedBlockGeo = new THREE.BoxGeometry(1, 1, 1);
+    const sharedBlockMat = new THREE.MeshStandardMaterial({
+      roughness: 0.5, metalness: 0.3,
+    });
+    const instancedBlocks = new THREE.InstancedMesh(sharedBlockGeo, sharedBlockMat, visible);
+    const dummy = new THREE.Object3D();
+    const tmpColor = new THREE.Color();
+
     for (let i = 0; i < visible; i++) {
       const bucket = blockBytes[i];
       const col = i % cols;
@@ -475,22 +512,61 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       const color = BLOCK_COLORS[bucket - 1] || BLOCK_COLORS[0];
       const size = 0.5 + bucket * 0.25;
       const height = 0.4 + bucket * 0.35;
+      const posY = height / 2 - 2.5;
 
-      const geo = new THREE.BoxGeometry(size, height, size);
+      dummy.position.set(x, posY, z);
+      dummy.scale.set(size, height, size);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      instancedBlocks.setMatrixAt(i, dummy.matrix);
+      tmpColor.setHex(color);
+      instancedBlocks.setColorAt!(i, tmpColor);
+
+      blockDataRef.current.push({
+        index: i, color, origX: x, origY: posY, origZ: z, size, height,
+      });
+    }
+
+    instancedBlocks.instanceMatrix.needsUpdate = true;
+    if (instancedBlocks.instanceColor) instancedBlocks.instanceColor.needsUpdate = true;
+    scene.add(instancedBlocks);
+    blockInstanceRef.current = instancedBlocks;
+
+    // We still need individual meshes for blocks that become enemies (they move independently).
+    // Create them lazily — blocksRef will hold per-block meshes only when they become enemies.
+    // For the enemy system, we create meshes on-demand but reuse them via the existing enemy lifecycle.
+    // To keep compatibility with startGame reset and enemy code, pre-create individual meshes as before
+    // but DON'T add them to the scene (the instanced mesh handles static rendering).
+    for (let i = 0; i < visible; i++) {
+      const bd = blockDataRef.current[i];
+      const geo = new THREE.BoxGeometry(bd.size, bd.height, bd.size);
       const mat = new THREE.MeshStandardMaterial({
-        color, emissive: color, emissiveIntensity: 0.15,
+        color: bd.color, emissive: bd.color, emissiveIntensity: 0.15,
         roughness: 0.5, metalness: 0.3,
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, height / 2 - 2.5, z);
-      
+      mesh.position.set(bd.origX, bd.origY, bd.origZ);
+      mesh.visible = false; // hidden; instanced mesh renders the block
       (mesh as any).userData = {
-        index: i, color, origX: x, origY: height / 2 - 2.5, origZ: z,
-        origColor: color, size, height,
+        index: i, color: bd.color, origX: bd.origX, origY: bd.origY, origZ: bd.origZ,
+        origColor: bd.color, size: bd.size, height: bd.height,
       };
-      
       scene.add(mesh);
       blocksRef.current.push(mesh);
+    }
+
+    // Pre-create projectile pool (object pooling to avoid per-frame allocations)
+    const PROJECTILE_POOL_SIZE = 80;
+    const projGeo = new THREE.BoxGeometry(0.22, 0.22, 0.45);
+    const projMat = new THREE.MeshStandardMaterial({
+      color: 0xffeb3b, emissive: 0xffaa00, emissiveIntensity: 1,
+    });
+    projectilePoolRef.current = [];
+    for (let i = 0; i < PROJECTILE_POOL_SIZE; i++) {
+      const mesh = new THREE.Mesh(projGeo, projMat);
+      mesh.visible = false;
+      scene.add(mesh);
+      projectilePoolRef.current.push({ mesh, inUse: false });
     }
 
     // Player gun turret
@@ -565,7 +641,6 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     let lastSpawn = 0;
 
     const animate = (time: number) => {
-      frameIdRef.current = requestAnimationFrame(animate);
       const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
@@ -661,14 +736,26 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           const idx = available[Math.floor(Math.random() * available.length)];
           const block = blocksRef.current[idx];
           const ud = (block as any).userData;
-          
+
           game.occupied.add(idx);
-          
+
+          // Show individual mesh for this enemy (it moves independently)
+          block.visible = true;
           (block.material as THREE.MeshStandardMaterial).color.setHex(0xff3333);
           (block.material as THREE.MeshStandardMaterial).emissive.setHex(0xff0000);
           (block.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.7;
           block.position.y = ud.origY + 1;
-          
+
+          // Hide this instance in the instanced mesh by scaling to zero
+          if (blockInstanceRef.current) {
+            const hideDummy = new THREE.Object3D();
+            hideDummy.position.set(ud.origX, ud.origY, ud.origZ);
+            hideDummy.scale.set(0, 0, 0);
+            hideDummy.updateMatrix();
+            blockInstanceRef.current.setMatrixAt(idx, hideDummy.matrix);
+            blockInstanceRef.current.instanceMatrix.needsUpdate = true;
+          }
+
           game.enemies.push({
             index: idx, mesh: block,
             hp: 30 + game.wave * 10, maxHp: 30 + game.wave * 10,
@@ -708,17 +795,16 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           for (let s = 0; s < shots; s++) {
             const spread = shots > 1 ? (s - (shots - 1) / 2) * 0.15 : 0;
             const finalAng = ang + spread;
-            
-            const proj = new THREE.Mesh(
-              new THREE.BoxGeometry(0.22, 0.22, 0.45),
-              new THREE.MeshStandardMaterial({ 
-                color: 0xffeb3b, emissive: 0xffaa00, emissiveIntensity: 1 
-              })
-            );
+
+            // Acquire from pool
+            const poolEntry = projectilePoolRef.current.find(p => !p.inUse);
+            if (!poolEntry) continue; // pool exhausted, skip
+            poolEntry.inUse = true;
+            const proj = poolEntry.mesh;
+            proj.visible = true;
             proj.position.set(game.playerPos.x, 0, game.playerPos.z);
-            proj.rotation.y = finalAng;
-            scene.add(proj);
-            
+            proj.rotation.set(0, finalAng, 0);
+
             game.projectiles.push({
               mesh: proj,
               dx: Math.sin(finalAng) * game.projectileSpeed,
@@ -786,22 +872,37 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
                 }
               }
               
-              // Return block
+              // Return block — animate individual mesh back, then restore instanced mesh instance
+              const capturedEnemy = e;
               setTimeout(() => {
                 const startT = Date.now();
                 const returnAnim = () => {
                   const elapsed = (Date.now() - startT) / 300;
+                  const ud = (capturedEnemy.mesh as any).userData;
                   if (elapsed >= 1) {
-                    e.mesh.position.set(e.originalX, (e.mesh as any).userData.origY, e.originalZ);
-                    (e.mesh.material as THREE.MeshStandardMaterial).color.setHex((e.mesh as any).userData.color);
-                    (e.mesh.material as THREE.MeshStandardMaterial).emissive.setHex((e.mesh as any).userData.color);
-                    (e.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+                    capturedEnemy.mesh.position.set(capturedEnemy.originalX, ud.origY, capturedEnemy.originalZ);
+                    capturedEnemy.mesh.visible = false; // hide individual mesh
+                    (capturedEnemy.mesh.material as THREE.MeshStandardMaterial).color.setHex(ud.color);
+                    (capturedEnemy.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(ud.color);
+                    (capturedEnemy.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.15;
+                    // Restore instanced mesh instance
+                    if (blockInstanceRef.current) {
+                      const restoreDummy = new THREE.Object3D();
+                      restoreDummy.position.set(ud.origX, ud.origY, ud.origZ);
+                      restoreDummy.scale.set(ud.size, ud.height, ud.size);
+                      restoreDummy.rotation.set(0, 0, 0);
+                      restoreDummy.updateMatrix();
+                      blockInstanceRef.current.setMatrixAt(capturedEnemy.index, restoreDummy.matrix);
+                      const restoreColor = new THREE.Color(ud.color);
+                      blockInstanceRef.current.setColorAt!(capturedEnemy.index, restoreColor);
+                      blockInstanceRef.current.instanceMatrix.needsUpdate = true;
+                      if (blockInstanceRef.current.instanceColor) blockInstanceRef.current.instanceColor.needsUpdate = true;
+                    }
                     return;
                   }
-                  const t = 1 - Math.pow(1 - elapsed, 3);
-                  e.mesh.position.x += (e.originalX - e.mesh.position.x) * 0.15;
-                  e.mesh.position.z += (e.originalZ - e.mesh.position.z) * 0.15;
-                  e.mesh.position.y += ((e.mesh as any).userData.origY - e.mesh.position.y) * 0.15;
+                  capturedEnemy.mesh.position.x += (capturedEnemy.originalX - capturedEnemy.mesh.position.x) * 0.15;
+                  capturedEnemy.mesh.position.z += (capturedEnemy.originalZ - capturedEnemy.mesh.position.z) * 0.15;
+                  capturedEnemy.mesh.position.y += (ud.origY - capturedEnemy.mesh.position.y) * 0.15;
                   requestAnimationFrame(returnAnim);
                 };
                 returnAnim();
@@ -820,7 +921,10 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
         }
         
         if (hit || p.life <= 0) {
-          scene.remove(p.mesh);
+          // Return projectile to pool
+          p.mesh.visible = false;
+          const poolEntry = projectilePoolRef.current.find(pe => pe.mesh === p.mesh);
+          if (poolEntry) poolEntry.inUse = false;
           game.projectiles.splice(i, 1);
         }
       }
@@ -841,6 +945,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
           e.mesh.rotation.z = Math.sin(time * 0.01 + e.index) * 0.15;
         } else {
           game.gameOver = true;
+          capturedSceneRef.current = captureThreeScene(rendererRef.current, sceneRef.current, cameraRef.current);
           setGameOver(true);
           if (game.score > highScore) setHighScore(game.score);
         }
@@ -875,12 +980,16 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
     // WebGPURenderer requires async init (falls back to WebGL if WebGPU unavailable)
     renderer.init().then(() => {
-      if (!aborted) frameIdRef.current = requestAnimationFrame(animate);
+      if (!aborted) renderer.setAnimationLoop(animate);
+    }).catch(() => {
+      // WebGPU and WebGL both failed
+      initErrorRef.current = true;
+      setInitError(true);
     });
 
     return () => {
       aborted = true;
-      cancelAnimationFrame(frameIdRef.current);
+      renderer.setAnimationLoop(null);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", onResize);
@@ -888,6 +997,20 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       container.removeEventListener('touchmove', handleCameraMove);
       container.removeEventListener('touchend', handleCameraEnd);
       container.removeEventListener('touchcancel', handleCameraEnd);
+      // Dispose all geometries, materials, and textures to prevent GPU memory leaks
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+      });
+      if (blockInstanceRef.current) {
+        blockInstanceRef.current.geometry.dispose();
+        if (Array.isArray(blockInstanceRef.current.material)) blockInstanceRef.current.material.forEach(m => m.dispose());
+        else (blockInstanceRef.current.material as THREE.Material).dispose();
+        blockInstanceRef.current = null;
+      }
       controls.dispose();
       renderer.dispose();
       container.removeChild(renderer.domElement);
@@ -898,10 +1021,22 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
     <div className="relative w-full h-full z-0">
       <div ref={containerRef} className="absolute inset-0 z-0" style={{ top: "var(--header-total)" }} />
 
+      {/* WebGPU/WebGL init error */}
+      {initError && (
+        <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80">
+          <div className="text-center space-y-3">
+            <h1 className="font-heading text-3xl font-bold text-red-400" style={{ textShadow: '0 0 15px rgba(248,113,113,0.4)' }}>Renderer Error</h1>
+            <p className="text-lg text-zinc-400 max-w-md">
+              Your browser does not support WebGPU or WebGL. Please try a different browser or device.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Upgrade Toast Notification */}
       {upgradeAnim && (
         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 animate-bounce">
-          <div className="br-card px-6 py-3 bg-primary text-black font-mono font-bold text-lg">
+          <div className="br-card px-6 py-3 bg-black/80 backdrop-blur-sm border border-primary/50 font-heading font-bold text-lg text-primary" style={{ textShadow: '0 0 12px rgba(247,147,26,0.5)' }}>
             {lastUpgrade}!
           </div>
         </div>
@@ -909,22 +1044,23 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Quick Upgrade Selection - Bottom Overlay */}
       {showUpgrade && (
-        <div data-ui className="absolute bottom-0 left-0 right-0 z-20 p-4">
+        <div data-ui className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16">
           <div className="max-w-2xl mx-auto text-center space-y-3">
-            <h2 className="font-mono text-2xl font-bold text-black bg-primary px-4 py-2 inline-block">
-              LEVEL UP! ({gameRef.current.pendingUpgrades} remaining)
+            <h2 className="font-heading text-2xl font-bold text-primary tracking-wide" style={{ textShadow: '0 0 20px rgba(247,147,26,0.5)' }}>
+              LEVEL UP! <span className="text-zinc-400 text-lg font-mono">({gameRef.current.pendingUpgrades} remaining)</span>
             </h2>
             <div className="flex gap-3 justify-center">
               {UPGRADE_NAMES.slice(0, 3).map((u, i) => (
                 <button
                   key={i}
                   onClick={() => applyUpgrade(i)}
-                  className="flex-1 max-w-[160px] p-3 min-h-[56px] bg-primary hover:bg-primary/80 transition-all hover:scale-105 active:scale-95"
+                  className="flex-1 max-w-[160px] p-3 min-h-[56px] bg-black/70 backdrop-blur-sm border transition-all hover:scale-105 active:scale-95"
+                  style={{ borderColor: u.color + '66', boxShadow: `0 0 12px ${u.color}33` }}
                 >
                   <div className="text-center">
                     <div className="text-3xl mb-1">{u.icon}</div>
-                    <div className="font-mono font-bold text-black text-sm">{u.name}</div>
-                    <div className="font-mono text-xs text-black/70 mt-1">
+                    <div className="font-heading font-bold text-sm" style={{ color: u.color }}>{u.name}</div>
+                    <div className="font-mono text-xs text-zinc-400 mt-1">
                       {u.name === "DAMAGE UP" && "+40% dmg"}
                       {u.name === "FIRE RATE" && "+25% speed"}
                       {u.name === "BULLET SPEED" && "+25% velocity"}
@@ -933,7 +1069,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
                 </button>
               ))}
             </div>
-            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
+            <p className="font-mono text-sm text-zinc-400">
               Tap to upgrade • {isMobile ? 'Use joystick to move' : 'Move with WASD'}
             </p>
           </div>
@@ -942,77 +1078,76 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
 
       {/* Start Screen - Only show when gameOver is false */}
       {showStart && !gameOver && (
-        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="text-center space-y-3">
-            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50 bg-black/85 backdrop-blur-sm">
+          <div className="text-center space-y-2">
+            <h1 className="font-heading text-5xl md:text-6xl font-bold text-primary tracking-tight" style={{ textShadow: '0 0 30px rgba(247,147,26,0.6), 0 0 60px rgba(247,147,26,0.2)' }}>
               SATOSHI SURVIVORS
             </h1>
-            <p className="font-mono text-2xl text-black bg-primary px-4 py-2 inline-block">
+            <p className="font-heading text-2xl text-zinc-300 tracking-wide">
               The Blocks Are ALIVE
             </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
-              Block {blockHeight.toLocaleString()}
-            </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-3 py-1 inline-block">
-              🔊 Sound enabled!
-            </p>
-            <br/>
-            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block max-w-lg">
-              Transaction blocks will rise and chase you
-            </p>
-            <br/>
-            <p className="font-mono text-base text-black bg-primary px-3 py-1 inline-block">
-              Destroy them to collect satoshis
-            </p>
-            <br/>
-            <p className="font-mono text-sm text-black bg-primary px-3 py-1 inline-block">
+            <div className="pt-2 space-y-1.5">
+              <p className="font-mono text-lg text-primary">
+                Block {blockHeight.toLocaleString()}
+              </p>
+              <p className="font-mono text-sm text-zinc-500">
+                🔊 Sound enabled
+              </p>
+            </div>
+            <div className="pt-3 space-y-1 max-w-md mx-auto">
+              <p className="text-base text-zinc-400">
+                Transaction blocks will rise and chase you
+              </p>
+              <p className="text-base text-zinc-400">
+                Destroy them to collect satoshis
+              </p>
+            </div>
+            <p className="font-mono text-sm text-zinc-500 pt-2">
               {isMobile ? '🕹️ Joystick to move • Swipe to look • Pinch to zoom' : '⌨️ WASD to move • Scroll to zoom'}
             </p>
-            <br/>
             {highScore > 0 && (
-              <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+              <p className="font-mono text-lg text-primary pt-1" style={{ textShadow: '0 0 10px rgba(247,147,26,0.4)' }}>
                 High Score: {highScore}
               </p>
             )}
-            <br/>
-            <button 
-              onClick={startGame} 
-              className="mt-4 px-12 py-4 bg-primary text-black font-mono font-bold text-2xl hover:bg-primary/80 transition-colors"
-            >
-              PLAY
-            </button>
+            <div className="pt-4">
+              <button
+                onClick={startGame}
+                className="px-12 py-4 bg-primary text-black font-heading font-bold text-2xl hover:bg-primary/80 transition-all hover:scale-105 active:scale-95" style={{ boxShadow: '0 0 20px rgba(247,147,26,0.3)' }}
+              >
+                PLAY
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Game Over Screen - Only show when not in start screen */}
       {gameOver && !showStart && (
-        <div data-ui className="absolute inset-0 flex items-center justify-center z-50">
+        <div data-ui className="absolute inset-0 flex items-center justify-center z-50 bg-black/85 backdrop-blur-sm">
           <div className="text-center space-y-3">
-            <h1 className="font-mono text-5xl font-bold text-black bg-primary px-6 py-3">
+            <h1 className="font-heading text-5xl md:text-6xl font-bold text-red-400 tracking-tight" style={{ textShadow: '0 0 30px rgba(248,113,113,0.5)' }}>
               GAME OVER
             </h1>
-            <p className="font-mono text-4xl text-black bg-primary px-5 py-2 inline-block">
-              {score} sats
+            <p className="font-mono text-4xl font-bold text-primary" style={{ textShadow: '0 0 15px rgba(247,147,26,0.5)' }}>
+              {score} <span className="text-2xl text-zinc-400">sats</span>
             </p>
-            <br/>
-            <p className="font-mono text-lg text-black bg-primary px-4 py-1 inline-block">
+            <p className="font-mono text-lg text-zinc-400">
               Level {level} • Wave {wave}
             </p>
-            <br/>
             {score === highScore && score > 0 && (
-              <p className="font-mono text-xl text-black bg-primary px-4 py-1 inline-block">
+              <p className="font-heading text-xl font-bold text-primary animate-pulse" style={{ textShadow: '0 0 15px rgba(247,147,26,0.6)' }}>
                 New High Score!
               </p>
             )}
-            <br/>
-            <div className="flex gap-4 justify-center mt-4">
-              <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+            <div className="flex gap-4 justify-center pt-4">
+              <button onClick={startGame} className="px-8 py-4 bg-primary text-black font-heading font-bold text-xl hover:bg-primary/80 transition-all hover:scale-105 active:scale-95" style={{ boxShadow: '0 0 15px rgba(247,147,26,0.3)' }}>
                 PLAY AGAIN
               </button>
-              <button onClick={resetGame} className="px-8 py-4 bg-primary text-black font-mono font-bold text-xl hover:bg-primary/80 transition-colors">
+              <button onClick={() => setShowShareCard(true)} className="px-8 py-4 bg-zinc-800/80 backdrop-blur-sm text-zinc-200 font-heading font-bold text-xl hover:bg-zinc-700 transition-all hover:scale-105 active:scale-95 border border-zinc-700">
+                SHARE
+              </button>
+              <button onClick={resetGame} className="px-8 py-4 bg-zinc-800/80 backdrop-blur-sm text-zinc-400 font-heading font-bold text-xl hover:bg-zinc-700 hover:text-zinc-200 transition-all hover:scale-105 active:scale-95 border border-zinc-700">
                 MENU
               </button>
             </div>
@@ -1020,30 +1155,47 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
         </div>
       )}
 
+      {capturedSceneRef.current && (
+        <ShareScoreCard
+          isOpen={showShareCard}
+          onClose={() => setShowShareCard(false)}
+          gameName="SATOSHI SURVIVORS"
+          stats={[
+            { label: "Score", value: `${score} sats` },
+            { label: "Level", value: `${level}` },
+            { label: "Wave", value: `${wave}` },
+          ]}
+          blockHeight={blockHeight}
+          sceneCapture={capturedSceneRef.current}
+          isHighScore={score === highScore && score > 0}
+          tweetText={`I scored ${score} sats in SATOSHI SURVIVORS on Block ${blockHeight.toLocaleString()}! Play at bitmap.trade/play?bitmap=${blockHeight}`}
+        />
+      )}
+
       {!showStart && !gameOver && (
         <>
           <div data-ui className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2">
-            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
-              <span className="font-mono text-[10px] md:text-xs text-zinc-500">LVL</span>
-              <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1">{level}</span>
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500 uppercase">Lvl</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-primary ml-1" style={{ textShadow: '0 0 8px rgba(247,147,26,0.4)' }}>{level}</span>
             </div>
-            <div className="br-card px-2.5 md:px-4 py-1.5 md:py-2">
-              <span className="font-mono text-lg md:text-2xl font-bold text-primary">{score}</span>
+            <div className="br-card px-2.5 md:px-4 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-lg md:text-2xl font-bold text-primary" style={{ textShadow: '0 0 8px rgba(247,147,26,0.4)' }}>{score}</span>
               <span className="font-mono text-[10px] md:text-xs text-zinc-500 ml-1">sats</span>
             </div>
           </div>
           <div data-ui className="absolute top-16 md:top-20 left-3 md:left-6 z-10">
-            <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
-              <span className="font-mono text-[10px] md:text-xs text-zinc-500">WAVE</span>
-              <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1">{wave}</span>
+            <div className="br-card px-2 md:px-3 py-1.5 md:py-2 bg-black/60 backdrop-blur-sm">
+              <span className="font-mono text-[10px] md:text-xs text-zinc-500 uppercase">Wave</span>
+              <span className="font-mono text-lg md:text-xl font-bold text-red-400 ml-1" style={{ textShadow: '0 0 8px rgba(248,113,113,0.4)' }}>{wave}</span>
             </div>
           </div>
           {/* Desktop controls hint */}
           {!isMobile && (
             <div className="absolute bottom-4 md:bottom-6 left-3 md:left-6 z-10 hidden sm:block">
-              <div className="br-card p-2.5 md:p-3 bg-bg/80">
-                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1">Controls</div>
-                <div className="font-mono text-xs text-zinc-300 space-y-1">
+              <div className="br-card p-2.5 md:p-3 bg-black/60 backdrop-blur-sm">
+                <div className="font-mono text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Controls</div>
+                <div className="font-mono text-xs text-zinc-400 space-y-1">
                   <div>WASD — Move</div>
                   <div>Mouse wheel — Zoom</div>
                 </div>
@@ -1069,7 +1221,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
             </div>
           )}
           {!showUpgrade && (
-            <button data-ui onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card font-mono text-xs md:text-sm text-zinc-400 hover:text-white">← Exit</button>
+            <button data-ui onClick={resetGame} className="absolute bottom-4 md:bottom-6 right-3 md:right-6 z-10 px-3 md:px-4 py-1.5 md:py-2 br-card bg-black/60 backdrop-blur-sm font-mono text-xs md:text-sm text-zinc-500 hover:text-zinc-200 transition-colors">← Exit</button>
           )}
         </>
       )}

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { captureThreeScene } from "@/lib/scorecard";
+import { ShareScoreCard } from "@/components/ui/ShareScoreCard";
 
 interface BlockVisualizerProps {
   /** 1 byte per tx — values 1-6 (log₁₀ output value buckets) */
@@ -144,7 +146,9 @@ export function BlockVisualizer({
   const hoveredMeshRef = useRef<THREE.Mesh | null>(null);
   const originalColorsRef = useRef<Map<number, number>>(new Map());
   const pairAssignmentsRef = useRef<number[]>([]);
-  
+  const capturedSceneRef = useRef<string | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
+
   // Store mutable values in refs to avoid stale closures
   const gameModeRef = useRef(gameMode);
   const gameOverRef = useRef(gameOver);
@@ -386,6 +390,7 @@ export function BlockVisualizer({
             const finalScore = calculateScore(newMoves, finalTime, totalPairs);
             setScore(finalScore);
             setTimeElapsed(finalTime);
+            capturedSceneRef.current = captureThreeScene(rendererRef.current, sceneRef.current, cameraRef.current);
             setGameOver(true);
             game.isPlaying = false;
             
@@ -883,9 +888,32 @@ export function BlockVisualizer({
                   >
                     PLAY AGAIN
                   </button>
+                  <button
+                    onClick={() => setShowShareCard(true)}
+                    className="px-6 py-3 bg-zinc-800 text-zinc-200 font-mono font-bold rounded hover:bg-zinc-700 transition-colors pointer-events-auto"
+                  >
+                    SHARE
+                  </button>
                 </div>
               </div>
             </div>
+          )}
+
+          {capturedSceneRef.current && (
+            <ShareScoreCard
+              isOpen={showShareCard}
+              onClose={() => setShowShareCard(false)}
+              gameName="BIT RECALL"
+              stats={[
+                { label: "Score", value: `${score}` },
+                { label: "Time", value: formatTime(timeElapsed) },
+                { label: "Moves", value: `${moves}` },
+              ]}
+              blockHeight={blockHeight ?? 0}
+              sceneCapture={capturedSceneRef.current}
+              isHighScore={score === highScore && score > 0}
+              tweetText={`Completed BIT RECALL on Block ${(blockHeight ?? 0).toLocaleString()} with ${score} points! Play at bitmap.trade/play?bitmap=${blockHeight ?? 0}`}
+            />
           )}
           
           {/* HUD */}
