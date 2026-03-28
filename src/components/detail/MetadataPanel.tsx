@@ -1,12 +1,12 @@
 "use client";
 
 import type { Bitmap } from "@/lib/types";
-import { formatNumber, truncateAddr, truncateInscription } from "@/lib/utils";
+import { formatNumber, truncateInscription } from "@/lib/utils";
 import { useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
-import Link from "next/link";
+import OwnerLink from "./OwnerLink";
 import ChildrenGallery from "./ChildrenGallery";
 
 interface MetadataPanelProps {
@@ -84,12 +84,7 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
     { 
       label: "Owner", 
       value: bitmap.owner ? (
-        <Link
-          href={`/portfolio/${bitmap.owner}`}
-          className="text-primary hover:underline"
-        >
-          {truncateAddr(bitmap.owner)}
-        </Link>
+        <OwnerLink address={bitmap.owner} />
       ) : null,
       rawValue: bitmap.owner,
       copyable: true 
