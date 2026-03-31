@@ -6,7 +6,6 @@ import { HelicopterVisualizer } from "@/components/visualizer/HelicopterVisualiz
 import { SatoshiSurvivors } from "@/components/visualizer/SatoshiSurvivors";
 import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
-import { BackButton } from "@/components/mempool/BackButton";
 import { useChainTip } from "@/hooks/useChainTip";
 import { Gamepad2, BarChart3, Sparkles, Brain, Zap, Maximize2, Palette } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -376,7 +375,7 @@ function VisualizerContent() {
         </>
       )}
 
-      <BackButton />
+
     </>
   );
 }
