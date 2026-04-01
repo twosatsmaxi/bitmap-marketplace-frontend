@@ -71,26 +71,6 @@ export async function signChallengeMessage(
   return res.result.signature;
 }
 
-export async function signPsbt(
-  psbtBase64: string,
-  paymentAddress: string
-): Promise<string> {
-  const res = await Wallet.request("signPsbt", {
-    psbt: psbtBase64,
-    signInputs: { [paymentAddress]: [0] },
-    broadcast: false,
-  } as Parameters<typeof Wallet.request<"signPsbt">>[1]);
-
-  if (res.status !== "success") {
-    if (res.error?.code === RpcErrorCode.USER_REJECTION) {
-      throw new Error("USER_REJECTED");
-    }
-    throw new Error(res.error?.message || "signPsbt failed");
-  }
-
-  return res.result.psbt;
-}
-
 export async function signPsbtInputs(
   psbtBase64: string,
   address: string,
@@ -110,4 +90,11 @@ export async function signPsbtInputs(
   }
 
   return res.result.psbt;
+}
+
+export async function signPsbt(
+  psbtBase64: string,
+  paymentAddress: string
+): Promise<string> {
+  return signPsbtInputs(psbtBase64, paymentAddress, [0]);
 }

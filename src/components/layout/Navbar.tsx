@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Terminal, Menu, X, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { truncateAddr } from "@/lib/utils";
+import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";

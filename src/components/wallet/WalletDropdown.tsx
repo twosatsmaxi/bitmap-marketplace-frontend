@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Wallet, X, Plus, LogOut, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { truncateAddr } from "@/lib/utils";
+import { cn, truncateAddr } from "@/lib/utils";
 import { isWalletAvailable } from "@/lib/wallet-service";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 

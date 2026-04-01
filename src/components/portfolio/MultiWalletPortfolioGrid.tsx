@@ -219,7 +219,8 @@ export default function MultiWalletPortfolioGrid({
     return () => {
       cancelled = true;
     };
-  }, [heights, blockMeta]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heights]);
 
   const loadMore = useCallback(() => {
     if (isValidating) return;

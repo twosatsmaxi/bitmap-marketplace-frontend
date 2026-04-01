@@ -17,22 +17,30 @@ export function useWalletConnect() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const connect = useCallback(async () => {
-    setIsConnecting(true);
-    setError(null);
-    try {
+  const authenticateWallet = useCallback(
+    async (existingToken?: string) => {
       const addresses = await connectWallet();
       const challenge = await getChallenge(addresses.ordinalsAddress);
       const signature = await signChallengeMessage(
         addresses.ordinalsAddress,
         challenge.message
       );
-      const auth = await connectToBackend(
+      return connectToBackend(
         addresses,
         signature,
         challenge.message,
-        challenge.nonce
+        challenge.nonce,
+        existingToken
       );
+    },
+    []
+  );
+
+  const connect = useCallback(async () => {
+    setIsConnecting(true);
+    setError(null);
+    try {
+      const auth = await authenticateWallet();
       setAuth(auth.token, auth.profile);
       router.push("/portfolio");
     } catch (err) {
@@ -40,32 +48,20 @@ export function useWalletConnect() {
     } finally {
       setIsConnecting(false);
     }
-  }, [setAuth, router]);
+  }, [authenticateWallet, setAuth, router]);
 
   const connectAnother = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     try {
-      const addresses = await connectWallet();
-      const challenge = await getChallenge(addresses.ordinalsAddress);
-      const signature = await signChallengeMessage(
-        addresses.ordinalsAddress,
-        challenge.message
-      );
-      const auth = await connectToBackend(
-        addresses,
-        signature,
-        challenge.message,
-        challenge.nonce,
-        token ?? undefined
-      );
+      const auth = await authenticateWallet(token ?? undefined);
       setAuth(auth.token, auth.profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
     } finally {
       setIsConnecting(false);
     }
-  }, [token, setAuth]);
+  }, [authenticateWallet, token, setAuth]);
 
   const removeWallet = useCallback(
     async (ordinalsAddress: string) => {

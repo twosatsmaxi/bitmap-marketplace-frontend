@@ -123,19 +123,18 @@ void main() {
   // ============================================
   
   // Block height: capped and scaled
-  // Original: blockHeight = min(size, 8.0) * u_tileHeightScale
-  // We use heightProgress for smooth growth during transition
-  float isoBlockHeight = min(size, 8.0) * heightProgress;
+  float cappedSize = min(size, 8.0);
+  float isoBlockHeight = cappedSize * heightProgress;
 
   // Compute iso viewport scaling (using heightProgress for dynamic viewport)
   float isoSpanX = (u_layoutWidth + u_usedHeight) * COS30;
-  float isoSpanY = (u_layoutWidth + u_usedHeight) * SIN30 + 8.0 * heightProgress;
+  float isoSpanY = (u_layoutWidth + u_usedHeight) * SIN30 + 8.0;
   float isoSpan  = max(isoSpanX, isoSpanY);
   float isoScale = u_canvasSize / (isoSpan * 1.15);
 
   float centerIsoX = (u_layoutWidth - u_usedHeight) * COS30 * 0.5;
   float centerIsoY = (u_layoutWidth + u_usedHeight) * SIN30 * 0.5
-                   - 4.0 * heightProgress;
+                   - 4.0;
 
   // Mouse repulsion: inverse-project mouse to grid space, then repel
   // EXACTLY like original: check u_enableRepulsion only
@@ -182,6 +181,9 @@ void main() {
   float effSize   = innerSize * shrinkFactor;
   float effHeight = isoBlockHeight * shrinkFactor;
 
+  // Drop from above: blocks start elevated and descend to resting position
+  float dropOffset = (1.0 - heightProgress) * cappedSize;
+
   // Shrink toward tile center
   float bx = curX + pad + (innerSize - effSize) * 0.5;
   float by = curY + pad + (innerSize - effSize) * 0.5;
@@ -195,6 +197,8 @@ void main() {
   } else {
     corner = vec3(bx + dx * effSize, by + effSize, dy * effHeight);
   }
+
+  corner.z += dropOffset;
 
   // Isometric projection
   float cornerIsoX = (corner.x - corner.y) * COS30;
