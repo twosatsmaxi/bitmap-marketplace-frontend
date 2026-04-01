@@ -633,9 +633,18 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       rendererRef.current.setSize(container.clientWidth, container.clientHeight);
     };
 
+    // Trackpad: horizontal scroll orbits camera
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5 && Math.abs(e.deltaX) > 2) {
+        const azimuth = e.deltaX * 0.005;
+        controls.rotateLeft(azimuth);
+      }
+    };
+
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
+    container.addEventListener("wheel", onWheel, { passive: true });
 
     let lastTime = 0;
     let lastSpawn = 0;
@@ -651,23 +660,36 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
         return;
       }
 
-      // Player movement (keyboard + virtual joystick)
-      let mx = 0, mz = 0;
-      if (keys.w) mz -= 1;
-      if (keys.s) mz += 1;
-      if (keys.a) mx -= 1;
-      if (keys.d) mx += 1;
+      // Player movement (keyboard + virtual joystick) — camera-relative
+      let inputX = 0, inputZ = 0;
+      if (keys.w) inputZ -= 1;
+      if (keys.s) inputZ += 1;
+      if (keys.a) inputX -= 1;
+      if (keys.d) inputX += 1;
 
       // Add virtual joystick input
       const joy = joystickRef.current;
       if (joy.active) {
-        mx += joy.dx;
-        mz += joy.dz;
+        inputX += joy.dx;
+        inputZ += joy.dz;
       }
 
-      if (mx !== 0 || mz !== 0) {
-        const len = Math.sqrt(mx * mx + mz * mz);
-        mx /= len; mz /= len;
+      if (inputX !== 0 || inputZ !== 0) {
+        const len = Math.sqrt(inputX * inputX + inputZ * inputZ);
+        inputX /= len; inputZ /= len;
+
+        // Project camera forward/right onto XZ plane
+        // "Forward" for player = away from camera = negative of camera look direction
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        const forward = new THREE.Vector3(-camDir.x, 0, -camDir.z).normalize();
+        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        // inputZ: -1 = up/W (forward), +1 = down/S (backward)
+        // inputX: -1 = left/A, +1 = right/D
+        const mx = -right.x * inputX + forward.x * inputZ;
+        const mz = -right.z * inputX + forward.z * inputZ;
+
         game.playerPos.x += mx * 9 * dt;
         game.playerPos.z += mz * 9 * dt;
         const limit = (cols / 2) * spacing - 1;
@@ -993,6 +1015,7 @@ export function SatoshiSurvivors({ blockBytes, blockHeight }: SatoshiSurvivorsPr
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("resize", onResize);
+      container.removeEventListener("wheel", onWheel);
       container.removeEventListener('touchstart', handleCameraStart);
       container.removeEventListener('touchmove', handleCameraMove);
       container.removeEventListener('touchend', handleCameraEnd);
