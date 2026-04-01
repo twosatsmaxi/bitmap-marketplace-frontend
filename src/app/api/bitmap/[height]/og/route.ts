@@ -1,10 +1,13 @@
 /**
  * OpenGraph Image Generator for Bitmap Blocks
  * 
- * GET /api/bitmap/{height}/og
+ * GET /api/bitmap/{height}/og?ratio=square
  * 
  * Clean, simple OG image showing just the bitmap visualization
  * with the block number in .bitmap format.
+ * 
+ * Query params:
+ *   - ratio: "horizontal" (1200x630, default) or "square" (1200x1200)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -15,9 +18,10 @@ export const dynamic = "force-dynamic";
 
 const RENDER_API = process.env.RENDER_API_BASE ?? "http://r2d2.local:3020";
 
-// OG dimensions (1.91:1 aspect ratio for social platforms)
-const OG_WIDTH = 1200;
-const OG_HEIGHT = 630;
+// OG dimensions
+const HORIZONTAL_WIDTH = 1200;
+const HORIZONTAL_HEIGHT = 630; // 1.91:1 aspect ratio
+const SQUARE_SIZE = 1200; // 1:1 aspect ratio for Instagram, etc.
 
 // HCL → RGB (same as bitmap-worker.js)
 function hclToRgb(hDeg: number, c: number, l: number): [number, number, number] {
@@ -60,13 +64,14 @@ function renderOGImage(
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
 
-  // Calculate layout - centered square bitmap
+  // Calculate layout - bitmap on right side
   const padding = 60;
-  const bitmapSize = Math.min(OG_HEIGHT - padding * 2, OG_WIDTH - padding * 2 - 300);
+  const textAreaWidth = 380; // Reserve space for text on left
+  const bitmapSize = Math.min(OG_HEIGHT - padding * 2, OG_WIDTH - textAreaWidth - padding * 3);
   const drawSize = Math.max(layoutWidth, usedHeight);
   const gridSize = bitmapSize / drawSize;
   
-  const offsetX = OG_WIDTH - bitmapSize - padding - 40;
+  const offsetX = OG_WIDTH - bitmapSize - padding;
   const offsetY = (OG_HEIGHT - usedHeight * gridSize) / 2;
   const unitPadding = gridSize / 4;
 
@@ -80,22 +85,22 @@ function renderOGImage(
     ctx.fillRect(px, py, pw, pw);
   }
 
-  // Simple text: "420000.bitmap"
-  const textX = 80;
-  const textY = OG_HEIGHT / 2 + 20;
+  // Text: block number in orange, .bitmap in white - positioned at top
+  const textX = 60;
+  const topY = 80;
 
-  ctx.fillStyle = "#f7931a"; // Bitcoin orange for the number
-  ctx.font = "bold 140px monospace";
+  // Block number (orange)
+  ctx.fillStyle = "#f7931a";
+  ctx.font = "bold 80px monospace";
   ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(blockHeight), textX, textY);
+  ctx.textBaseline = "top";
+  ctx.fillText(String(blockHeight), textX, topY);
 
-  // Get text width for positioning .bitmap suffix
+  // .bitmap suffix (white) - positioned to the right of number
   const numberWidth = ctx.measureText(String(blockHeight)).width;
-  
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 48px monospace";
-  ctx.fillText(".bitmap", textX + numberWidth + 10, textY + 20);
+  ctx.font = "bold 28px monospace";
+  ctx.fillText(".bitmap", textX + numberWidth + 8, topY + 42);
 }
 
 export async function GET(
