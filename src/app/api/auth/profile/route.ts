@@ -5,15 +5,18 @@ const BITMAP_INDEX_API =
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
+  const cookieHeader = req.headers.get("Cookie");
+
+  if (!authHeader && !cookieHeader) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const res = await fetch(`${BITMAP_INDEX_API}/api/auth/profile`, {
-      headers: { Authorization: authHeader },
-    });
+    const headers: Record<string, string> = {};
+    if (authHeader) headers["Authorization"] = authHeader;
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
 
+    const res = await fetch(`${BITMAP_INDEX_API}/api/auth/profile`, { headers });
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch {

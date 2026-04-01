@@ -9,16 +9,21 @@ export async function DELETE(
 ) {
   const { address } = await params;
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
+  const cookieHeader = req.headers.get("Cookie");
+  if (!authHeader && !cookieHeader) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
+    const headers: Record<string, string> = {};
+    if (authHeader) headers["Authorization"] = authHeader;
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
+
     const res = await fetch(
       `${BITMAP_INDEX_API}/api/auth/wallets/${encodeURIComponent(address)}`,
       {
         method: "DELETE",
-        headers: { Authorization: authHeader },
+        headers,
       }
     );
 
