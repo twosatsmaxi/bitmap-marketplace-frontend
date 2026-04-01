@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { connectWallet, disconnectWallet } from "@/lib/wallet-service";
+import { connectWallet, disconnectWallet, signChallengeMessage } from "@/lib/wallet-service";
 import {
   connectToBackend,
+  getChallenge,
   removeWalletFromProfile,
 } from "@/lib/auth-api";
 import { useWalletStore } from "@/stores/wallet-store";
@@ -21,7 +22,17 @@ export function useWalletConnect() {
     setError(null);
     try {
       const addresses = await connectWallet();
-      const auth = await connectToBackend(addresses);
+      const challenge = await getChallenge(addresses.ordinalsAddress);
+      const signature = await signChallengeMessage(
+        addresses.ordinalsAddress,
+        challenge.message
+      );
+      const auth = await connectToBackend(
+        addresses,
+        signature,
+        challenge.message,
+        challenge.nonce
+      );
       setAuth(auth.token, auth.profile);
       router.push("/portfolio");
     } catch (err) {
@@ -36,7 +47,18 @@ export function useWalletConnect() {
     setError(null);
     try {
       const addresses = await connectWallet();
-      const auth = await connectToBackend(addresses, token ?? undefined);
+      const challenge = await getChallenge(addresses.ordinalsAddress);
+      const signature = await signChallengeMessage(
+        addresses.ordinalsAddress,
+        challenge.message
+      );
+      const auth = await connectToBackend(
+        addresses,
+        signature,
+        challenge.message,
+        challenge.nonce,
+        token ?? undefined
+      );
       setAuth(auth.token, auth.profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");

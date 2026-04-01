@@ -51,6 +51,26 @@ export async function disconnectWallet(): Promise<void> {
   }
 }
 
+export async function signChallengeMessage(
+  address: string,
+  message: string
+): Promise<string> {
+  const res = await Wallet.request("signMessage", {
+    address,
+    message,
+    protocol: "BIP322" as any,
+  });
+
+  if (res.status !== "success") {
+    if (res.error?.code === RpcErrorCode.USER_REJECTION) {
+      throw new Error("USER_REJECTED");
+    }
+    throw new Error(res.error?.message || "Message signing failed");
+  }
+
+  return res.result.signature;
+}
+
 export async function signPsbt(
   psbtBase64: string,
   paymentAddress: string
