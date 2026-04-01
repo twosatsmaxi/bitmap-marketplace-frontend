@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Terminal, Menu, X } from "lucide-react";
+import { Terminal, Menu, X, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import WalletDropdown from "@/components/wallet/WalletDropdown";
+import { useWalletConnect } from "@/hooks/useWalletConnect";
+import { isWalletAvailable } from "@/lib/wallet-service";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isConnected, wallets, connect, isConnecting } = useWalletConnect();
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -50,6 +55,9 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
+            {isConnected && (
+              <NavLink href="/portfolio" active={pathname.startsWith("/portfolio")}>Portfolio</NavLink>
+            )}
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
@@ -60,13 +68,8 @@ export default function Navbar() {
             {/* Trade — always visible on mobile */}
             <SoonNavInline label="Trade" className="md:hidden" />
 
-            {/* Desktop: Connect */}
-            <span className="hidden items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600 md:inline-flex">
-              Connect
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-                Soon
-              </span>
-            </span>
+            {/* Desktop: Wallet Connect */}
+            <WalletDropdown />
 
             {/* Mobile hamburger */}
             <button
@@ -127,6 +130,15 @@ export default function Navbar() {
           >
             Explore
           </DrawerNavLink>
+          {isConnected && (
+            <DrawerNavLink
+              href="/portfolio"
+              active={pathname.startsWith("/portfolio")}
+              onClick={() => setMenuOpen(false)}
+            >
+              Portfolio
+            </DrawerNavLink>
+          )}
           <DrawerSoonNav label="Market" />
           <DrawerSoonNav label="Activity" />
 
@@ -134,14 +146,32 @@ export default function Navbar() {
 
           {/* Mobile Actions */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-                Connect Wallet
-              </span>
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
-                Soon
-              </span>
-            </div>
+            {isConnected ? (
+              <div className="flex items-center gap-2 px-4 py-3">
+                <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-300">
+                  {truncateAddr(wallets[0]?.ordinalsAddress ?? "", 6, 4)}
+                </span>
+                {wallets.length > 1 && (
+                  <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
+                    +{wallets.length - 1}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  await connect();
+                  setMenuOpen(false);
+                }}
+                disabled={isConnecting || !isWalletAvailable()}
+                className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)] disabled:opacity-50 disabled:text-zinc-600"
+              >
+                <Wallet className="h-3.5 w-3.5" />
+                {isConnecting ? "Connecting..." : "Connect Wallet"}
+              </button>
+            )}
           </div>
         </div>
 
