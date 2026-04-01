@@ -29,8 +29,8 @@ RUN npx next build
 # Stage 3: Production runner
 FROM node:20-alpine
 
-# Install curl for health check
-RUN apk add --no-cache curl
+# Install runtime libraries for canvas + fonts + curl for health check
+RUN apk add --no-cache cairo pango pixman fontconfig ttf-dejavu curl
 
 WORKDIR /app
 
