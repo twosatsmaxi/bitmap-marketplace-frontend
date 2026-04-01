@@ -124,7 +124,7 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     snake: [],
     previousPositions: [],
     direction: { x: 0, z: 0 },
-    nextDirection: { x: 1, z: 0 },
+    nextDirection: { x: 0, z: -1 },
     score: 0,
     deaths: 0,
     bestScore: 0,
@@ -379,8 +379,8 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     const startPos = getTxPosition(startIndex) || { x: 0, z: 0, index: 0 };
     game.snake = [startPos];
     game.previousPositions = [startPos];
-    game.direction = { x: 1, z: 0 };
-    game.nextDirection = { x: 1, z: 0 };
+    game.direction = { x: 0, z: -1 };
+    game.nextDirection = { x: 0, z: -1 };
     game.speed = INITIAL_SPEED;
     game.isDead = false;
     game.moveProgress = 0;
@@ -420,11 +420,11 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     if (norm > 0.4) {
       const current = gameRef.current.direction;
       if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
-        else if (dx < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
+        if (dx > 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+        else if (dx < 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
       } else {
-        if (dy > 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
-        else if (dy < 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+        if (dy > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
+        else if (dy < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
       }
     }
   }, []);
@@ -449,11 +449,11 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     if (norm > 0.4) {
       const current = gameRef.current.direction;
       if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
-        else if (dx < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
+        if (dx > 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+        else if (dx < 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
       } else {
-        if (dy > 0 && current.z !== -1) gameRef.current.nextDirection = { x: 0, z: 1 };
-        else if (dy < 0 && current.z !== 1) gameRef.current.nextDirection = { x: 0, z: -1 };
+        if (dy > 0 && current.x !== -1) gameRef.current.nextDirection = { x: 1, z: 0 };
+        else if (dy < 0 && current.x !== 1) gameRef.current.nextDirection = { x: -1, z: 0 };
       }
     }
   }, []);
@@ -474,8 +474,8 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
     gameRef.current = {
       snake: [startPos],
       previousPositions: [startPos],
-      direction: { x: 1, z: 0 },
-      nextDirection: { x: 1, z: 0 },
+      direction: { x: 0, z: -1 },
+      nextDirection: { x: 0, z: -1 },
       score: 0,
       deaths: 0,
       bestScore: 0,
@@ -677,14 +677,14 @@ export function HelicopterVisualizer({ blockBytes, blockHeight }: HelicopterVisu
       const k = e.key.toLowerCase();
       const current = game.direction;
 
-      if ((k === "arrowup" || k === "w") && current.z !== 1) {
-        game.nextDirection = { x: 0, z: -1 };
-      } else if ((k === "arrowdown" || k === "s") && current.z !== -1) {
-        game.nextDirection = { x: 0, z: 1 };
-      } else if ((k === "arrowleft" || k === "a") && current.x !== 1) {
+      if ((k === "arrowup" || k === "w") && current.x !== 1) {
         game.nextDirection = { x: -1, z: 0 };
-      } else if ((k === "arrowright" || k === "d") && current.x !== -1) {
+      } else if ((k === "arrowdown" || k === "s") && current.x !== -1) {
         game.nextDirection = { x: 1, z: 0 };
+      } else if ((k === "arrowleft" || k === "a") && current.z !== -1) {
+        game.nextDirection = { x: 0, z: 1 };
+      } else if ((k === "arrowright" || k === "d") && current.z !== 1) {
+        game.nextDirection = { x: 0, z: -1 };
       } else if (k === "escape") {
         resetGame();
       }
