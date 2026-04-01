@@ -7,6 +7,9 @@
 
 import type { BitmapType } from "./types";
 
+// Re-export for consumers
+export type { BitmapType };
+
 // ============================================================================
 // PRNG (same as prng.ts but without module dependencies)
 // ============================================================================

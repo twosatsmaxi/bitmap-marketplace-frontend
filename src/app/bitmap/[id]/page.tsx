@@ -11,11 +11,55 @@ import DetailCanvas from "@/components/detail/DetailCanvas";
 import PriceHistoryChart from "@/components/detail/PriceHistoryChart";
 import BitmapPreview from "@/components/detail/BitmapPreview";
 import SwipeNavigator from "@/components/detail/SwipeNavigator";
+import type { Metadata } from "next";
 
 export const revalidate = 60;
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const decodedId = decodeURIComponent(id);
+  
+  // Extract block number
+  const bitmapMatch = decodedId.match(/^(\d+)\.bitmap$/);
+  const blockNum = bitmapMatch ? Number(bitmapMatch[1]) : null;
+  
+  if (!blockNum) {
+    return {
+      title: "Bitmap Not Found",
+    };
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const ogImageUrl = `${baseUrl}/api/bitmap/${blockNum}/og`;
+
+  return {
+    title: `${blockNum}.bitmap - Bitmap Market`,
+    description: `Bitmap #${blockNum} - Bitcoin block-based generative art NFT`,
+    openGraph: {
+      title: `${blockNum}.bitmap`,
+      description: `Bitcoin block ${blockNum} visualized as generative art`,
+      type: "website",
+      url: `${baseUrl}/bitmap/${blockNum}.bitmap`,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${blockNum}.bitmap`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${blockNum}.bitmap`,
+      description: `Bitcoin block ${blockNum} visualized as generative art`,
+      images: [ogImageUrl],
+    },
+  };
 }
 
 /**

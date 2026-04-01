@@ -2,6 +2,9 @@
 # Stage 1: Install dependencies
 FROM node:20-alpine AS deps
 
+# Install build dependencies for native modules (canvas, etc.)
+RUN apk add --no-cache python3 make g++ cairo-dev pango-dev pixman-dev pkgconfig
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -12,6 +15,9 @@ RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build the application
 FROM node:20-alpine AS builder
+
+# Install runtime libraries for canvas (needed during static generation)
+RUN apk add --no-cache cairo pango pixman
 
 WORKDIR /app
 
