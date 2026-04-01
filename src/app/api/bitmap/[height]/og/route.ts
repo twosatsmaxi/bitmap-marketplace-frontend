@@ -58,49 +58,90 @@ function renderOGImage(
   squares: { x: number; y: number; r: number }[],
   layoutWidth: number,
   usedHeight: number,
-  blockHeight: number
+  blockHeight: number,
+  canvasWidth: number,
+  canvasHeight: number
 ): void {
   // Background
   ctx.fillStyle = BG_COLOR;
-  ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // Calculate layout - bitmap on right side
-  const padding = 60;
-  const textAreaWidth = 380; // Reserve space for text on left
-  const bitmapSize = Math.min(OG_HEIGHT - padding * 2, OG_WIDTH - textAreaWidth - padding * 3);
-  const drawSize = Math.max(layoutWidth, usedHeight);
-  const gridSize = bitmapSize / drawSize;
+  const isSquare = canvasWidth === canvasHeight;
   
-  const offsetX = OG_WIDTH - bitmapSize - padding;
-  const offsetY = (OG_HEIGHT - usedHeight * gridSize) / 2;
-  const unitPadding = gridSize / 4;
+  if (isSquare) {
+    // Square layout: bitmap fills most of the canvas, text at top
+    const padding = 80;
+    const bitmapSize = canvasWidth - padding * 2;
+    const drawSize = Math.max(layoutWidth, usedHeight);
+    const gridSize = bitmapSize / drawSize;
+    
+    const offsetX = padding;
+    const offsetY = padding + 60; // Extra space for text at top
+    const unitPadding = gridSize / 4;
 
-  // Draw bitmap squares
-  ctx.fillStyle = TX_COLOR;
-  for (const sq of squares) {
-    const px = offsetX + sq.x * gridSize + unitPadding;
-    const py = offsetY + sq.y * gridSize + unitPadding;
-    const pw = sq.r * gridSize - unitPadding * 2;
-    if (pw <= 0) continue;
-    ctx.fillRect(px, py, pw, pw);
+    // Draw bitmap squares
+    ctx.fillStyle = TX_COLOR;
+    for (const sq of squares) {
+      const px = offsetX + sq.x * gridSize + unitPadding;
+      const py = offsetY + sq.y * gridSize + unitPadding;
+      const pw = sq.r * gridSize - unitPadding * 2;
+      if (pw <= 0) continue;
+      ctx.fillRect(px, py, pw, pw);
+    }
+
+    // Text at top center
+    const textY = 40;
+    ctx.fillStyle = "#f7931a";
+    ctx.font = "bold 64px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    
+    const blockText = String(blockHeight);
+    const textX = (canvasWidth - ctx.measureText(blockText).width - 80) / 2;
+    ctx.fillText(blockText, textX, textY);
+
+    // .bitmap suffix positioned to the right
+    const numberWidth = ctx.measureText(blockText).width;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(".bitmap", textX + numberWidth + 8, textY + 30);
+  } else {
+    // Horizontal layout: bitmap on right, text on left
+    const padding = 60;
+    const textAreaWidth = 380;
+    const bitmapSize = Math.min(canvasHeight - padding * 2, canvasWidth - textAreaWidth - padding * 3);
+    const drawSize = Math.max(layoutWidth, usedHeight);
+    const gridSize = bitmapSize / drawSize;
+    
+    const offsetX = canvasWidth - bitmapSize - padding;
+    const offsetY = (canvasHeight - usedHeight * gridSize) / 2;
+    const unitPadding = gridSize / 4;
+
+    // Draw bitmap squares
+    ctx.fillStyle = TX_COLOR;
+    for (const sq of squares) {
+      const px = offsetX + sq.x * gridSize + unitPadding;
+      const py = offsetY + sq.y * gridSize + unitPadding;
+      const pw = sq.r * gridSize - unitPadding * 2;
+      if (pw <= 0) continue;
+      ctx.fillRect(px, py, pw, pw);
+    }
+
+    // Text at top left
+    const textX = 60;
+    const topY = 80;
+
+    ctx.fillStyle = "#f7931a";
+    ctx.font = "bold 80px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(String(blockHeight), textX, topY);
+
+    const numberWidth = ctx.measureText(String(blockHeight)).width;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px monospace";
+    ctx.fillText(".bitmap", textX + numberWidth + 8, topY + 42);
   }
-
-  // Text: block number in orange, .bitmap in white - positioned at top
-  const textX = 60;
-  const topY = 80;
-
-  // Block number (orange)
-  ctx.fillStyle = "#f7931a";
-  ctx.font = "bold 80px monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(String(blockHeight), textX, topY);
-
-  // .bitmap suffix (white) - positioned to the right of number
-  const numberWidth = ctx.measureText(String(blockHeight)).width;
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 28px monospace";
-  ctx.fillText(".bitmap", textX + numberWidth + 8, topY + 42);
 }
 
 export async function GET(
@@ -116,6 +157,14 @@ export async function GET(
       { status: 400 }
     );
   }
+
+  // Parse ratio parameter
+  const { searchParams } = new URL(request.url);
+  const ratio = searchParams.get("ratio") || "horizontal";
+  const isSquare = ratio === "square";
+  
+  const canvasWidth = isSquare ? SQUARE_SIZE : HORIZONTAL_WIDTH;
+  const canvasHeight = isSquare ? SQUARE_SIZE : HORIZONTAL_HEIGHT;
 
   try {
     // Fetch block transaction data
@@ -138,21 +187,25 @@ export async function GET(
     const { squares, layoutWidth, usedHeight } = processBlockBuffer(blockBuffer);
 
     // Create OG canvas
-    const canvas = createCanvas(OG_WIDTH, OG_HEIGHT);
+    const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext("2d");
 
     // Render OG image
-    renderOGImage(ctx, squares, layoutWidth, usedHeight, height);
+    renderOGImage(ctx, squares, layoutWidth, usedHeight, height, canvasWidth, canvasHeight);
 
     // Convert to PNG
     const pngBuffer = canvas.toBuffer("image/png");
+
+    const filename = isSquare 
+      ? `bitmap-${height}-square.png` 
+      : `bitmap-${height}-og.png`;
 
     return new NextResponse(Buffer.from(pngBuffer), {
       status: 200,
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400, immutable",
-        "Content-Disposition": `inline; filename="bitmap-${height}-og.png"`,
+        "Content-Disposition": `inline; filename="${filename}"`,
         "X-Block-Height": heightStr,
       },
     });
