@@ -53,16 +53,18 @@ async function connectXverse(): Promise<WalletAddresses> {
     purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     console.error("[xverse] getAccounts failed:", JSON.stringify(res, null, 2));
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error(res.error?.message || `Wallet connection failed (${res.status})`);
+    throw new Error(res.error?.message || "Wallet connection failed");
   }
 
-  const payment = res.result.find(
+  // Xverse provider returns { status: "success", result } or { result, id }
+  const results = res.result ?? [];
+  const payment = results.find(
     (a: any) => a.purpose === AddressPurpose.Payment
   );
-  const ordinals = res.result.find(
+  const ordinals = results.find(
     (a: any) => a.purpose === AddressPurpose.Ordinals
   );
 
@@ -130,12 +132,12 @@ export async function signChallengeMessage(
     protocol: "BIP322",
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
     throw new Error(res.error?.message || "Message signing failed");
   }
 
-  return res.result.signature;
+  return res.result?.signature ?? res.signature;
 }
 
 export async function signPsbtInputs(
@@ -152,12 +154,12 @@ export async function signPsbtInputs(
     broadcast: false,
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
     throw new Error(res.error?.message || "signPsbt failed");
   }
 
-  return res.result.psbt;
+  return res.result?.psbt ?? res.psbt;
 }
 
 export async function signPsbt(
