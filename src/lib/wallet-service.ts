@@ -54,8 +54,9 @@ async function connectXverse(): Promise<WalletAddresses> {
   });
 
   if (res.status !== "success") {
+    console.error("[xverse] getAccounts failed:", JSON.stringify(res, null, 2));
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error("Wallet connection failed");
+    throw new Error(res.error?.message || `Wallet connection failed (${res.status})`);
   }
 
   const payment = res.result.find(

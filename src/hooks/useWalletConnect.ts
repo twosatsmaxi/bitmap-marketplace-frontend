@@ -52,6 +52,7 @@ export function useWalletConnect() {
         router.push("/portfolio");
         return true;
       } catch (err) {
+        console.error("[wallet-connect] connect failed:", err);
         setError(err instanceof Error ? err.message : "Connection failed");
         return false;
       } finally {
