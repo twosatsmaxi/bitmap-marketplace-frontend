@@ -43,6 +43,7 @@ export async function connectToBackend(
   signature: string,
   message: string,
   nonce: string,
+  provider?: string,
 ): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/connect`, {
     method: "POST",
@@ -54,6 +55,7 @@ export async function connectToBackend(
       signature,
       message,
       nonce,
+      provider,
     }),
   });
 

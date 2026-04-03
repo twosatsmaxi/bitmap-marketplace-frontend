@@ -37,6 +37,7 @@ export function useWalletConnect() {
         signature,
         challenge.message,
         challenge.nonce,
+        provider,
       );
     },
     []

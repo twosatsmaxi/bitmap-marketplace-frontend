@@ -55,18 +55,20 @@ export default function Navbar() {
     if (profile) {
       setConnectedProfile(profile);
     }
-    setConnectingProvider(null);
+    // Keep connectingProvider set so the connected screen can show the provider name
   };
 
   const handleGoToPortfolio = () => {
     setPaletteOpen(false);
     setConnectedProfile(null);
+    setConnectingProvider(null);
     router.push("/portfolio");
   };
 
   const handlePaletteClose = () => {
     setPaletteOpen(false);
     setConnectedProfile(null);
+    setConnectingProvider(null);
   };
 
   return (
