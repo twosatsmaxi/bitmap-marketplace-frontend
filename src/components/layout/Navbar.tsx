@@ -8,13 +8,15 @@ import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
-import WalletConnectModal from "@/components/wallet/WalletConnectModal";
+import WalletBottomSheet from "@/components/wallet/WalletBottomSheet";
+import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
 
   // Lock body scroll when menu is open
@@ -34,6 +36,25 @@ export default function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Global Cmd+K / Ctrl+K shortcut for command palette
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleWalletSelect = async (provider: WalletProvider) => {
+    setConnectingProvider(provider);
+    await connect(provider);
+    setBottomSheetOpen(false);
+    setPaletteOpen(false);
+    setConnectingProvider(null);
+  };
 
   return (
     <>
@@ -165,7 +186,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  setMobileModalOpen(true);
+                  setBottomSheetOpen(true);
                 }}
                 className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)]"
               >
@@ -184,16 +205,21 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Wallet Connect Modal */}
-      <WalletConnectModal
-        open={mobileModalOpen}
-        onClose={() => setMobileModalOpen(false)}
-        onSelect={async (provider) => {
-          setConnectingProvider(provider);
-          await connect(provider);
-          setMobileModalOpen(false);
-          setConnectingProvider(null);
-        }}
+      {/* Mobile Bottom Sheet */}
+      <WalletBottomSheet
+        open={bottomSheetOpen}
+        onClose={() => setBottomSheetOpen(false)}
+        onSelect={handleWalletSelect}
+        isConnecting={isConnecting}
+        connectingProvider={connectingProvider}
+        error={error}
+      />
+
+      {/* Command Palette (Cmd+K) */}
+      <WalletCommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={handleWalletSelect}
         isConnecting={isConnecting}
         connectingProvider={connectingProvider}
         error={error}
