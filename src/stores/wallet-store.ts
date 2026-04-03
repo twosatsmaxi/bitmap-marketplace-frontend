@@ -3,10 +3,9 @@ import { persist } from "zustand/middleware";
 import type { Profile } from "@/lib/auth-api";
 
 interface WalletState {
-  token: string | null;
   profile: Profile | null;
 
-  setAuth: (token: string, profile: Profile) => void;
+  setAuth: (profile: Profile) => void;
   updateProfile: (profile: Profile) => void;
   clearAuth: () => void;
 }
@@ -14,12 +13,11 @@ interface WalletState {
 export const useWalletStore = create<WalletState>()(
   persist(
     (set) => ({
-      token: null,
       profile: null,
 
-      setAuth: (token, profile) => set({ token, profile }),
+      setAuth: (profile) => set({ profile }),
       updateProfile: (profile) => set({ profile }),
-      clearAuth: () => set({ token: null, profile: null }),
+      clearAuth: () => set({ profile: null }),
     }),
     { name: "bitmap-wallets" }
   )
