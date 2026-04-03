@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
@@ -18,6 +18,47 @@ interface WalletCommandPaletteProps {
   error: string | null;
 }
 
+/* ── Terminal boot sequence types ─────────────────────────── */
+
+interface TerminalLine {
+  prefix: string;
+  value: string;
+  color: string;       // tailwind class for value portion
+  speed: number;       // ms per character
+  pauseAfter: number;  // ms delay before next line starts
+  isAsync?: boolean;   // true = waits for bitmapCount
+}
+
+interface DisplayLine {
+  prefix: string;
+  value: string;
+  color: string;
+  done: boolean;
+  showShimmer?: boolean;
+}
+
+function buildSequence(
+  provider: string,
+  address: string,
+  bitmapCount: number | null,
+): TerminalLine[] {
+  const short = address.length > 16
+    ? address.slice(0, 8) + "…" + address.slice(-6)
+    : address;
+
+  return [
+    { prefix: "> ",           value: `connecting ${provider}...`, color: "text-emerald-500",      speed: 14, pauseAfter: 120 },
+    { prefix: "  auth      ", value: "ok",                        color: "text-emerald-500",      speed: 8,  pauseAfter: 50 },
+    { prefix: "  network   ", value: "mainnet",                   color: "text-zinc-400",         speed: 8,  pauseAfter: 50 },
+    { prefix: "  addr      ", value: short,                       color: "text-zinc-400",         speed: 5,  pauseAfter: 50 },
+    { prefix: "  bitmaps   ", value: bitmapCount !== null ? bitmapCount.toLocaleString("en-US") : "", color: "text-primary font-bold", speed: 10, pauseAfter: 80, isAsync: bitmapCount === null },
+    { prefix: "  status    ", value: "ready",                     color: "text-emerald-500",      speed: 10, pauseAfter: 150 },
+    { prefix: "> ",           value: "enter portfolio",           color: "text-zinc-200",         speed: 12, pauseAfter: 0 },
+  ];
+}
+
+/* ── Constants ────────────────────────────────────────────── */
+
 const SPINNER_FRAMES = ["|", "/", "-", "\\"];
 
 const PIXEL_RAIN = [
@@ -29,7 +70,6 @@ const PIXEL_RAIN = [
   { left: "91%", size: "3px", duration: 7.5, delay: 1.8 },
 ];
 
-// Precomputed styles to avoid recreating objects every render
 const GRID_STYLE = {
   backgroundImage:
     "linear-gradient(rgba(255,187,0,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,187,0,0.045) 1px, transparent 1px)",
@@ -45,6 +85,8 @@ const PIXEL_STYLES = PIXEL_RAIN.map((p) => ({
   animation: `home-pixel-rain ${p.duration}s linear ${p.delay}s infinite`,
 }));
 
+/* ── Component ────────────────────────────────────────────── */
+
 export default function WalletCommandPalette({
   open,
   onClose,
@@ -59,23 +101,32 @@ export default function WalletCommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
   const [bitmapCount, setBitmapCount] = useState<number | null>(null);
-  const [typedLines, setTypedLines] = useState<string[]>([]);
-  const [typingDone, setTypingDone] = useState(false);
+
+  // Terminal boot sequence state
+  const [displayLines, setDisplayLines] = useState<DisplayLine[]>([]);
+  const [activeLineIdx, setActiveLineIdx] = useState(-1);
+  const [sequenceDone, setSequenceDone] = useState(false);
+  const resumeRef = useRef<(() => void) | null>(null);
+  const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   // Refs for stable keyboard handler
   const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile });
   stateRef.current = { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile };
 
+  // Reset on open
   useEffect(() => {
     if (open) {
       setWallets(detectWallets());
       setSelectedIndex(0);
       setBitmapCount(null);
-      setTypedLines([]);
-      setTypingDone(false);
+      setDisplayLines([]);
+      setActiveLineIdx(-1);
+      setSequenceDone(false);
+      resumeRef.current = null;
     }
   }, [open]);
 
+  // Spinner for connecting state
   useEffect(() => {
     if (!isConnecting) return;
     const id = setInterval(() => {
@@ -107,70 +158,137 @@ export default function WalletCommandPalette({
     return () => { stale = true; };
   }, [connectedProfile]);
 
-  // Typewriter effect for connected screen
+  // Terminal boot sequence engine
+  const runSequence = useCallback((sequence: TerminalLine[]) => {
+    const cancel = { cancelled: false };
+    cancelRef.current = cancel;
+
+    function typeLine(lineIdx: number) {
+      if (cancel.cancelled || lineIdx >= sequence.length) {
+        if (!cancel.cancelled) setSequenceDone(true);
+        return;
+      }
+
+      const line = sequence[lineIdx];
+      const fullText = line.prefix + line.value;
+
+      // Add empty display line
+      setDisplayLines((prev) => [
+        ...prev,
+        { prefix: "", value: "", color: line.color, done: false },
+      ]);
+      setActiveLineIdx(lineIdx);
+
+      // Handle async line with no data yet
+      if (line.isAsync) {
+        // Type prefix only, then show shimmer
+        let ci = 0;
+        function tickPrefix() {
+          if (cancel.cancelled) return;
+          ci++;
+          const visible = line.prefix.slice(0, ci);
+          setDisplayLines((prev) => {
+            const next = [...prev];
+            next[lineIdx] = { ...next[lineIdx], prefix: visible };
+            return next;
+          });
+          if (ci < line.prefix.length) {
+            setTimeout(tickPrefix, line.speed);
+          } else {
+            // Show shimmer and pause — resume when bitmapCount arrives
+            setDisplayLines((prev) => {
+              const next = [...prev];
+              next[lineIdx] = { ...next[lineIdx], showShimmer: true };
+              return next;
+            });
+            resumeRef.current = () => {
+              resumeRef.current = null;
+              // Will be called when bitmapCount arrives; next effect fills the value
+              setTimeout(() => typeLine(lineIdx + 1), line.pauseAfter);
+            };
+          }
+        }
+        tickPrefix();
+        return;
+      }
+
+      // Normal line: type chars one by one across prefix+value
+      let ci = 0;
+      function tick() {
+        if (cancel.cancelled) return;
+        ci++;
+        const prefixLen = line.prefix.length;
+        const visiblePrefix = fullText.slice(0, Math.min(ci, prefixLen));
+        const visibleValue = ci > prefixLen ? line.value.slice(0, ci - prefixLen) : "";
+        setDisplayLines((prev) => {
+          const next = [...prev];
+          next[lineIdx] = { ...next[lineIdx], prefix: visiblePrefix, value: visibleValue };
+          return next;
+        });
+        if (ci < fullText.length) {
+          setTimeout(tick, line.speed);
+        } else {
+          // Line done
+          setDisplayLines((prev) => {
+            const next = [...prev];
+            next[lineIdx] = { ...next[lineIdx], done: true };
+            return next;
+          });
+          setTimeout(() => typeLine(lineIdx + 1), line.pauseAfter);
+        }
+      }
+      tick();
+    }
+
+    typeLine(0);
+    return () => { cancel.cancelled = true; };
+  }, []);
+
+  // Start sequence when connected
   useEffect(() => {
     if (!connectedProfile) {
-      setTypedLines([]);
-      setTypingDone(false);
+      setDisplayLines([]);
+      setActiveLineIdx(-1);
+      setSequenceDone(false);
+      resumeRef.current = null;
       return;
     }
     const primaryWallet = connectedProfile.wallets[0];
     const provider = connectingProvider ?? primaryWallet?.label ?? "wallet";
     const addr = primaryWallet?.ordinalsAddress ?? connectedProfile.primaryAddress;
+    const sequence = buildSequence(provider, addr, bitmapCount);
+    return runSequence(sequence);
+  }, [connectedProfile, connectingProvider, runSequence]); // intentionally exclude bitmapCount — handled separately
 
-    const lines = [
-      `> ${provider} connected`,
-      `  addr ${addr}`,
-      "",
-    ];
+  // Handle late-arriving bitmap count
+  useEffect(() => {
+    if (bitmapCount === null) return;
+    // Find the async line and fill it in
+    setDisplayLines((prev) => {
+      const idx = prev.findIndex((l) => l.showShimmer);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        value: bitmapCount.toLocaleString("en-US"),
+        showShimmer: false,
+        done: true,
+      };
+      return next;
+    });
+    // Resume the sequence if paused
+    if (resumeRef.current) {
+      resumeRef.current();
+    }
+  }, [bitmapCount]);
 
-    let lineIndex = 0;
-    let charIndex = 0;
-    setTypedLines([]);
-    setTypingDone(false);
-
-    const id = setInterval(() => {
-      if (lineIndex >= lines.length) {
-        clearInterval(id);
-        setTypingDone(true);
-        return;
-      }
-
-      const currentLine = lines[lineIndex];
-
-      // Empty lines appear instantly
-      if (currentLine === "") {
-        setTypedLines((prev) => [...prev, ""]);
-        lineIndex++;
-        charIndex = 0;
-        return;
-      }
-
-      charIndex++;
-      const partial = currentLine.slice(0, charIndex);
-      setTypedLines((prev) => {
-        const next = [...prev];
-        next[lineIndex] = partial;
-        return next;
-      });
-
-      if (charIndex >= currentLine.length) {
-        lineIndex++;
-        charIndex = 0;
-      }
-    }, 25);
-
-    return () => clearInterval(id);
-  }, [connectedProfile, connectingProvider]);
-
-  // Stable keyboard handler — reads from ref so it never needs re-registration
+  // Keyboard handler
   useEffect(() => {
     if (!open) return;
 
     function handleKeyDown(e: KeyboardEvent) {
       const { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, connectedProfile } = stateRef.current;
 
-      // Connected screen: only Enter and Escape
       if (connectedProfile) {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -224,7 +342,7 @@ export default function WalletCommandPalette({
 
   if (!open) return null;
 
-  // Connected info screen — terminal typewriter
+  /* ── Connected: terminal boot sequence ─────────────────── */
   if (connectedProfile) {
     return createPortal(
       <div className="fixed inset-0 z-[100] flex justify-center">
@@ -238,49 +356,40 @@ export default function WalletCommandPalette({
             "animate-fadeUp overflow-hidden",
           )}
         >
-          {/* Grid background */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            aria-hidden="true"
-            style={GRID_STYLE}
-          />
-          {/* Pixel rain */}
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true" style={GRID_STYLE} />
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
             {PIXEL_STYLES.map((style, i) => (
               <span key={i} className="absolute" style={style} />
             ))}
           </div>
 
-          {/* Terminal output */}
-          <div className="px-4 py-4 font-mono text-sm space-y-1 min-h-[100px]">
-            {typedLines.map((line, i) => (
-              <div key={i} className="flex">
-                <span className={i === 0 ? "text-emerald-500" : "text-zinc-400"}>
-                  {line}
-                </span>
-                {/* Blinking cursor on the line currently being typed */}
-                {!typingDone && i === typedLines.length - 1 && line !== "" && (
-                  <span className="inline-block w-2 h-4 bg-emerald-500 ml-0.5 animate-[blink_1s_step-end_infinite]" />
-                )}
-              </div>
-            ))}
-            {/* Bitmap count line appears after typing finishes */}
-            {typingDone && (
-              <div className="flex text-zinc-400">
-                <span>{"  bitmaps "}</span>
-                {bitmapCount === null ? (
-                  <span className="inline-block h-4 w-12 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] ml-1" />
-                ) : (
-                  <span className="text-primary font-bold">{bitmapCount.toLocaleString("en-US")}</span>
-                )}
-              </div>
+          {/* Terminal lines */}
+          <div className="px-4 py-4 font-mono text-sm space-y-0.5 min-h-[160px]">
+            {displayLines.map((line, i) => {
+              const isActive = i === activeLineIdx && !line.done;
+              return (
+                <div key={i} className="flex items-center h-5">
+                  <span className="text-zinc-600 whitespace-pre">{line.prefix}</span>
+                  <span className={cn(line.color, "whitespace-pre")}>{line.value}</span>
+                  {line.showShimmer && (
+                    <span className="inline-block h-3.5 w-14 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%]" />
+                  )}
+                  {isActive && !line.showShimmer && (
+                    <span className="inline-block w-1.5 h-3.5 bg-emerald-500 ml-px animate-[blink_1s_step-end_infinite]" />
+                  )}
+                </div>
+              );
+            })}
+            {/* Blinking cursor after CTA line */}
+            {sequenceDone && (
+              <span className="inline-block w-1.5 h-3.5 bg-zinc-200 animate-[blink_1s_step-end_infinite]" />
             )}
           </div>
 
-          {/* Footer — only shows after typewriter completes */}
-          {typingDone && (
-            <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2">
-              <span className="font-mono text-[10px] text-zinc-600">
+          {/* Footer */}
+          {sequenceDone && (
+            <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 animate-fadeUp">
+              <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em]">
                 {"enter portfolio · esc close"}
               </span>
             </div>
@@ -291,7 +400,7 @@ export default function WalletCommandPalette({
     );
   }
 
-  // Default: wallet selection screen
+  /* ── Default: wallet selection screen ──────────────────── */
   let promptContent: React.ReactNode;
   if (error) {
     promptContent = (
@@ -317,10 +426,7 @@ export default function WalletCommandPalette({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* Palette */}
       <div
         className={cn(
           "relative mt-24 h-fit w-[420px] max-w-[calc(100vw-2rem)]",
@@ -330,26 +436,17 @@ export default function WalletCommandPalette({
           "animate-fadeUp overflow-hidden",
         )}
       >
-        {/* Grid background */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden="true"
-          style={GRID_STYLE}
-        />
-
-        {/* Pixel rain */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true" style={GRID_STYLE} />
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           {PIXEL_STYLES.map((style, i) => (
             <span key={i} className="absolute" style={style} />
           ))}
         </div>
 
-        {/* Terminal Prompt Line */}
         <div className="px-4 py-3 border-b border-[rgba(120,72,18,0.35)]">
           {promptContent}
         </div>
 
-        {/* Wallet List */}
         <div className="p-2">
           {wallets.map((wallet, index) => {
             const isSelected = index === selectedIndex;
@@ -395,7 +492,6 @@ export default function WalletCommandPalette({
           })}
         </div>
 
-        {/* Footer */}
         <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2">
           <span className="font-mono text-[10px] text-zinc-600">
             {"↑↓ navigate · enter select · esc close"}
@@ -406,4 +502,3 @@ export default function WalletCommandPalette({
     document.body,
   );
 }
-
