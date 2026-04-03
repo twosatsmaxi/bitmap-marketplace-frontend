@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { cn } from "@/lib/utils";
-import { renderGrid } from "@/components/bitmap-art/renderers/renderGrid";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -38,26 +37,6 @@ export default function WalletCommandPalette({
   const [wallets, setWallets] = useState(detectWallets());
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
-  const [seed, setSeed] = useState(0);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Re-detect wallets and reseed art when palette opens
-  useEffect(() => {
-    if (open) {
-      setSeed(Date.now());
-    }
-  }, [open]);
-
-  // Draw mini bitmap art
-  useEffect(() => {
-    if (!open || !seed) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    renderGrid(ctx, canvas.width, canvas.height, seed);
-  }, [open, seed]);
-
   // Re-detect wallets when palette opens
   useEffect(() => {
     if (open) {
@@ -195,15 +174,6 @@ export default function WalletCommandPalette({
             />
           ))}
         </div>
-
-        {/* Mini bitmap art strip */}
-        <canvas
-          ref={canvasRef}
-          width={420}
-          height={32}
-          className="relative w-full h-8 border-b border-[rgba(120,72,18,0.35)]"
-          style={{ imageRendering: "pixelated" }}
-        />
 
         {/* Terminal Prompt Line */}
         <div className="px-4 py-3 border-b border-[rgba(120,72,18,0.35)]">
