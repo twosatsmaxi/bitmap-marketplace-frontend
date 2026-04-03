@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Terminal, Menu, X, Wallet } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
+import { type Profile } from "@/lib/auth-api";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
+  const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -48,9 +51,22 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    const ok = await connect(provider);
-    if (ok) setPaletteOpen(false);
+    const profile = await connect(provider);
+    if (profile) {
+      setConnectedProfile(profile);
+    }
     setConnectingProvider(null);
+  };
+
+  const handleGoToPortfolio = () => {
+    setPaletteOpen(false);
+    setConnectedProfile(null);
+    router.push("/portfolio");
+  };
+
+  const handlePaletteClose = () => {
+    setPaletteOpen(false);
+    setConnectedProfile(null);
   };
 
   return (
@@ -201,10 +217,12 @@ export default function Navbar() {
       {/* Command Palette (Cmd+K / Connect button / mobile) */}
       <WalletCommandPalette
         open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
+        onClose={handlePaletteClose}
         onSelect={handleWalletSelect}
         isConnecting={isConnecting}
         connectingProvider={connectingProvider}
+        connectedProfile={connectedProfile}
+        onGoToPortfolio={handleGoToPortfolio}
         error={error}
       />
     </>
