@@ -2,7 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { connectWallet, disconnectWallet, signChallengeMessage } from "@/lib/wallet-service";
+import {
+  connectWallet,
+  disconnectWallet,
+  signChallengeMessage,
+  type WalletProvider,
+} from "@/lib/wallet-service";
 import {
   connectToBackend,
   getChallenge,
@@ -18,12 +23,13 @@ export function useWalletConnect() {
   const [error, setError] = useState<string | null>(null);
 
   const authenticateWallet = useCallback(
-    async (existingToken?: string) => {
-      const addresses = await connectWallet();
+    async (provider?: WalletProvider, existingToken?: string) => {
+      const addresses = await connectWallet(provider);
       const challenge = await getChallenge(addresses.ordinalsAddress);
       const signature = await signChallengeMessage(
         addresses.ordinalsAddress,
-        challenge.message
+        challenge.message,
+        provider
       );
       return connectToBackend(
         addresses,
@@ -36,32 +42,38 @@ export function useWalletConnect() {
     []
   );
 
-  const connect = useCallback(async () => {
-    setIsConnecting(true);
-    setError(null);
-    try {
-      const auth = await authenticateWallet();
-      setAuth(auth.token, auth.profile);
-      router.push("/portfolio");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed");
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [authenticateWallet, setAuth, router]);
+  const connect = useCallback(
+    async (provider?: WalletProvider) => {
+      setIsConnecting(true);
+      setError(null);
+      try {
+        const auth = await authenticateWallet(provider);
+        setAuth(auth.token, auth.profile);
+        router.push("/portfolio");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Connection failed");
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [authenticateWallet, setAuth, router]
+  );
 
-  const connectAnother = useCallback(async () => {
-    setIsConnecting(true);
-    setError(null);
-    try {
-      const auth = await authenticateWallet(token ?? undefined);
-      setAuth(auth.token, auth.profile);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed");
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [authenticateWallet, token, setAuth]);
+  const connectAnother = useCallback(
+    async (provider?: WalletProvider) => {
+      setIsConnecting(true);
+      setError(null);
+      try {
+        const auth = await authenticateWallet(provider, token ?? undefined);
+        setAuth(auth.token, auth.profile);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Connection failed");
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [authenticateWallet, token, setAuth]
+  );
 
   const removeWallet = useCallback(
     async (ordinalsAddress: string) => {

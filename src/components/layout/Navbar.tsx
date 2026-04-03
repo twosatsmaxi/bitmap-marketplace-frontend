@@ -7,12 +7,15 @@ import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
-import { isWalletAvailable } from "@/lib/wallet-service";
+import { type WalletProvider } from "@/lib/wallet-service";
+import WalletConnectModal from "@/components/wallet/WalletConnectModal";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isConnected, wallets, connect, isConnecting } = useWalletConnect();
+  const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -160,15 +163,14 @@ export default function Navbar() {
             ) : (
               <button
                 type="button"
-                onClick={async () => {
-                  await connect();
+                onClick={() => {
                   setMenuOpen(false);
+                  setMobileModalOpen(true);
                 }}
-                disabled={isConnecting || !isWalletAvailable()}
-                className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)] disabled:opacity-50 disabled:text-zinc-600"
+                className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)]"
               >
                 <Wallet className="h-3.5 w-3.5" />
-                {isConnecting ? "Connecting..." : "Connect Wallet"}
+                Connect Wallet
               </button>
             )}
           </div>
@@ -181,6 +183,21 @@ export default function Navbar() {
           </p>
         </div>
       </div>
+
+      {/* Mobile Wallet Connect Modal */}
+      <WalletConnectModal
+        open={mobileModalOpen}
+        onClose={() => setMobileModalOpen(false)}
+        onSelect={async (provider) => {
+          setConnectingProvider(provider);
+          await connect(provider);
+          setMobileModalOpen(false);
+          setConnectingProvider(null);
+        }}
+        isConnecting={isConnecting}
+        connectingProvider={connectingProvider}
+        error={error}
+      />
     </>
   );
 }
