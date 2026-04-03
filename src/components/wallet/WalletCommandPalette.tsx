@@ -47,13 +47,13 @@ function buildSequence(
     : address;
 
   return [
-    { prefix: "> ",           value: `connecting ${provider}...`, color: "text-emerald-500",      speed: 14, pauseAfter: 120 },
-    { prefix: "  auth      ", value: "ok",                        color: "text-emerald-500",      speed: 8,  pauseAfter: 50 },
-    { prefix: "  network   ", value: "mainnet",                   color: "text-zinc-400",         speed: 8,  pauseAfter: 50 },
-    { prefix: "  addr      ", value: short,                       color: "text-zinc-400",         speed: 5,  pauseAfter: 50 },
-    { prefix: "  bitmaps   ", value: bitmapCount !== null ? bitmapCount.toLocaleString("en-US") : "", color: "text-primary font-bold", speed: 10, pauseAfter: 80, isAsync: bitmapCount === null },
-    { prefix: "  status    ", value: "ready",                     color: "text-emerald-500",      speed: 10, pauseAfter: 150 },
-    { prefix: "> ",           value: "enter portfolio",           color: "text-zinc-200",         speed: 12, pauseAfter: 0 },
+    { prefix: "> ",           value: `connecting ${provider}...`, color: "text-primary",           speed: 28, pauseAfter: 200 },
+    { prefix: "  auth      ", value: "ok",                        color: "text-primary",           speed: 18, pauseAfter: 100 },
+    { prefix: "  network   ", value: "mainnet",                   color: "text-amber-700",         speed: 18, pauseAfter: 100 },
+    { prefix: "  addr      ", value: short,                       color: "text-amber-700",         speed: 12, pauseAfter: 100 },
+    { prefix: "  bitmaps   ", value: bitmapCount !== null ? bitmapCount.toLocaleString("en-US") : "", color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
+    { prefix: "  status    ", value: "ready",                     color: "text-primary",           speed: 22, pauseAfter: 250 },
+    { prefix: "> ",           value: "enter portfolio",           color: "text-amber-200",         speed: 25, pauseAfter: 0 },
   ];
 }
 
@@ -369,20 +369,20 @@ export default function WalletCommandPalette({
               const isActive = i === activeLineIdx && !line.done;
               return (
                 <div key={i} className="flex items-center h-5">
-                  <span className="text-zinc-600 whitespace-pre">{line.prefix}</span>
+                  <span className="text-amber-900/70 whitespace-pre">{line.prefix}</span>
                   <span className={cn(line.color, "whitespace-pre")}>{line.value}</span>
                   {line.showShimmer && (
                     <span className="inline-block h-3.5 w-14 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%]" />
                   )}
                   {isActive && !line.showShimmer && (
-                    <span className="inline-block w-1.5 h-3.5 bg-emerald-500 ml-px animate-[blink_1s_step-end_infinite]" />
+                    <span className="inline-block w-1.5 h-3.5 bg-primary ml-px animate-[blink_1s_step-end_infinite]" />
                   )}
                 </div>
               );
             })}
             {/* Blinking cursor after CTA line */}
             {sequenceDone && (
-              <span className="inline-block w-1.5 h-3.5 bg-zinc-200 animate-[blink_1s_step-end_infinite]" />
+              <span className="inline-block w-1.5 h-3.5 bg-primary animate-[blink_1s_step-end_infinite]" />
             )}
           </div>
 
