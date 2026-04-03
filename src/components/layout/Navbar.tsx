@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Terminal, Menu, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Terminal, Menu, X, Wallet } from "lucide-react";
+import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import WalletDropdown from "@/components/wallet/WalletDropdown";
+import { useWalletConnect } from "@/hooks/useWalletConnect";
+import { type WalletProvider } from "@/lib/wallet-service";
+import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -27,6 +34,24 @@ export default function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Global Cmd+K / Ctrl+K shortcut for command palette
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleWalletSelect = async (provider: WalletProvider) => {
+    setConnectingProvider(provider);
+    await connect(provider);
+    setPaletteOpen(false);
+    setConnectingProvider(null);
+  };
 
   return (
     <>
@@ -50,6 +75,9 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
+            {isConnected && (
+              <NavLink href="/portfolio" active={pathname.startsWith("/portfolio")}>Portfolio</NavLink>
+            )}
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
@@ -60,13 +88,8 @@ export default function Navbar() {
             {/* Trade — always visible on mobile */}
             <SoonNavInline label="Trade" className="md:hidden" />
 
-            {/* Desktop: Connect */}
-            <span className="hidden items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600 md:inline-flex">
-              Connect
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-                Soon
-              </span>
-            </span>
+            {/* Desktop: Wallet Connect */}
+            <WalletDropdown onOpenPalette={() => setPaletteOpen(true)} />
 
             {/* Mobile hamburger */}
             <button
@@ -127,6 +150,15 @@ export default function Navbar() {
           >
             Explore
           </DrawerNavLink>
+          {isConnected && (
+            <DrawerNavLink
+              href="/portfolio"
+              active={pathname.startsWith("/portfolio")}
+              onClick={() => setMenuOpen(false)}
+            >
+              Portfolio
+            </DrawerNavLink>
+          )}
           <DrawerSoonNav label="Market" />
           <DrawerSoonNav label="Activity" />
 
@@ -134,14 +166,27 @@ export default function Navbar() {
 
           {/* Mobile Actions */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+            {isConnected ? (
+              <div className="flex items-center gap-2 px-4 py-3">
+                <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
+                <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-300">
+                  {truncateAddr(wallets[0]?.ordinalsAddress ?? "", 6, 4)}
+                </span>
+                {wallets.length > 1 && (
+                  <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
+                    +{wallets.length - 1}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
+                <Wallet className="h-3.5 w-3.5" />
                 Connect Wallet
-              </span>
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
-                Soon
-              </span>
-            </div>
+                <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
+                  Soon
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,6 +197,16 @@ export default function Navbar() {
           </p>
         </div>
       </div>
+
+      {/* Command Palette (Cmd+K / Connect button / mobile) */}
+      <WalletCommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={handleWalletSelect}
+        isConnecting={isConnecting}
+        connectingProvider={connectingProvider}
+        error={error}
+      />
     </>
   );
 }
