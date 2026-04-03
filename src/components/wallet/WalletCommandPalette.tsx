@@ -108,6 +108,8 @@ export default function WalletCommandPalette({
   const [sequenceDone, setSequenceDone] = useState(false);
   const resumeRef = useRef<(() => void) | null>(null);
   const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+  const bitmapCountRef = useRef<number | null>(null);
+  bitmapCountRef.current = bitmapCount;
 
   // Refs for stable keyboard handler
   const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile });
@@ -179,9 +181,9 @@ export default function WalletCommandPalette({
       ]);
       setActiveLineIdx(lineIdx);
 
-      // Handle async line with no data yet
+      // Handle async line (bitmaps)
       if (line.isAsync) {
-        // Type prefix only, then show shimmer
+        // Type prefix first, then check if data arrived in the meantime
         let ci = 0;
         function tickPrefix() {
           if (cancel.cancelled) return;
@@ -195,17 +197,44 @@ export default function WalletCommandPalette({
           if (ci < line.prefix.length) {
             setTimeout(tickPrefix, line.speed);
           } else {
-            // Show shimmer and pause — resume when bitmapCount arrives
-            setDisplayLines((prev) => {
-              const next = [...prev];
-              next[lineIdx] = { ...next[lineIdx], showShimmer: true };
-              return next;
-            });
-            resumeRef.current = () => {
-              resumeRef.current = null;
-              // Will be called when bitmapCount arrives; next effect fills the value
-              setTimeout(() => typeLine(lineIdx + 1), line.pauseAfter);
-            };
+            // Prefix done — check if count already arrived
+            const count = bitmapCountRef.current;
+            if (count !== null) {
+              // Data already here — type the value normally
+              const val = count.toLocaleString("en-US");
+              let vi = 0;
+              function tickValue() {
+                if (cancel.cancelled) return;
+                vi++;
+                setDisplayLines((prev) => {
+                  const next = [...prev];
+                  next[lineIdx] = { ...next[lineIdx], value: val.slice(0, vi) };
+                  return next;
+                });
+                if (vi < val.length) {
+                  setTimeout(tickValue, line.speed);
+                } else {
+                  setDisplayLines((prev) => {
+                    const next = [...prev];
+                    next[lineIdx] = { ...next[lineIdx], done: true };
+                    return next;
+                  });
+                  setTimeout(() => typeLine(lineIdx + 1), line.pauseAfter);
+                }
+              }
+              tickValue();
+            } else {
+              // Data not here yet — show shimmer and wait
+              setDisplayLines((prev) => {
+                const next = [...prev];
+                next[lineIdx] = { ...next[lineIdx], showShimmer: true };
+                return next;
+              });
+              resumeRef.current = () => {
+                resumeRef.current = null;
+                setTimeout(() => typeLine(lineIdx + 1), line.pauseAfter);
+              };
+            }
           }
         }
         tickPrefix();
