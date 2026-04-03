@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Wallet, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
+import { type Profile } from "@/lib/auth-api";
 import WalletBar from "@/components/wallet/WalletBar";
-import WalletConnectModal from "@/components/wallet/WalletConnectModal";
+import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
 
 export default function PortfolioPage() {
@@ -19,23 +20,35 @@ export default function PortfolioPage() {
     error,
   } = useWalletConnect();
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] =
     useState<WalletProvider | null>(null);
+  const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
 
   const addresses = useMemo(
     () => wallets.map((w) => w.ordinalsAddress),
     [wallets]
   );
 
+  const handleWalletSelect = async (provider: WalletProvider) => {
+    setConnectingProvider(provider);
+    const profile = await connect(provider);
+    if (profile) {
+      setConnectedProfile(profile);
+    }
+    setConnectingProvider(null);
+  };
+
+  const handlePaletteClose = () => {
+    setPaletteOpen(false);
+    setConnectedProfile(null);
+  };
+
   if (!isConnected) {
     return (
       <>
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-6 px-3 pb-12 pt-16 md:px-4 md:pt-24">
           <div className="br-card flex flex-col items-center gap-5 p-8 md:p-12">
-            <div className="flex h-16 w-16 items-center justify-center border border-[rgba(120,72,18,0.4)] bg-[rgba(247,147,26,0.06)]">
-              <Wallet className="h-7 w-7 text-primary" />
-            </div>
             <div className="text-center">
               <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
                 Bitmap Portfolio
@@ -47,31 +60,26 @@ export default function PortfolioPage() {
             </div>
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={() => setPaletteOpen(true)}
               disabled={isConnecting}
               className="flex items-center gap-2 border border-primary bg-[rgba(247,147,26,0.12)] px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.2)] disabled:opacity-50"
             >
-              {isConnecting ? (
+              {isConnecting && (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Wallet className="h-4 w-4" />
               )}
               {isConnecting ? "Connecting..." : "Connect Wallet"}
             </button>
           </div>
         </div>
 
-        <WalletConnectModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSelect={async (provider) => {
-            setConnectingProvider(provider);
-            await connect(provider);
-            setModalOpen(false);
-            setConnectingProvider(null);
-          }}
+        <WalletCommandPalette
+          open={paletteOpen}
+          onClose={handlePaletteClose}
+          onSelect={handleWalletSelect}
           isConnecting={isConnecting}
           connectingProvider={connectingProvider}
+          connectedProfile={connectedProfile}
+          onGoToPortfolio={handlePaletteClose}
           error={error}
         />
       </>

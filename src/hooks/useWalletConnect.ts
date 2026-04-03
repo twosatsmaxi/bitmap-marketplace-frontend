@@ -16,7 +16,7 @@ import {
 import { useWalletStore } from "@/stores/wallet-store";
 
 export function useWalletConnect() {
-  const { profile, setAuth, updateProfile, clearAuth } = useWalletStore();
+  const { profile, provider: activeProvider, setAuth, updateProfile, clearAuth } = useWalletStore();
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export function useWalletConnect() {
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
-        setAuth(auth.profile);
+        setAuth(auth.profile, provider ?? "xverse");
         return auth.profile;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
@@ -66,7 +66,7 @@ export function useWalletConnect() {
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
-        setAuth(auth.profile);
+        setAuth(auth.profile, provider ?? "xverse");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
       } finally {
@@ -91,12 +91,13 @@ export function useWalletConnect() {
   );
 
   const disconnect = useCallback(async () => {
-    await disconnectWallet();
+    await disconnectWallet(activeProvider ?? undefined);
     clearAuth();
-  }, [clearAuth]);
+  }, [activeProvider, clearAuth]);
 
   return {
     profile,
+    provider: activeProvider,
     wallets: profile?.wallets ?? [],
     isConnected: !!profile,
     connect,
