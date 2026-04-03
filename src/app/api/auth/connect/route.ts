@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = authHeader;
     }
 
+    const cookieHeader = req.headers.get("Cookie");
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+
     const res = await fetch(`${BITMAP_INDEX_API}/api/auth/connect`, {
       method: "POST",
       headers,

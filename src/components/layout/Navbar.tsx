@@ -15,7 +15,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
+  const { isConnected, wallets, connect, connectAnother, isConnecting, error } = useWalletConnect();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
@@ -51,9 +51,13 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    const profile = await connect(provider);
-    if (profile) {
-      setConnectedProfile(profile);
+    if (isConnected) {
+      await connectAnother(provider);
+    } else {
+      const profile = await connect(provider);
+      if (profile) {
+        setConnectedProfile(profile);
+      }
     }
     // Keep connectingProvider set so the connected screen can show the provider name
   };

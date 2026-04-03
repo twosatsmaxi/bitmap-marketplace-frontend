@@ -32,9 +32,13 @@ export default function PortfolioPage() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    const profile = await connect(provider);
-    if (profile) {
-      setConnectedProfile(profile);
+    if (isConnected) {
+      await connectAnother(provider);
+    } else {
+      const profile = await connect(provider);
+      if (profile) {
+        setConnectedProfile(profile);
+      }
     }
     setConnectingProvider(null);
   };
@@ -44,9 +48,9 @@ export default function PortfolioPage() {
     setConnectedProfile(null);
   };
 
-  if (!isConnected) {
-    return (
-      <>
+  return (
+    <>
+      {!isConnected ? (
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-6 px-3 pb-12 pt-16 md:px-4 md:pt-24">
           <div className="br-card flex flex-col items-center gap-5 p-8 md:p-12">
             <div className="text-center">
@@ -71,44 +75,42 @@ export default function PortfolioPage() {
             </button>
           </div>
         </div>
-
-        <WalletCommandPalette
-          open={paletteOpen}
-          onClose={handlePaletteClose}
-          onSelect={handleWalletSelect}
-          isConnecting={isConnecting}
-          connectingProvider={connectingProvider}
-          connectedProfile={connectedProfile}
-          onGoToPortfolio={handlePaletteClose}
-          error={error}
-        />
-      </>
-    );
-  }
-
-  return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 pb-12 pt-3 md:gap-4 md:px-4 md:pt-4">
-      {/* Header */}
-      <div className="br-card p-3 md:p-5">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-              Bitmap Portfolio
-            </h1>
-            <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
-              {wallets.length} wallet{wallets.length !== 1 ? "s" : ""}
-            </span>
+      ) : (
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 pb-12 pt-3 md:gap-4 md:px-4 md:pt-4">
+          {/* Header */}
+          <div className="br-card p-3 md:p-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
+                  Bitmap Portfolio
+                </h1>
+                <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
+                  {wallets.length} wallet{wallets.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <WalletBar
+                wallets={wallets}
+                onRemove={removeWallet}
+                onConnectAnother={() => setPaletteOpen(true)}
+              />
+            </div>
           </div>
-          <WalletBar
-            wallets={wallets}
-            onRemove={removeWallet}
-            onConnectAnother={connectAnother}
-          />
-        </div>
-      </div>
 
-      {/* Grid */}
-      <MultiWalletPortfolioGrid addresses={addresses} />
-    </div>
+          {/* Grid */}
+          <MultiWalletPortfolioGrid addresses={addresses} />
+        </div>
+      )}
+
+      <WalletCommandPalette
+        open={paletteOpen}
+        onClose={handlePaletteClose}
+        onSelect={handleWalletSelect}
+        isConnecting={isConnecting}
+        connectingProvider={connectingProvider}
+        connectedProfile={connectedProfile}
+        onGoToPortfolio={handlePaletteClose}
+        error={error}
+      />
+    </>
   );
 }
