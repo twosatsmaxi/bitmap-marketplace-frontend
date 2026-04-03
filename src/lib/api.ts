@@ -69,6 +69,7 @@ export async function getBitmapDetails(
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
       next: { revalidate: 60 },
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) throw new Error(`Bitmap index API error: ${res.status}`);
     return res.json() as Promise<BitmapDetailsResponse>;
@@ -90,6 +91,7 @@ async function bis<T>(path: string, params: Record<string, string> = {}): Promis
       "Content-Type": "application/json",
     },
     next: { revalidate: 60 },
+    signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`BiS API error: ${res.status}`);
   return res.json() as Promise<T>;
