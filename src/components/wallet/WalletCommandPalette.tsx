@@ -17,6 +17,15 @@ interface WalletCommandPaletteProps {
 
 const SPINNER_FRAMES = ["|", "/", "-", "\\"];
 
+const PIXEL_RAIN = [
+  { left: "8%",  size: "4px", duration: 6,  delay: 0 },
+  { left: "24%", size: "3px", duration: 8,  delay: 1.2 },
+  { left: "45%", size: "5px", duration: 7,  delay: 0.5 },
+  { left: "62%", size: "3px", duration: 9,  delay: 2.1 },
+  { left: "78%", size: "4px", duration: 6.5, delay: 0.8 },
+  { left: "91%", size: "3px", duration: 7.5, delay: 1.8 },
+];
+
 export default function WalletCommandPalette({
   open,
   onClose,
@@ -135,9 +144,27 @@ export default function WalletCommandPalette({
           "border border-[rgba(120,72,18,0.55)]",
           "bg-[rgba(7,7,9,0.98)]",
           "shadow-[0_0_60px_rgba(247,147,26,0.08)]",
-          "animate-fadeUp",
+          "animate-fadeUp overflow-hidden",
         )}
       >
+        {/* Pixel rain */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          {PIXEL_RAIN.map((p, i) => (
+            <span
+              key={i}
+              className="absolute"
+              style={{
+                left: p.left,
+                width: p.size,
+                height: p.size,
+                background: "rgba(247, 147, 26, 0.12)",
+                outline: "1px solid rgba(126, 73, 18, 0.24)",
+                animation: `home-pixel-rain ${p.duration}s linear ${p.delay}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+
         {/* Terminal Prompt Line */}
         <div className="px-4 py-3 border-b border-[rgba(120,72,18,0.35)]">
           {promptContent}
