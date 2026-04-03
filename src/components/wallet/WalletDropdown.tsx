@@ -4,20 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import { Wallet, X, Plus, LogOut, Loader2 } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
-import { type WalletProvider } from "@/lib/wallet-service";
-import WalletConnectDropdown from "./WalletConnectDropdown";
 
-export default function WalletDropdown() {
+interface WalletDropdownProps {
+  onOpenPalette: () => void;
+}
+
+export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
   const [open, setOpen] = useState(false);
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [connectingProvider, setConnectingProvider] =
-    useState<WalletProvider | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
     wallets,
     isConnected,
-    connect,
-    connectAnother,
     removeWallet,
     disconnect,
     isConnecting,
@@ -26,37 +23,18 @@ export default function WalletDropdown() {
 
   // Close on click outside
   useEffect(() => {
-    if (!open && !connectOpen) return;
+    if (!open) return;
     function handleClick(e: MouseEvent) {
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node)
       ) {
         setOpen(false);
-        setConnectOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [open, connectOpen]);
-
-  const handleConnectSelect = async (provider: WalletProvider) => {
-    setConnectingProvider(provider);
-    await connect(provider);
-    if (!error) {
-      setConnectOpen(false);
-    }
-    setConnectingProvider(null);
-  };
-
-  const handleAddSelect = async (provider: WalletProvider) => {
-    setConnectingProvider(provider);
-    await connectAnother(provider);
-    if (!error) {
-      setConnectOpen(false);
-    }
-    setConnectingProvider(null);
-  };
+  }, [open]);
 
   const handleDisconnect = async () => {
     await disconnect();
@@ -71,10 +49,8 @@ export default function WalletDropdown() {
         onClick={() => {
           if (isConnected) {
             setOpen((o) => !o);
-            setConnectOpen(false);
           } else {
-            setConnectOpen((o) => !o);
-            setOpen(false);
+            onOpenPalette();
           }
         }}
         className={cn(
@@ -89,16 +65,6 @@ export default function WalletDropdown() {
           ? truncateAddr(wallets[0]?.ordinalsAddress ?? "", 6, 4)
           : "Connect"}
       </button>
-
-      {/* Connect dropdown (when disconnected) */}
-      <WalletConnectDropdown
-        open={connectOpen && !isConnected}
-        onClose={() => setConnectOpen(false)}
-        onSelect={handleConnectSelect}
-        isConnecting={isConnecting}
-        connectingProvider={connectingProvider}
-        error={error}
-      />
 
       {/* Connected dropdown (when connected) */}
       {open && isConnected && (
@@ -143,7 +109,7 @@ export default function WalletDropdown() {
               type="button"
               onClick={() => {
                 setOpen(false);
-                setConnectOpen(true);
+                onOpenPalette();
               }}
               disabled={isConnecting}
               className="flex w-full items-center gap-2 px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-primary disabled:opacity-50"

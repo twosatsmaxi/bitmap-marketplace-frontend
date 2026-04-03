@@ -8,14 +8,12 @@ import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
-import WalletBottomSheet from "@/components/wallet/WalletBottomSheet";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
-  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
 
@@ -51,7 +49,6 @@ export default function Navbar() {
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
     await connect(provider);
-    setBottomSheetOpen(false);
     setPaletteOpen(false);
     setConnectingProvider(null);
   };
@@ -92,7 +89,7 @@ export default function Navbar() {
             <SoonNavInline label="Trade" className="md:hidden" />
 
             {/* Desktop: Wallet Connect */}
-            <WalletDropdown />
+            <WalletDropdown onOpenPalette={() => setPaletteOpen(true)} />
 
             {/* Mobile hamburger */}
             <button
@@ -186,7 +183,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  setBottomSheetOpen(true);
+                  setPaletteOpen(true);
                 }}
                 className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)]"
               >
@@ -205,17 +202,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Bottom Sheet */}
-      <WalletBottomSheet
-        open={bottomSheetOpen}
-        onClose={() => setBottomSheetOpen(false)}
-        onSelect={handleWalletSelect}
-        isConnecting={isConnecting}
-        connectingProvider={connectingProvider}
-        error={error}
-      />
-
-      {/* Command Palette (Cmd+K) */}
+      {/* Command Palette (Cmd+K / Connect button / mobile) */}
       <WalletCommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
