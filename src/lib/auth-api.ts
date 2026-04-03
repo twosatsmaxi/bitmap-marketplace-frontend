@@ -55,7 +55,7 @@ export async function connectToBackend(
       signature,
       message,
       nonce,
-      provider,
+      label: provider,
     }),
   });
 
