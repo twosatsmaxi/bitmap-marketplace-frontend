@@ -53,15 +53,17 @@ async function connectXverse(): Promise<WalletAddresses> {
     purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error("Wallet connection failed");
+    throw new Error(res.error?.message || "Wallet connection failed");
   }
 
-  const payment = res.result.find(
+  // Xverse provider returns { status: "success", result } or { result, id }
+  const results = res.result ?? [];
+  const payment = results.find(
     (a: any) => a.purpose === AddressPurpose.Payment
   );
-  const ordinals = res.result.find(
+  const ordinals = results.find(
     (a: any) => a.purpose === AddressPurpose.Ordinals
   );
 
@@ -97,8 +99,14 @@ export async function connectWallet(
   return connectXverse();
 }
 
-export async function disconnectWallet(): Promise<void> {
+export async function disconnectWallet(
+  walletProvider?: WalletProvider
+): Promise<void> {
   try {
+    if (walletProvider === "unisat") {
+      // UniSat has no explicit disconnect API; clearing local state is sufficient
+      return;
+    }
     const provider = getXverseProvider();
     if (provider) {
       await provider.request("wallet_renouncePermissions", undefined);
@@ -129,19 +137,24 @@ export async function signChallengeMessage(
     protocol: "BIP322",
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
     throw new Error(res.error?.message || "Message signing failed");
   }
 
-  return res.result.signature;
+  return res.result?.signature ?? res.signature;
 }
 
 export async function signPsbtInputs(
   psbtBase64: string,
   address: string,
-  inputIndices: number[]
+  inputIndices: number[],
+  walletProvider?: WalletProvider
 ): Promise<string> {
+  if (walletProvider === "unisat") {
+    return signPsbtUnisat(psbtBase64, inputIndices);
+  }
+
   const provider = getXverseProvider();
   if (!provider) throw new Error("Xverse wallet not found");
 
@@ -151,17 +164,41 @@ export async function signPsbtInputs(
     broadcast: false,
   });
 
-  if (res.status !== "success") {
+  if (res.error) {
     if (res.error?.code === 4001) throw new Error("USER_REJECTED");
     throw new Error(res.error?.message || "signPsbt failed");
   }
 
-  return res.result.psbt;
+  return res.result?.psbt ?? res.psbt;
 }
 
 export async function signPsbt(
   psbtBase64: string,
-  paymentAddress: string
+  paymentAddress: string,
+  walletProvider?: WalletProvider
 ): Promise<string> {
-  return signPsbtInputs(psbtBase64, paymentAddress, [0]);
+  return signPsbtInputs(psbtBase64, paymentAddress, [0], walletProvider);
+}
+
+async function signPsbtUnisat(
+  psbtBase64: string,
+  inputIndices: number[]
+): Promise<string> {
+  const w = window as unknown as Record<string, any>;
+  const unisat = w.unisat;
+  if (!unisat) throw new Error("Unisat wallet not found");
+
+  // UniSat expects hex, not base64
+  const psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
+
+  const signedHex: string = await unisat.signPsbt(psbtHex, {
+    autoFinalized: false,
+    toSignInputs: inputIndices.map((index) => ({
+      index,
+      disableTweakSigner: true,
+    })),
+  });
+
+  // Convert back to base64 for consistency
+  return Buffer.from(signedHex, "hex").toString("base64");
 }

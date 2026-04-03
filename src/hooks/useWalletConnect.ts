@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import {
   connectWallet,
   disconnectWallet,
@@ -12,20 +11,22 @@ import {
   connectToBackend,
   getChallenge,
   removeWalletFromProfile,
+  type Profile,
 } from "@/lib/auth-api";
 import { useWalletStore } from "@/stores/wallet-store";
 
 export function useWalletConnect() {
-  const router = useRouter();
-  const { token, profile, setAuth, updateProfile, clearAuth } =
-    useWalletStore();
+  const { profile, provider: activeProvider, setAuth, updateProfile, clearAuth } = useWalletStore();
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const authenticateWallet = useCallback(
-    async (provider?: WalletProvider, existingToken?: string) => {
+    async (provider?: WalletProvider) => {
       const addresses = await connectWallet(provider);
       const challenge = await getChallenge(addresses.ordinalsAddress);
+      if (new Date(challenge.expiration_time) <= new Date()) {
+        throw new Error("Challenge expired, please try again");
+      }
       const signature = await signChallengeMessage(
         addresses.ordinalsAddress,
         challenge.message,
@@ -36,27 +37,28 @@ export function useWalletConnect() {
         signature,
         challenge.message,
         challenge.nonce,
-        existingToken
+        provider,
       );
     },
     []
   );
 
   const connect = useCallback(
-    async (provider?: WalletProvider) => {
+    async (provider?: WalletProvider): Promise<Profile | null> => {
       setIsConnecting(true);
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
-        setAuth(auth.token, auth.profile);
-        router.push("/portfolio");
+        setAuth(auth.profile, provider ?? "xverse");
+        return auth.profile;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
+        return null;
       } finally {
         setIsConnecting(false);
       }
     },
-    [authenticateWallet, setAuth, router]
+    [authenticateWallet, setAuth]
   );
 
   const connectAnother = useCallback(
@@ -64,41 +66,39 @@ export function useWalletConnect() {
       setIsConnecting(true);
       setError(null);
       try {
-        const auth = await authenticateWallet(provider, token ?? undefined);
-        setAuth(auth.token, auth.profile);
+        const auth = await authenticateWallet(provider);
+        setAuth(auth.profile, provider ?? "xverse");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
       } finally {
         setIsConnecting(false);
       }
     },
-    [authenticateWallet, token, setAuth]
+    [authenticateWallet, setAuth]
   );
 
   const removeWallet = useCallback(
     async (ordinalsAddress: string) => {
-      if (!token) return;
+      if (!profile) return;
       setError(null);
       try {
-        const updatedProfile = await removeWalletFromProfile(
-          token,
-          ordinalsAddress
-        );
+        const updatedProfile = await removeWalletFromProfile(ordinalsAddress);
         updateProfile(updatedProfile);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Remove failed");
       }
     },
-    [token, updateProfile]
+    [profile, updateProfile]
   );
 
   const disconnect = useCallback(async () => {
-    await disconnectWallet();
+    await disconnectWallet(activeProvider ?? undefined);
     clearAuth();
-  }, [clearAuth]);
+  }, [activeProvider, clearAuth]);
 
   return {
     profile,
+    provider: activeProvider,
     wallets: profile?.wallets ?? [],
     isConnected: !!profile,
     connect,

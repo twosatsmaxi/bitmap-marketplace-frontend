@@ -1,21 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Terminal, Menu, X, Wallet } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
+import { type Profile } from "@/lib/auth-api";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isConnected, wallets, connect, isConnecting, error } = useWalletConnect();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
+  const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -48,8 +51,23 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    await connect(provider);
+    const profile = await connect(provider);
+    if (profile) {
+      setConnectedProfile(profile);
+    }
+    // Keep connectingProvider set so the connected screen can show the provider name
+  };
+
+  const handleGoToPortfolio = () => {
     setPaletteOpen(false);
+    setConnectedProfile(null);
+    setConnectingProvider(null);
+    router.push("/portfolio");
+  };
+
+  const handlePaletteClose = () => {
+    setPaletteOpen(false);
+    setConnectedProfile(null);
     setConnectingProvider(null);
   };
 
@@ -86,7 +104,7 @@ export default function Navbar() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 md:gap-3">
             {/* Trade — always visible on mobile */}
-            <SoonNavInline label="Trade" className="md:hidden" />
+            <SoonNav label="Trade" className="md:hidden" />
 
             {/* Desktop: Wallet Connect */}
             <WalletDropdown onOpenPalette={() => setPaletteOpen(true)} />
@@ -201,10 +219,12 @@ export default function Navbar() {
       {/* Command Palette (Cmd+K / Connect button / mobile) */}
       <WalletCommandPalette
         open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
+        onClose={handlePaletteClose}
         onSelect={handleWalletSelect}
         isConnecting={isConnecting}
         connectingProvider={connectingProvider}
+        connectedProfile={connectedProfile}
+        onGoToPortfolio={handleGoToPortfolio}
         error={error}
       />
     </>
@@ -235,20 +255,9 @@ function NavLink({
   );
 }
 
-function SoonNav({ label }: { label: string }) {
+function SoonNav({ label, className }: { label: string; className?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
-      {label}
-      <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-        Soon
-      </span>
-    </span>
-  );
-}
-
-function SoonNavInline({ label, className }: { label: string; className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600", className)}>
+    <span className={cn("inline-flex items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600", className)}>
       {label}
       <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
         Soon
