@@ -147,6 +147,17 @@ export default function WalletCommandPalette({
           "animate-fadeUp overflow-hidden",
         )}
       >
+        {/* Grid background */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,187,0,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,187,0,0.045) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+
         {/* Pixel rain */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           {PIXEL_RAIN.map((p, i) => (
