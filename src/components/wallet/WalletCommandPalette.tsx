@@ -72,7 +72,7 @@ function buildSequence(
     { prefix: "  bitmaps   ", value: bitmapValue, color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
     ...(walletCount > 1 ? [{ prefix: "  wallets   ", value: `${walletCount} linked`, color: "text-amber-700", speed: 18, pauseAfter: 100 }] : []),
     { prefix: "  status    ", value: "connected",                 color: "text-primary",           speed: 22, pauseAfter: 250 },
-    { prefix: "> ",           value: "enter portfolio",           color: "text-amber-200",         speed: 25, pauseAfter: 0 },
+    { prefix: "> ",           value: "ready?",                      color: "text-amber-200",         speed: 25, pauseAfter: 0 },
   ];
 }
 
@@ -435,6 +435,7 @@ export default function WalletCommandPalette({
           >
             {displayLines.map((line, i) => {
               const isActive = i === activeLineIdx && !line.done;
+              const isLastLine = sequenceDone && i === displayLines.length - 1;
               return (
                 <div key={i} className="flex items-center h-5">
                   <span className="text-amber-900/70 whitespace-pre">{line.prefix}</span>
@@ -442,16 +443,12 @@ export default function WalletCommandPalette({
                   {line.showShimmer && (
                     <span className="inline-block h-3.5 w-14 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%]" />
                   )}
-                  {isActive && !line.showShimmer && (
+                  {(isActive && !line.showShimmer || isLastLine) && (
                     <span className="inline-block w-1.5 h-3.5 bg-primary ml-px animate-[blink_1s_step-end_infinite]" />
                   )}
                 </div>
               );
             })}
-            {/* Blinking cursor after CTA line */}
-            {sequenceDone && (
-              <span className="inline-block w-1.5 h-3.5 bg-primary animate-[blink_1s_step-end_infinite]" />
-            )}
           </div>
 
           {/* Footer */}

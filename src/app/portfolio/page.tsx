@@ -25,6 +25,7 @@ export default function PortfolioPage() {
     useState<WalletProvider | null>(null);
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [activeWallet, setActiveWallet] = useState<string | null>(null);
 
   const addresses = useMemo(
     () => wallets.map((w) => w.ordinalsAddress),
@@ -94,12 +95,16 @@ export default function PortfolioPage() {
                 wallets={wallets}
                 onRemove={removeWallet}
                 onConnectAnother={() => setPaletteOpen(true)}
+                activeAddress={activeWallet}
+                onToggleFilter={(addr) =>
+                  setActiveWallet((prev) => (prev === addr ? null : addr))
+                }
               />
             </div>
           </div>
 
           {/* Grid */}
-          <MultiWalletPortfolioGrid addresses={addresses} />
+          <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} />
         </div>
       )}
 

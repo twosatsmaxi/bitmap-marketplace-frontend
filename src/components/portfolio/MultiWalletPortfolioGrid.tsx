@@ -24,6 +24,7 @@ interface MultiPortfolioResponse {
 
 interface MultiWalletPortfolioGridProps {
   addresses: string[];
+  activeWallet?: string | null;
 }
 
 // Module-level meta cache
@@ -81,6 +82,7 @@ function TraitPill({
 
 export default function MultiWalletPortfolioGrid({
   addresses,
+  activeWallet,
 }: MultiWalletPortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
@@ -148,6 +150,11 @@ export default function MultiWalletPortfolioGrid({
     return data.flatMap((page) => page.bitmaps);
   }, [data]);
 
+  const filteredBitmaps = useMemo(() => {
+    if (!activeWallet) return allBitmaps;
+    return allBitmaps.filter((b) => b.owner === activeWallet);
+  }, [allBitmaps, activeWallet]);
+
   const traits = useMemo(() => {
     if (!data || data.length === 0) return [];
     return data[0].traits || [];
@@ -159,8 +166,8 @@ export default function MultiWalletPortfolioGrid({
   }, [data]);
 
   const heights = useMemo(
-    () => allBitmaps.map((b) => b.block_height),
-    [allBitmaps]
+    () => filteredBitmaps.map((b) => b.block_height),
+    [filteredBitmaps]
   );
 
   const hasMore = useMemo(() => {
@@ -263,7 +270,7 @@ export default function MultiWalletPortfolioGrid({
       {total > 0 && (
         <div className="br-card -mt-3 p-3 md:-mt-4 md:p-5">
           <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
-            <span className="text-primary">{total}</span> bitmaps
+            <span className="text-primary">{activeWallet ? filteredBitmaps.length : total}</span> bitmaps
           </span>
         </div>
       )}
