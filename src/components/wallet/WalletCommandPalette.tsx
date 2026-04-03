@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { cn } from "@/lib/utils";
-import { WALLET_ICONS } from "./wallet-icons";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -209,11 +208,8 @@ export default function WalletCommandPalette({
                   {isSelected ? ">" : "\u00A0"}
                 </span>
                 <span className="text-zinc-600 text-xs">[{index + 1}]</span>
-                <span className="flex-shrink-0 [&_svg]:h-6 [&_svg]:w-6">
-                  {WALLET_ICONS[wallet.provider]}
-                </span>
                 <span className="text-sm">
-                  {wallet.name}
+                  {wallet.provider}
                 </span>
                 <span className="ml-auto">
                   {isWalletConnecting ? (
