@@ -15,10 +15,19 @@ export interface Profile {
 }
 
 export interface AuthResponse {
+  token: string;
   profile: Profile;
 }
 
 const API_BASE = "/api/auth";
+
+function extractErrorMessage(body: string, fallback: string): string {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed.error) return parsed.error;
+  } catch { /* not JSON */ }
+  return body || fallback;
+}
 
 export interface ChallengeResponse {
   message: string;
@@ -33,7 +42,7 @@ export async function getChallenge(address: string): Promise<ChallengeResponse> 
   );
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `Challenge failed: ${res.status}`);
+    throw new Error(extractErrorMessage(body, `Challenge failed: ${res.status}`));
   }
   return res.json() as Promise<ChallengeResponse>;
 }
@@ -44,10 +53,17 @@ export async function connectToBackend(
   message: string,
   nonce: string,
   provider?: string,
+  authToken?: string,
 ): Promise<AuthResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
   const res = await fetch(`${API_BASE}/connect`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify({
       paymentAddress: addresses.paymentAddress,
@@ -61,7 +77,7 @@ export async function connectToBackend(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `Auth connect failed: ${res.status}`);
+    throw new Error(extractErrorMessage(body, `Auth connect failed: ${res.status}`));
   }
 
   return res.json() as Promise<AuthResponse>;
@@ -92,7 +108,7 @@ export async function removeWalletFromProfile(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `Failed to remove wallet: ${res.status}`);
+    throw new Error(extractErrorMessage(body, `Failed to remove wallet: ${res.status}`));
   }
 
   return res.json() as Promise<Profile>;

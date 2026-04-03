@@ -6,8 +6,9 @@ import type { WalletProvider } from "@/lib/wallet-service";
 interface WalletState {
   profile: Profile | null;
   provider: WalletProvider | null;
+  token: string | null;
 
-  setAuth: (profile: Profile, provider: WalletProvider) => void;
+  setAuth: (profile: Profile, provider: WalletProvider, token: string) => void;
   updateProfile: (profile: Profile) => void;
   clearAuth: () => void;
 }
@@ -17,10 +18,11 @@ export const useWalletStore = create<WalletState>()(
     (set) => ({
       profile: null,
       provider: null,
+      token: null,
 
-      setAuth: (profile, provider) => set({ profile, provider }),
+      setAuth: (profile, provider, token) => set({ profile, provider, token }),
       updateProfile: (profile) => set({ profile }),
-      clearAuth: () => set({ profile: null, provider: null }),
+      clearAuth: () => set({ profile: null, provider: null, token: null }),
     }),
     { name: "bitmap-wallets" }
   )

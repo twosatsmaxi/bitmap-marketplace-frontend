@@ -32,20 +32,22 @@ export default function PortfolioPage() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
+    let profile: Profile | null = null;
     if (isConnected) {
-      await connectAnother(provider);
+      profile = await connectAnother(provider);
     } else {
-      const profile = await connect(provider);
-      if (profile) {
-        setConnectedProfile(profile);
-      }
+      profile = await connect(provider);
     }
-    setConnectingProvider(null);
+    if (profile) {
+      setConnectedProfile(profile);
+    }
+    // Keep connectingProvider set so the connected screen can show the provider name
   };
 
   const handlePaletteClose = () => {
     setPaletteOpen(false);
     setConnectedProfile(null);
+    setConnectingProvider(null);
   };
 
   return (

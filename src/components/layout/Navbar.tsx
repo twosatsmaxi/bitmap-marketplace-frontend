@@ -51,13 +51,14 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
+    let profile: Profile | null = null;
     if (isConnected) {
-      await connectAnother(provider);
+      profile = await connectAnother(provider);
     } else {
-      const profile = await connect(provider);
-      if (profile) {
-        setConnectedProfile(profile);
-      }
+      profile = await connect(provider);
+    }
+    if (profile) {
+      setConnectedProfile(profile);
     }
     // Keep connectingProvider set so the connected screen can show the provider name
   };

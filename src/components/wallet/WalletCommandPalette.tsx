@@ -37,21 +37,37 @@ interface DisplayLine {
   showShimmer?: boolean;
 }
 
+type TraitInfo = { name: string; count: number };
+
+function formatBitmapValue(bitmapCount: number, traits: TraitInfo[]): string {
+  const countStr = bitmapCount.toLocaleString("en-US");
+  if (traits.length === 0) return countStr;
+  const showTotal = Math.random() > 0.5;
+  if (showTotal) return `${countStr} (${traits.length} traits found)`;
+  const random = traits[Math.floor(Math.random() * traits.length)];
+  return `${countStr} (${random.count} ${random.name} found)`;
+}
+
 function buildSequence(
   provider: string,
   address: string,
   bitmapCount: number | null,
+  traits: TraitInfo[],
 ): TerminalLine[] {
   const short = address.length > 16
     ? address.slice(0, 8) + "…" + address.slice(-6)
     : address;
+
+  const bitmapValue = bitmapCount !== null
+    ? formatBitmapValue(bitmapCount, traits)
+    : "";
 
   return [
     { prefix: "> ",           value: `connecting ${provider}...`, color: "text-primary",           speed: 28, pauseAfter: 200 },
     { prefix: "  auth      ", value: "ok",                        color: "text-primary",           speed: 18, pauseAfter: 100 },
     { prefix: "  network   ", value: "mainnet",                   color: "text-amber-700",         speed: 18, pauseAfter: 100 },
     { prefix: "  addr      ", value: short,                       color: "text-amber-700",         speed: 12, pauseAfter: 100 },
-    { prefix: "  bitmaps   ", value: bitmapCount !== null ? bitmapCount.toLocaleString("en-US") : "", color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
+    { prefix: "  bitmaps   ", value: bitmapValue, color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
     { prefix: "  status    ", value: "ready",                     color: "text-primary",           speed: 22, pauseAfter: 250 },
     { prefix: "> ",           value: "enter portfolio",           color: "text-amber-200",         speed: 25, pauseAfter: 0 },
   ];
@@ -101,6 +117,7 @@ export default function WalletCommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
   const [bitmapCount, setBitmapCount] = useState<number | null>(null);
+  const [traits, setTraits] = useState<TraitInfo[]>([]);
 
   // Terminal boot sequence state
   const [displayLines, setDisplayLines] = useState<DisplayLine[]>([]);
@@ -110,6 +127,8 @@ export default function WalletCommandPalette({
   const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const bitmapCountRef = useRef<number | null>(null);
   bitmapCountRef.current = bitmapCount;
+  const traitsRef = useRef<TraitInfo[]>([]);
+  traitsRef.current = traits;
 
   // Refs for stable keyboard handler
   const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile });
@@ -121,6 +140,7 @@ export default function WalletCommandPalette({
       setWallets(detectWallets());
       setSelectedIndex(0);
       setBitmapCount(null);
+      setTraits([]);
       setDisplayLines([]);
       setActiveLineIdx(-1);
       setSequenceDone(false);
@@ -141,6 +161,7 @@ export default function WalletCommandPalette({
   useEffect(() => {
     if (!connectedProfile) {
       setBitmapCount(null);
+      setTraits([]);
       return;
     }
     let stale = false;
@@ -152,10 +173,15 @@ export default function WalletCommandPalette({
     })
       .then((r) => r.json())
       .then((data) => {
-        if (!stale) setBitmapCount(data.total ?? 0);
+        if (stale) return;
+        setBitmapCount(data.total ?? 0);
+        const traitStats = (data.traits as TraitInfo[] | undefined) ?? [];
+        setTraits(traitStats);
       })
       .catch(() => {
-        if (!stale) setBitmapCount(0);
+        if (stale) return;
+        setBitmapCount(0);
+        setTraits([]);
       });
     return () => { stale = true; };
   }, [connectedProfile]);
@@ -201,7 +227,7 @@ export default function WalletCommandPalette({
             const count = bitmapCountRef.current;
             if (count !== null) {
               // Data already here — type the value normally
-              const val = count.toLocaleString("en-US");
+              const val = formatBitmapValue(count, traitsRef.current);
               let vi = 0;
               function tickValue() {
                 if (cancel.cancelled) return;
@@ -282,12 +308,17 @@ export default function WalletCommandPalette({
       resumeRef.current = null;
       return;
     }
+    // Clear any leftover state from a prior run (e.g. StrictMode double-invoke)
+    setDisplayLines([]);
+    setActiveLineIdx(-1);
+    setSequenceDone(false);
+
     const primaryWallet = connectedProfile.wallets[0];
     const provider = connectingProvider ?? primaryWallet?.label ?? "wallet";
     const addr = primaryWallet?.ordinalsAddress ?? connectedProfile.primaryAddress;
-    const sequence = buildSequence(provider, addr, bitmapCount);
+    const sequence = buildSequence(provider, addr, bitmapCount, traits);
     return runSequence(sequence);
-  }, [connectedProfile, connectingProvider, runSequence]); // intentionally exclude bitmapCount — handled separately
+  }, [connectedProfile, connectingProvider, runSequence]); // intentionally exclude bitmapCount/traits — handled separately
 
   // Handle late-arriving bitmap count
   useEffect(() => {
@@ -299,7 +330,7 @@ export default function WalletCommandPalette({
       const next = [...prev];
       next[idx] = {
         ...next[idx],
-        value: bitmapCount.toLocaleString("en-US"),
+        value: formatBitmapValue(bitmapCount, traits),
         showShimmer: false,
         done: true,
       };
@@ -309,7 +340,7 @@ export default function WalletCommandPalette({
     if (resumeRef.current) {
       resumeRef.current();
     }
-  }, [bitmapCount]);
+  }, [bitmapCount, traits]);
 
   // Keyboard handler
   useEffect(() => {
@@ -393,7 +424,12 @@ export default function WalletCommandPalette({
           </div>
 
           {/* Terminal lines */}
-          <div className="px-4 py-4 font-mono text-sm space-y-0.5 min-h-[160px]">
+          <div
+            className={cn("px-4 py-4 font-mono text-sm space-y-0.5 min-h-[160px]", sequenceDone && "cursor-pointer")}
+            onClick={sequenceDone ? onGoToPortfolio : undefined}
+            role={sequenceDone ? "button" : undefined}
+            tabIndex={sequenceDone ? 0 : undefined}
+          >
             {displayLines.map((line, i) => {
               const isActive = i === activeLineIdx && !line.done;
               return (
@@ -417,10 +453,22 @@ export default function WalletCommandPalette({
 
           {/* Footer */}
           {sequenceDone && (
-            <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 animate-fadeUp">
-              <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em]">
-                {"enter portfolio · esc close"}
-              </span>
+            <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 animate-fadeUp flex gap-1">
+              <button
+                type="button"
+                onClick={onGoToPortfolio}
+                className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
+              >
+                enter portfolio
+              </button>
+              <span className="font-mono text-[10px] text-zinc-600">·</span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
+              >
+                esc close
+              </button>
             </div>
           )}
         </div>
