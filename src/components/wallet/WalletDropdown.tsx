@@ -49,21 +49,25 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
         onClick={() => {
           if (isConnected) {
             setOpen((o) => !o);
-          } else {
-            onOpenPalette();
           }
         }}
+        disabled={!isConnected}
         className={cn(
           "hidden items-center gap-2 border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors md:inline-flex",
           isConnected
             ? "border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.08)] text-primary hover:bg-[rgba(247,147,26,0.14)]"
-            : "border-[rgba(120,72,18,0.4)] text-zinc-400 hover:border-[rgba(120,72,18,0.55)] hover:text-primary"
+            : "border-[rgba(120,72,18,0.4)] text-zinc-600 cursor-not-allowed"
         )}
       >
         <Wallet className="h-3.5 w-3.5" />
         {isConnected
           ? truncateAddr(wallets[0]?.ordinalsAddress ?? "", 6, 4)
           : "Connect"}
+        {!isConnected && (
+          <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
+            Soon
+          </span>
+        )}
       </button>
 
       {/* Connected dropdown (when connected) */}

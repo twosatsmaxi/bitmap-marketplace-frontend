@@ -179,17 +179,13 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setPaletteOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-[rgba(247,147,26,0.06)]"
-              >
+              <div className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
                 <Wallet className="h-3.5 w-3.5" />
                 Connect Wallet
-              </button>
+                <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
+                  Soon
+                </span>
+              </div>
             )}
           </div>
         </div>
