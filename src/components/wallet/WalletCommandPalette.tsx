@@ -216,9 +216,9 @@ export default function WalletCommandPalette({
                   {isWalletConnecting ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : wallet.installed ? (
-                    <span className="text-emerald-500">██</span>
+                    <span className="h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
                   ) : (
-                    <span className="text-zinc-600">██</span>
+                    <span className="h-2.5 w-2.5 bg-zinc-700" />
                   )}
                 </span>
               </button>
