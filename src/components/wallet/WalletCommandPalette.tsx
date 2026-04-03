@@ -54,6 +54,7 @@ function buildSequence(
   address: string,
   bitmapCount: number | null,
   traits: TraitInfo[],
+  walletCount: number,
 ): TerminalLine[] {
   const short = address.length > 16
     ? address.slice(0, 8) + "…" + address.slice(-6)
@@ -64,12 +65,13 @@ function buildSequence(
     : "";
 
   return [
-    { prefix: "> ",           value: `connecting ${provider}...`, color: "text-primary",           speed: 28, pauseAfter: 200 },
-    { prefix: "  auth      ", value: "ok",                        color: "text-primary",           speed: 18, pauseAfter: 100 },
+    { prefix: "> ",           value: `connect ${provider}`,       color: "text-primary",           speed: 28, pauseAfter: 200 },
+    { prefix: "  signed    ", value: "bip322",                    color: "text-primary",           speed: 18, pauseAfter: 100 },
     { prefix: "  network   ", value: "mainnet",                   color: "text-amber-700",         speed: 18, pauseAfter: 100 },
     { prefix: "  addr      ", value: short,                       color: "text-amber-700",         speed: 12, pauseAfter: 100 },
     { prefix: "  bitmaps   ", value: bitmapValue, color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
-    { prefix: "  status    ", value: "ready",                     color: "text-primary",           speed: 22, pauseAfter: 250 },
+    ...(walletCount > 1 ? [{ prefix: "  wallets   ", value: `${walletCount} linked`, color: "text-amber-700", speed: 18, pauseAfter: 100 }] : []),
+    { prefix: "  status    ", value: "connected",                 color: "text-primary",           speed: 22, pauseAfter: 250 },
     { prefix: "> ",           value: "enter portfolio",           color: "text-amber-200",         speed: 25, pauseAfter: 0 },
   ];
 }
@@ -317,7 +319,7 @@ export default function WalletCommandPalette({
 
     const provider = connectingProvider ?? connectedProfile.wallets[0]?.label ?? "wallet";
     const addr = connectedAddress ?? connectedProfile.primaryAddress;
-    const sequence = buildSequence(provider, addr, bitmapCount, traits);
+    const sequence = buildSequence(provider, addr, bitmapCount, traits, connectedProfile.wallets.length);
     return runSequence(sequence);
   }, [connectedProfile, connectingProvider, runSequence]); // intentionally exclude bitmapCount/traits — handled separately
 
