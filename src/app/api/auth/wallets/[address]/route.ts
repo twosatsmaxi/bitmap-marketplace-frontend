@@ -27,8 +27,16 @@ export async function DELETE(
       }
     );
 
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const text = await res.text();
+    if (!text) {
+      return new NextResponse(null, { status: res.status });
+    }
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data, { status: res.status });
+    } catch {
+      return new NextResponse(text, { status: res.status });
+    }
   } catch {
     return NextResponse.json(
       { error: "Upstream unreachable" },
