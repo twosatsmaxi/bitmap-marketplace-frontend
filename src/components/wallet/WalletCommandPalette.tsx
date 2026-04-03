@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { cn } from "@/lib/utils";
+import { WALLET_ICONS } from "./wallet-icons";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -26,6 +27,22 @@ const PIXEL_RAIN = [
   { left: "91%", size: "3px", duration: 7.5, delay: 1.8 },
 ];
 
+// Precomputed styles to avoid recreating objects every render
+const GRID_STYLE = {
+  backgroundImage:
+    "linear-gradient(rgba(255,187,0,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,187,0,0.045) 1px, transparent 1px)",
+  backgroundSize: "28px 28px",
+} as const;
+
+const PIXEL_STYLES = PIXEL_RAIN.map((p) => ({
+  left: p.left,
+  width: p.size,
+  height: p.size,
+  background: "rgba(247, 147, 26, 0.12)",
+  outline: "1px solid rgba(126, 73, 18, 0.24)",
+  animation: `home-pixel-rain ${p.duration}s linear ${p.delay}s infinite`,
+}));
+
 export default function WalletCommandPalette({
   open,
   onClose,
@@ -34,10 +51,14 @@ export default function WalletCommandPalette({
   connectingProvider,
   error,
 }: WalletCommandPaletteProps) {
-  const [wallets, setWallets] = useState(detectWallets());
+  const [wallets, setWallets] = useState(() => detectWallets());
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
-  // Re-detect wallets when palette opens
+
+  // Refs for stable keyboard handler
+  const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, open });
+  stateRef.current = { wallets, selectedIndex, onClose, onSelect, open };
+
   useEffect(() => {
     if (open) {
       setWallets(detectWallets());
@@ -45,7 +66,6 @@ export default function WalletCommandPalette({
     }
   }, [open]);
 
-  // ASCII spinner animation
   useEffect(() => {
     if (!isConnecting) return;
     const id = setInterval(() => {
@@ -54,10 +74,12 @@ export default function WalletCommandPalette({
     return () => clearInterval(id);
   }, [isConnecting]);
 
-  // Keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!open) return;
+  // Stable keyboard handler — reads from ref so it never needs re-registration
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      const { wallets, selectedIndex, onClose, onSelect } = stateRef.current;
 
       switch (e.key) {
         case "Escape":
@@ -93,18 +115,14 @@ export default function WalletCommandPalette({
           }
           break;
       }
-    },
-    [open, wallets, selectedIndex, onClose, onSelect],
-  );
+    }
 
-  useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  }, [open]);
 
   if (!open) return null;
 
-  // Terminal prompt content
   let promptContent: React.ReactNode;
   if (error) {
     promptContent = (
@@ -123,10 +141,7 @@ export default function WalletCommandPalette({
     promptContent = (
       <>
         <span className="font-mono text-sm text-primary">{"> connect_wallet"}</span>
-        <span
-          className="inline-block w-2 h-4 bg-primary ml-0.5"
-          style={{ animation: "blink 1s step-end infinite" }}
-        />
+        <span className="inline-block w-2 h-4 bg-primary ml-0.5 animate-[blink_1s_step-end_infinite]" />
       </>
     );
   }
@@ -150,28 +165,13 @@ export default function WalletCommandPalette({
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden="true"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,187,0,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,187,0,0.045) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
+          style={GRID_STYLE}
         />
 
         {/* Pixel rain */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          {PIXEL_RAIN.map((p, i) => (
-            <span
-              key={i}
-              className="absolute"
-              style={{
-                left: p.left,
-                width: p.size,
-                height: p.size,
-                background: "rgba(247, 147, 26, 0.12)",
-                outline: "1px solid rgba(126, 73, 18, 0.24)",
-                animation: `home-pixel-rain ${p.duration}s linear ${p.delay}s infinite`,
-              }}
-            />
+          {PIXEL_STYLES.map((style, i) => (
+            <span key={i} className="absolute" style={style} />
           ))}
         </div>
 
@@ -209,8 +209,11 @@ export default function WalletCommandPalette({
                   {isSelected ? ">" : "\u00A0"}
                 </span>
                 <span className="text-zinc-600 text-xs">[{index + 1}]</span>
+                <span className="flex-shrink-0 [&_svg]:h-6 [&_svg]:w-6">
+                  {WALLET_ICONS[wallet.provider]}
+                </span>
                 <span className="text-sm">
-                  {wallet.provider}
+                  {wallet.name}
                 </span>
                 <span className="ml-auto">
                   {isWalletConnecting ? (
@@ -233,14 +236,6 @@ export default function WalletCommandPalette({
           </span>
         </div>
       </div>
-
-      {/* Blink keyframes */}
-      <style>{`
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
     </div>,
     document.body,
   );

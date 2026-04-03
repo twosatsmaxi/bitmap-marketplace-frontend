@@ -48,8 +48,8 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    await connect(provider);
-    setPaletteOpen(false);
+    const ok = await connect(provider);
+    if (ok) setPaletteOpen(false);
     setConnectingProvider(null);
   };
 
@@ -86,7 +86,7 @@ export default function Navbar() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-2 md:gap-3">
             {/* Trade — always visible on mobile */}
-            <SoonNavInline label="Trade" className="md:hidden" />
+            <SoonNav label="Trade" className="md:hidden" />
 
             {/* Desktop: Wallet Connect */}
             <WalletDropdown onOpenPalette={() => setPaletteOpen(true)} />
@@ -235,20 +235,9 @@ function NavLink({
   );
 }
 
-function SoonNav({ label }: { label: string }) {
+function SoonNav({ label, className }: { label: string; className?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
-      {label}
-      <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-        Soon
-      </span>
-    </span>
-  );
-}
-
-function SoonNavInline({ label, className }: { label: string; className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600", className)}>
+    <span className={cn("inline-flex items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600", className)}>
       {label}
       <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
         Soon

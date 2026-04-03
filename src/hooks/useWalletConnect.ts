@@ -43,15 +43,17 @@ export function useWalletConnect() {
   );
 
   const connect = useCallback(
-    async (provider?: WalletProvider) => {
+    async (provider?: WalletProvider): Promise<boolean> => {
       setIsConnecting(true);
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
         setAuth(auth.token, auth.profile);
         router.push("/portfolio");
+        return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
+        return false;
       } finally {
         setIsConnecting(false);
       }
