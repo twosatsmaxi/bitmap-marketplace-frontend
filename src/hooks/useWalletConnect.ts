@@ -32,7 +32,7 @@ export function useWalletConnect() {
         challenge.message,
         provider
       );
-      return connectToBackend(
+      const auth = await connectToBackend(
         addresses,
         signature,
         challenge.message,
@@ -40,18 +40,19 @@ export function useWalletConnect() {
         provider,
         authToken,
       );
+      return { ...auth, ordinalsAddress: addresses.ordinalsAddress };
     },
     []
   );
 
   const connect = useCallback(
-    async (provider?: WalletProvider): Promise<Profile | null> => {
+    async (provider?: WalletProvider): Promise<{ profile: Profile; ordinalsAddress: string } | null> => {
       setIsConnecting(true);
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
         setAuth(auth.profile, provider ?? "xverse", auth.token);
-        return auth.profile;
+        return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
         return null;
@@ -63,13 +64,13 @@ export function useWalletConnect() {
   );
 
   const connectAnother = useCallback(
-    async (provider?: WalletProvider): Promise<Profile | null> => {
+    async (provider?: WalletProvider): Promise<{ profile: Profile; ordinalsAddress: string } | null> => {
       setIsConnecting(true);
       setError(null);
       try {
         const auth = await authenticateWallet(provider, token ?? undefined);
         setAuth(auth.profile, provider ?? "xverse", auth.token);
-        return auth.profile;
+        return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
         return null;

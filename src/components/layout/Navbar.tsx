@@ -19,6 +19,7 @@ export default function Navbar() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -51,14 +52,12 @@ export default function Navbar() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    let profile: Profile | null = null;
-    if (isConnected) {
-      profile = await connectAnother(provider);
-    } else {
-      profile = await connect(provider);
-    }
-    if (profile) {
-      setConnectedProfile(profile);
+    const result = isConnected
+      ? await connectAnother(provider)
+      : await connect(provider);
+    if (result) {
+      setConnectedProfile(result.profile);
+      setConnectedAddress(result.ordinalsAddress);
     }
     // Keep connectingProvider set so the connected screen can show the provider name
   };
@@ -67,6 +66,7 @@ export default function Navbar() {
     setPaletteOpen(false);
     setConnectedProfile(null);
     setConnectingProvider(null);
+    setConnectedAddress(null);
     router.push("/portfolio");
   };
 
@@ -74,6 +74,7 @@ export default function Navbar() {
     setPaletteOpen(false);
     setConnectedProfile(null);
     setConnectingProvider(null);
+    setConnectedAddress(null);
   };
 
   return (
@@ -229,6 +230,7 @@ export default function Navbar() {
         isConnecting={isConnecting}
         connectingProvider={connectingProvider}
         connectedProfile={connectedProfile}
+        connectedAddress={connectedAddress}
         onGoToPortfolio={handleGoToPortfolio}
         error={error}
       />

@@ -14,6 +14,7 @@ interface WalletCommandPaletteProps {
   isConnecting: boolean;
   connectingProvider: WalletProvider | null;
   connectedProfile: Profile | null;
+  connectedAddress: string | null;
   onGoToPortfolio: () => void;
   error: string | null;
 }
@@ -110,6 +111,7 @@ export default function WalletCommandPalette({
   isConnecting,
   connectingProvider,
   connectedProfile,
+  connectedAddress,
   onGoToPortfolio,
   error,
 }: WalletCommandPaletteProps) {
@@ -313,9 +315,8 @@ export default function WalletCommandPalette({
     setActiveLineIdx(-1);
     setSequenceDone(false);
 
-    const primaryWallet = connectedProfile.wallets[0];
-    const provider = connectingProvider ?? primaryWallet?.label ?? "wallet";
-    const addr = primaryWallet?.ordinalsAddress ?? connectedProfile.primaryAddress;
+    const provider = connectingProvider ?? connectedProfile.wallets[0]?.label ?? "wallet";
+    const addr = connectedAddress ?? connectedProfile.primaryAddress;
     const sequence = buildSequence(provider, addr, bitmapCount, traits);
     return runSequence(sequence);
   }, [connectedProfile, connectingProvider, runSequence]); // intentionally exclude bitmapCount/traits — handled separately

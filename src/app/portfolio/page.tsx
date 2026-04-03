@@ -24,6 +24,7 @@ export default function PortfolioPage() {
   const [connectingProvider, setConnectingProvider] =
     useState<WalletProvider | null>(null);
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
   const addresses = useMemo(
     () => wallets.map((w) => w.ordinalsAddress),
@@ -32,14 +33,12 @@ export default function PortfolioPage() {
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
-    let profile: Profile | null = null;
-    if (isConnected) {
-      profile = await connectAnother(provider);
-    } else {
-      profile = await connect(provider);
-    }
-    if (profile) {
-      setConnectedProfile(profile);
+    const result = isConnected
+      ? await connectAnother(provider)
+      : await connect(provider);
+    if (result) {
+      setConnectedProfile(result.profile);
+      setConnectedAddress(result.ordinalsAddress);
     }
     // Keep connectingProvider set so the connected screen can show the provider name
   };
@@ -48,6 +47,7 @@ export default function PortfolioPage() {
     setPaletteOpen(false);
     setConnectedProfile(null);
     setConnectingProvider(null);
+    setConnectedAddress(null);
   };
 
   return (
@@ -110,6 +110,7 @@ export default function PortfolioPage() {
         isConnecting={isConnecting}
         connectingProvider={connectingProvider}
         connectedProfile={connectedProfile}
+        connectedAddress={connectedAddress}
         onGoToPortfolio={handlePaletteClose}
         error={error}
       />
