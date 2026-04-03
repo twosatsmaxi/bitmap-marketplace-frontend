@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
-import { cn, truncateAddr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -59,6 +59,8 @@ export default function WalletCommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
   const [bitmapCount, setBitmapCount] = useState<number | null>(null);
+  const [typedLines, setTypedLines] = useState<string[]>([]);
+  const [typingDone, setTypingDone] = useState(false);
 
   // Refs for stable keyboard handler
   const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile });
@@ -69,6 +71,8 @@ export default function WalletCommandPalette({
       setWallets(detectWallets());
       setSelectedIndex(0);
       setBitmapCount(null);
+      setTypedLines([]);
+      setTypingDone(false);
     }
   }, [open]);
 
@@ -102,6 +106,62 @@ export default function WalletCommandPalette({
       });
     return () => { stale = true; };
   }, [connectedProfile]);
+
+  // Typewriter effect for connected screen
+  useEffect(() => {
+    if (!connectedProfile) {
+      setTypedLines([]);
+      setTypingDone(false);
+      return;
+    }
+    const primaryWallet = connectedProfile.wallets[0];
+    const provider = connectingProvider ?? primaryWallet?.label ?? "wallet";
+    const addr = primaryWallet?.ordinalsAddress ?? connectedProfile.primaryAddress;
+
+    const lines = [
+      `> ${provider} connected`,
+      `  addr ${addr}`,
+      "",
+    ];
+
+    let lineIndex = 0;
+    let charIndex = 0;
+    setTypedLines([]);
+    setTypingDone(false);
+
+    const id = setInterval(() => {
+      if (lineIndex >= lines.length) {
+        clearInterval(id);
+        setTypingDone(true);
+        return;
+      }
+
+      const currentLine = lines[lineIndex];
+
+      // Empty lines appear instantly
+      if (currentLine === "") {
+        setTypedLines((prev) => [...prev, ""]);
+        lineIndex++;
+        charIndex = 0;
+        return;
+      }
+
+      charIndex++;
+      const partial = currentLine.slice(0, charIndex);
+      setTypedLines((prev) => {
+        const next = [...prev];
+        next[lineIndex] = partial;
+        return next;
+      });
+
+      if (charIndex >= currentLine.length) {
+        lineIndex++;
+        charIndex = 0;
+      }
+    }, 25);
+
+    return () => clearInterval(id);
+  }, [connectedProfile, connectingProvider]);
 
   // Stable keyboard handler — reads from ref so it never needs re-registration
   useEffect(() => {
@@ -164,12 +224,8 @@ export default function WalletCommandPalette({
 
   if (!open) return null;
 
-  // Connected info screen
+  // Connected info screen — terminal typewriter
   if (connectedProfile) {
-    const primaryWallet = connectedProfile.wallets[0];
-    const walletLabel = connectingProvider ?? primaryWallet?.label ?? "Wallet";
-    const addr = primaryWallet?.ordinalsAddress ?? connectedProfile.primaryAddress;
-
     return createPortal(
       <div className="fixed inset-0 z-[100] flex justify-center">
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -195,39 +251,40 @@ export default function WalletCommandPalette({
             ))}
           </div>
 
-          {/* Terminal Prompt Line */}
-          <div className="px-4 py-3 border-b border-[rgba(120,72,18,0.35)]">
-            <span className="font-mono text-sm text-emerald-500">{"> wallet_connected"}</span>
-            <span className="ml-2 font-mono text-sm text-emerald-500">{"✓"}</span>
-          </div>
-
-          {/* Wallet Info */}
-          <div className="px-4 py-4 space-y-3">
-            <InfoRow label="WALLET" value={String(walletLabel)} />
-            <InfoRow label="ADDR" value={truncateAddr(addr, 8, 6)} />
-            <div className="flex items-center gap-3">
-              <span className="w-20 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-                Bitmaps
-              </span>
-              {bitmapCount === null ? (
-                <div className="h-4 w-16 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%]" />
-              ) : (
-                <span className="font-mono text-sm font-bold text-zinc-200">
-                  {bitmapCount.toLocaleString("en-US")}
+          {/* Terminal output */}
+          <div className="px-4 py-4 font-mono text-sm space-y-1 min-h-[100px]">
+            {typedLines.map((line, i) => (
+              <div key={i} className="flex">
+                <span className={i === 0 ? "text-emerald-500" : "text-zinc-400"}>
+                  {line}
                 </span>
-              )}
-            </div>
-            {connectedProfile.wallets.length > 1 && (
-              <InfoRow label="WALLETS" value={`${connectedProfile.wallets.length} linked`} />
+                {/* Blinking cursor on the line currently being typed */}
+                {!typingDone && i === typedLines.length - 1 && line !== "" && (
+                  <span className="inline-block w-2 h-4 bg-emerald-500 ml-0.5 animate-[blink_1s_step-end_infinite]" />
+                )}
+              </div>
+            ))}
+            {/* Bitmap count line appears after typing finishes */}
+            {typingDone && (
+              <div className="flex text-zinc-400">
+                <span>{"  bitmaps "}</span>
+                {bitmapCount === null ? (
+                  <span className="inline-block h-4 w-12 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] ml-1" />
+                ) : (
+                  <span className="text-primary font-bold">{bitmapCount.toLocaleString("en-US")}</span>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 flex items-center justify-between">
-            <span className="font-mono text-[10px] text-zinc-600">
-              {"enter portfolio · esc close"}
-            </span>
-          </div>
+          {/* Footer — only shows after typewriter completes */}
+          {typingDone && (
+            <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2">
+              <span className="font-mono text-[10px] text-zinc-600">
+                {"enter portfolio · esc close"}
+              </span>
+            </div>
+          )}
         </div>
       </div>,
       document.body,
@@ -350,15 +407,3 @@ export default function WalletCommandPalette({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-20 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-        {label}
-      </span>
-      <span className="font-mono text-sm font-bold text-zinc-200">
-        {value}
-      </span>
-    </div>
-  );
-}
