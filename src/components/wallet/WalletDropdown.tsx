@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Wallet, X, Plus, LogOut, Loader2 } from "lucide-react";
+import { Wallet, X, Plus, LogOut, Loader2, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { useWalletLabelsStore } from "@/stores/wallet-labels";
@@ -11,6 +12,7 @@ interface WalletDropdownProps {
 }
 
 export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,6 +135,17 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
           </div>
 
           <div className="border-t border-[rgba(120,72,18,0.35)] p-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                router.push("/profile");
+              }}
+              className="flex w-full items-center gap-2 px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-primary"
+            >
+              <User className="h-3 w-3" />
+              Profile
+            </button>
             <button
               type="button"
               onClick={() => {

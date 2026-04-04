@@ -101,9 +101,6 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
-            {isConnected && (
-              <NavLink href="/profile" active={pathname === "/profile"}>Profile</NavLink>
-            )}
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
@@ -178,15 +175,6 @@ export default function Navbar() {
           >
             Explore
           </DrawerNavLink>
-          {isConnected && (
-            <DrawerNavLink
-              href="/profile"
-              active={pathname === "/profile"}
-              onClick={() => setMenuOpen(false)}
-            >
-              Profile
-            </DrawerNavLink>
-          )}
           <DrawerSoonNav label="Market" />
           <DrawerSoonNav label="Activity" />
 

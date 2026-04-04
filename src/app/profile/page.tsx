@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2, User } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
 import WalletBar from "@/components/wallet/WalletBar";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
-import { truncateAddr } from "@/lib/utils";
 
 export default function ProfilePage() {
   const {
@@ -18,7 +17,6 @@ export default function ProfilePage() {
     connect,
     connectAnother,
     removeWallet,
-    disconnect,
     isConnecting,
     error,
   } = useWalletConnect();
@@ -51,10 +49,6 @@ export default function ProfilePage() {
     setConnectedProfile(null);
     setConnectingProvider(null);
     setConnectedAddress(null);
-  };
-
-  const handleDisconnect = async () => {
-    await disconnect();
   };
 
   return (
@@ -106,62 +100,6 @@ export default function ProfilePage() {
                   setActiveWallet((prev) => (prev === addr ? null : addr))
                 }
               />
-            </div>
-          </div>
-
-          {/* Account Info */}
-          <div className="br-card p-3 md:p-5">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center border border-[rgba(120,72,18,0.4)] bg-[rgba(247,147,26,0.08)]">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-mono text-sm font-bold uppercase tracking-[0.1em] text-zinc-200">
-                    Account
-                  </h2>
-                  <p className="font-mono text-[10px] text-zinc-500">
-                    Manage your profile and connected wallets
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                {/* Primary Address */}
-                <div className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                    Primary Address
-                  </p>
-                  <p className="mt-1 font-mono text-xs text-zinc-300">
-                    {profile?.primaryAddress
-                      ? truncateAddr(profile.primaryAddress, 10, 6)
-                      : "—"}
-                  </p>
-                </div>
-
-                {/* Profile ID */}
-                <div className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                    Profile ID
-                  </p>
-                  <p className="mt-1 font-mono text-xs text-zinc-300">
-                    {profile?.id
-                      ? `${profile.id.slice(0, 8)}…${profile.id.slice(-8)}`
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Disconnect Button */}
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={handleDisconnect}
-                  className="border border-red-900/50 bg-red-950/20 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-400 transition-colors hover:bg-red-950/30"
-                >
-                  Disconnect All
-                </button>
-              </div>
             </div>
           </div>
 
