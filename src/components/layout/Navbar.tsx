@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Terminal, Menu, X, Wallet } from "lucide-react";
+import { Terminal, Menu, X, Wallet, User } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";

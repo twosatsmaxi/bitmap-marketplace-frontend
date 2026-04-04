@@ -225,7 +225,13 @@ describe("useWalletConnect", () => {
         token: "existing-jwt",
       });
 
-      vi.mocked(connectWallet).mockResolvedValue(mockAddresses);
+      // Use a different address for the new wallet (not already in profile)
+      const newWalletAddresses: WalletAddresses = {
+        paymentAddress: "bc1qnewpay",
+        ordinalsAddress: "bc1qneword",
+      };
+
+      vi.mocked(connectWallet).mockResolvedValue(newWalletAddresses);
       vi.mocked(getChallenge).mockResolvedValue(mockChallenge);
       vi.mocked(signChallengeMessage).mockResolvedValue("sig");
       vi.mocked(connectToBackend).mockResolvedValue(mockAuth);
@@ -237,7 +243,7 @@ describe("useWalletConnect", () => {
       });
 
       expect(connectToBackend).toHaveBeenCalledWith(
-        mockAddresses,
+        newWalletAddresses,
         "sig",
         "Sign this message",
         "abc123",
@@ -253,7 +259,13 @@ describe("useWalletConnect", () => {
         token: "existing-jwt",
       });
 
-      vi.mocked(connectWallet).mockResolvedValue(mockAddresses);
+      // Use a different address for the new wallet (not already in profile)
+      const newWalletAddresses: WalletAddresses = {
+        paymentAddress: "bc1qnewpay",
+        ordinalsAddress: "bc1qneword",
+      };
+
+      vi.mocked(connectWallet).mockResolvedValue(newWalletAddresses);
       vi.mocked(getChallenge).mockResolvedValue(mockChallenge);
       vi.mocked(signChallengeMessage).mockResolvedValue("sig");
       vi.mocked(connectToBackend).mockResolvedValue(mockAuth);
@@ -267,7 +279,7 @@ describe("useWalletConnect", () => {
 
       expect(connectResult!).toEqual({
         profile: mockAuth.profile,
-        ordinalsAddress: "bc1qord",
+        ordinalsAddress: "bc1qneword",
       });
     });
 
