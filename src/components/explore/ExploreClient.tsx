@@ -14,6 +14,7 @@ import type {
 } from "./types";
 import { cn } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
+import EmptyState from "@/components/ui/EmptyState";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;  // Divisible by 2, 3, and 4 for clean grid rows
@@ -348,11 +349,10 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           />
         ))}
         {blocks.length === 0 && (
-          <div className="col-span-full py-16 md:py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
-            <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
-              No matching bitmaps found for this page
-            </p>
-          </div>
+          <EmptyState
+            title="No matching bitmaps found for this page"
+            className="col-span-full"
+          />
         )}
       </div>
 

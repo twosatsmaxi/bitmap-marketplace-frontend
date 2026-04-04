@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
+import ErrorState from "@/components/ui/ErrorState";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -481,7 +482,7 @@ export default function WalletCommandPalette({
   let promptContent: React.ReactNode;
   if (error) {
     promptContent = (
-      <span className="font-mono text-sm text-red-400">{`> ERR: ${error}`}</span>
+      <ErrorState variant="terminal" message={error} />
     );
   } else if (isConnecting) {
     promptContent = (

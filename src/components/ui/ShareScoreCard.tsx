@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Download, Share2 } from "lucide-react";
+import Button from "@/components/ui/Button";
 import {
   generateScoreCard,
   downloadScoreCard,
@@ -161,22 +162,25 @@ export function ShareScoreCard({
 
         {/* Buttons */}
         <div className="flex gap-3 justify-center">
-          <button
+          <Button
             onClick={handleDownload}
             disabled={!imgSrc}
-            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 text-zinc-200 font-mono font-bold text-sm hover:bg-zinc-700 transition-colors disabled:opacity-40"
+            variant="ghost"
+            size="md"
+            className="bg-zinc-800 text-zinc-200 hover:bg-zinc-700 border-none"
           >
             <Download className="h-4 w-4" />
             DOWNLOAD
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleShare}
             disabled={!imgSrc}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-black font-mono font-bold text-sm hover:bg-primary/80 transition-colors disabled:opacity-40"
+            variant="primary"
+            size="md"
           >
             <Share2 className="h-4 w-4" />
             SHARE ON X
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -17,6 +17,8 @@ import type {
 } from "./types";
 import { cn, abbreviateNumber } from "@/lib/utils";
 import { use3DPreference } from "@/hooks/use3DPreference";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
 
 const RENDER_API = "";
 const GRID_SIZE = 12;
@@ -523,11 +525,10 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
         )}
 
         {blocks.length === 0 && !isLoading && (
-          <div className="col-span-full py-16 md:py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
-            <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
-              No matching bitmaps found
-            </p>
-          </div>
+          <EmptyState
+            title="No matching bitmaps found"
+            className="col-span-full"
+          />
         )}
       </div>
 
@@ -558,11 +559,10 @@ export default function ExploreClientInfinite({ latestBlock }: { latestBlock: nu
       </button>
 
       {error && (
-        <div className="text-center py-4">
-          <p className="font-mono text-sm text-red-400">
-            Failed to load bitmaps. <button onClick={() => mutate()} className="underline hover:text-red-300">Retry</button>
-          </p>
-        </div>
+        <ErrorState
+          message="Failed to load bitmaps."
+          retry={() => mutate()}
+        />
       )}
     </div>
   );

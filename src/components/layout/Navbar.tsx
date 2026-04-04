@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Terminal, Menu, X, Wallet } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 import WalletDropdown from "@/components/wallet/WalletDropdown";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
@@ -116,15 +118,16 @@ export default function Navbar() {
             <WalletDropdown onOpenPalette={() => setPaletteOpen(true)} />
 
             {/* Mobile hamburger */}
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.06)] text-zinc-400 transition-colors hover:text-primary active:scale-95 md:hidden"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center active:scale-95 md:hidden px-0 py-0"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
             >
               {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
+            </Button>
           </div>
         </div>
       </nav>
@@ -155,14 +158,15 @@ export default function Navbar() {
           <span className="font-mono text-sm font-bold uppercase tracking-[0.12em] text-primary">
             Menu
           </span>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setMenuOpen(false)}
-            className="flex h-10 w-10 items-center justify-center text-zinc-400 transition-colors hover:text-primary active:scale-95"
+            className="flex h-10 w-10 items-center justify-center border-none bg-transparent active:scale-95 px-0 py-0"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Drawer Content */}
@@ -197,18 +201,14 @@ export default function Navbar() {
                   {truncateAddr(wallets[0]?.ordinalsAddress ?? "", 6, 4)}
                 </span>
                 {wallets.length > 1 && (
-                  <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] text-primary">
-                    +{wallets.length - 1}
-                  </span>
+                  <Badge variant="soon">+{wallets.length - 1}</Badge>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
                 <Wallet className="h-3.5 w-3.5" />
                 Connect Wallet
-                <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-                  Soon
-                </span>
+                <Badge variant="soon">Soon</Badge>
               </div>
             )}
           </div>
@@ -266,9 +266,7 @@ function SoonNav({ label, className }: { label: string; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2 border border-[rgba(120,72,18,0.4)] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600", className)}>
       {label}
-      <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">
-        Soon
-      </span>
+      <Badge variant="soon">Soon</Badge>
     </span>
   );
 }
@@ -306,9 +304,7 @@ function DrawerSoonNav({ label }: { label: string }) {
       <span className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-zinc-600">
         {label}
       </span>
-      <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-primary">
-        Soon
-      </span>
+      <Badge variant="soon" className="font-bold">Soon</Badge>
     </div>
   );
 }
