@@ -17,10 +17,12 @@ export const useWalletLabelsStore = create<WalletLabelsState>()(
 
       getLabel: (address) => get().labels[address],
 
-      setLabel: (address, label) =>
+      setLabel: (address, label) => {
+        if (get().labels[address] === label) return;
         set((state) => ({
           labels: { ...state.labels, [address]: label },
-        })),
+        }));
+      },
 
       removeLabel: (address) =>
         set((state) => {

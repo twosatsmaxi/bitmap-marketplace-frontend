@@ -11,7 +11,6 @@ import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfoli
 
 export default function ProfilePage() {
   const {
-    profile,
     wallets,
     isConnected,
     connect,

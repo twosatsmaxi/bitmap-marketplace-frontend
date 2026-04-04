@@ -469,7 +469,7 @@ export default function WalletCommandPalette({
                 onClick={() => { setTypedResponse("y"); setTimeout(onGoToProfile, 180); }}
                 className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
               >
-                y portfolio
+                y profile
               </button>
               <span className="font-mono text-[10px] text-zinc-600">·</span>
               <button

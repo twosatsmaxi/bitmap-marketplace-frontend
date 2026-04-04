@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Pencil } from "lucide-react";
 import { useWalletLabelsStore } from "@/stores/wallet-labels";
 import { cn } from "@/lib/utils";
@@ -40,47 +40,36 @@ export function EditableWalletLabel({
     }
   }, [currentLabel, isEditing]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     const trimmed = inputValue.trim();
     const finalLabel = trimmed || defaultLabel;
-    
+
     setLabel(address, finalLabel);
     setIsEditing(false);
     setInputValue(finalLabel);
-    
+
     if (onLabelChange && finalLabel !== currentLabel) {
       onLabelChange(finalLabel);
     }
-  }, [address, currentLabel, defaultLabel, inputValue, onLabelChange, setLabel]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setIsEditing(false);
     setInputValue(currentLabel);
-  }, [currentLabel]);
+  };
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      switch (e.key) {
-        case "Enter":
-          e.preventDefault();
-          handleSave();
-          break;
-        case "Escape":
-          e.preventDefault();
-          handleCancel();
-          break;
-      }
-    },
-    [handleSave, handleCancel]
-  );
-
-  const handleBlur = useCallback(() => {
-    handleSave();
-  }, [handleSave]);
-
-  const handleClick = useCallback(() => {
-    setIsEditing(true);
-  }, []);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    switch (e.key) {
+      case "Enter":
+        e.preventDefault();
+        handleSave();
+        break;
+      case "Escape":
+        e.preventDefault();
+        handleCancel();
+        break;
+    }
+  };
 
   if (isEditing) {
     return (
@@ -90,7 +79,7 @@ export function EditableWalletLabel({
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value.slice(0, MAX_LABEL_LENGTH))}
         onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
+        onBlur={handleSave}
         maxLength={MAX_LABEL_LENGTH}
         className={cn(
           "w-full min-w-[80px] bg-transparent px-1 py-0.5",
@@ -106,7 +95,7 @@ export function EditableWalletLabel({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={() => setIsEditing(true)}
       className={cn(
         "group inline-flex items-center gap-1.5",
         "font-mono text-xs text-primary",
