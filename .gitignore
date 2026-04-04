@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Dolt database files (added by bd init)
 *.db
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key
