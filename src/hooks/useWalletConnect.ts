@@ -70,13 +70,14 @@ export function useWalletConnect() {
       try {
         // Check if wallet is already connected before attempting full auth flow
         const addresses = await connectWallet(provider);
-        const alreadyLinked = profile?.wallets.some(
+        const existing = profile?.wallets.find(
           (w) =>
             w.ordinalsAddress === addresses.ordinalsAddress ||
             w.paymentAddress === addresses.paymentAddress
         );
-        if (alreadyLinked) {
-          setError("This wallet is already connected");
+        if (existing) {
+          const short = `${existing.ordinalsAddress.slice(0, 6)}...${existing.ordinalsAddress.slice(-4)}`;
+          setError(`Wallet ${short} (${existing.label}) is already linked to your profile`);
           return null;
         }
 
