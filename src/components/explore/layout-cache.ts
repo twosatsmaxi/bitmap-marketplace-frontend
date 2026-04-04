@@ -4,13 +4,14 @@ export interface LayoutCacheEntry {
   squares: WorkerSquare[];
   layoutWidth: number;
   usedHeight: number;
+  /** Pre-built WebGL instance data (x, y, r, index) — avoids re-allocation on cache hit */
+  instanceData?: Float32Array;
 }
 
 /**
- * Module-level cache for worker layout results, keyed by
- * `${blockHeight}:${canvasSize}`. Survives component unmount so
- * navigating explore -> detail -> back skips the worker and the 3s
- * entry animation entirely.
+ * Module-level cache keyed by `${blockHeight}:${canvasSize}`.
+ * Survives component unmount so navigating explore -> detail -> back
+ * skips the worker and the 3s entry animation entirely.
  */
 const cache = new Map<string, LayoutCacheEntry>();
 
@@ -30,7 +31,6 @@ export function setLayoutCache(
   canvasSize: number,
   entry: LayoutCacheEntry
 ): void {
-  // Cap at 200 entries (~50 KB each) to avoid unbounded growth
   if (cache.size >= 200) {
     const firstKey = cache.keys().next().value;
     if (firstKey !== undefined) cache.delete(firstKey);

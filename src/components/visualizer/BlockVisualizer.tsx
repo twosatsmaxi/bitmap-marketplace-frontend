@@ -126,6 +126,7 @@ export function BlockVisualizer({
   const [highScore, setHighScore] = useState(0);
   const [matchAnimation, setMatchAnimation] = useState<{ active: boolean; bucket: number }>({ active: false, bucket: 0 });
   const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [scoreBreakdown, setScoreBreakdown] = useState<{ baseScore: number; movePenalty: number; timeBonus: number; stars: number } | null>(null);
 
   // Game state refs
   const gameStateRef = useRef({
@@ -214,6 +215,7 @@ export function BlockVisualizer({
     setTimeElapsed(0);
     setMatchAnimation({ active: false, bucket: 0 });
     setIsNewHighScore(false);
+    setScoreBreakdown(null);
 
     // Reset all cubes to hidden state and regenerate pair assignments
     if (txGroupRef.current && gameMode === "memory") {
@@ -390,6 +392,11 @@ export function BlockVisualizer({
           if (newMatches >= totalPairs) {
             const finalTime = Math.floor((Date.now() - game.startTime) / 1000);
             const finalScore = calculateScore(newMoves, finalTime, totalPairs);
+            const baseScore = totalPairs * 100;
+            const movePenalty = Math.max(0, (newMoves - totalPairs) * 10);
+            const timeBonus = Math.max(0, 300 - finalTime) * 2;
+            const stars = newMoves <= totalPairs * 2 ? 3 : newMoves <= totalPairs * 3 ? 2 : 1;
+            setScoreBreakdown({ baseScore, movePenalty, timeBonus, stars });
             setScore(finalScore);
             setTimeElapsed(finalTime);
             capturedSceneRef.current = captureThreeScene(rendererRef.current, sceneRef.current, cameraRef.current);
@@ -877,16 +884,9 @@ export function BlockVisualizer({
           )}
           
           {/* Game Over Screen */}
-          {gameOver && (() => {
-            const totalPairs = Math.floor(blockBytes.length / 2);
-            const baseScore = totalPairs * 100;
-            const movePenalty = Math.max(0, (moves - totalPairs) * 10);
-            const timeBonus = Math.max(0, 300 - timeElapsed) * 2;
-            const stars = moves <= totalPairs * 2 ? 3 : moves <= totalPairs * 3 ? 2 : 1;
-            return (
+          {gameOver && scoreBreakdown && (
             <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
               <div className="text-center pointer-events-auto max-w-sm w-full mx-4">
-                {/* New High Score celebration */}
                 {isNewHighScore && (
                   <div className="mb-4 animate-bounce">
                     <p className="font-mono text-lg font-bold text-primary animate-pulse" style={{ textShadow: "0 0 20px rgba(247,147,26,0.6), 0 0 40px rgba(247,147,26,0.3), 0 0 60px rgba(247,147,26,0.15)" }}>
@@ -897,43 +897,40 @@ export function BlockVisualizer({
 
                 <h1 className="font-mono text-4xl font-bold text-primary mb-3">COMPLETE!</h1>
 
-                {/* Star Rating */}
                 <div className="flex justify-center gap-1 mb-4">
                   {[1, 2, 3].map((i) => (
                     <span
                       key={i}
-                      className={`text-3xl transition-all duration-500 ${i <= stars ? "opacity-100 scale-100" : "opacity-20 scale-75"}`}
-                      style={i <= stars ? {
+                      className={`text-3xl transition-all duration-500 ${i <= scoreBreakdown.stars ? "opacity-100 scale-100" : "opacity-20 scale-75"}`}
+                      style={i <= scoreBreakdown.stars ? {
                         filter: "drop-shadow(0 0 6px rgba(247,147,26,0.5))",
                         animationDelay: `${i * 150}ms`,
                       } : undefined}
                     >
-                      {i <= stars ? "\u2605" : "\u2606"}
+                      {i <= scoreBreakdown.stars ? "\u2605" : "\u2606"}
                     </span>
                   ))}
                 </div>
                 <p className="font-mono text-xs text-zinc-500 mb-5">
-                  {stars === 3 ? "Perfect memory!" : stars === 2 ? "Great recall!" : "Good effort!"}
+                  {scoreBreakdown.stars === 3 ? "Perfect memory!" : scoreBreakdown.stars === 2 ? "Great recall!" : "Good effort!"}
                 </p>
 
-                {/* Final Score */}
                 <p className="font-mono text-3xl font-bold text-white mb-5" style={isNewHighScore ? { textShadow: "0 0 12px rgba(247,147,26,0.4)" } : undefined}>
                   {score}
                 </p>
 
-                {/* Score Breakdown */}
                 <div className="br-card p-4 mb-5 text-left">
                   <div className="flex justify-between font-mono text-sm mb-2">
-                    <span className="text-zinc-400">Base ({totalPairs} pairs)</span>
-                    <span className="text-white">+{baseScore}</span>
+                    <span className="text-zinc-400">Base ({Math.floor(blockBytes.length / 2)} pairs)</span>
+                    <span className="text-white">+{scoreBreakdown.baseScore}</span>
                   </div>
                   <div className="flex justify-between font-mono text-sm mb-2">
                     <span className="text-zinc-400">Move penalty ({moves} moves)</span>
-                    <span className={movePenalty > 0 ? "text-red-400" : "text-zinc-500"}>{movePenalty > 0 ? `-${movePenalty}` : "0"}</span>
+                    <span className={scoreBreakdown.movePenalty > 0 ? "text-red-400" : "text-zinc-500"}>{scoreBreakdown.movePenalty > 0 ? `-${scoreBreakdown.movePenalty}` : "0"}</span>
                   </div>
                   <div className="flex justify-between font-mono text-sm mb-2">
                     <span className="text-zinc-400">Time bonus ({formatTime(timeElapsed)})</span>
-                    <span className={timeBonus > 0 ? "text-green-400" : "text-zinc-500"}>+{timeBonus}</span>
+                    <span className={scoreBreakdown.timeBonus > 0 ? "text-green-400" : "text-zinc-500"}>+{scoreBreakdown.timeBonus}</span>
                   </div>
                   <div className="border-t border-zinc-700 pt-2 mt-2 flex justify-between font-mono text-sm font-bold">
                     <span className="text-zinc-300">Total</span>
@@ -957,8 +954,7 @@ export function BlockVisualizer({
                 </div>
               </div>
             </div>
-            );
-          })()}
+          )}
 
           {capturedSceneRef.current && (
             <ShareScoreCard

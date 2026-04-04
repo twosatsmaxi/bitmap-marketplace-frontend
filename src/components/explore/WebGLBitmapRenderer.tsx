@@ -409,7 +409,7 @@ export default function WebGLBitmapRenderer({
         prevDataRef.current = { squares, layoutWidth, usedHeight };
 
         // Persist to module-level cache so remounts skip the worker
-        setLayoutCache(heightRef.current, scaledSize, { squares, layoutWidth, usedHeight });
+        setLayoutCache(heightRef.current, scaledSize, { squares, layoutWidth, usedHeight, instanceData: data });
 
         // If skipEntryAnimation, render final frame immediately (no animation)
         if (skipEntryAnimationRef.current) {
@@ -564,15 +564,19 @@ export default function WebGLBitmapRenderer({
       if (cached) {
         const { squares, layoutWidth, usedHeight } = cached;
         const count = Math.min(squares.length, MAX_INSTANCES);
-        const data = new Float32Array(count * 4);
-        for (let i = 0; i < count; i++) {
-          const sq = squares[i];
-          const off = i * 4;
-          data[off] = sq.x;
-          data[off + 1] = sq.y;
-          data[off + 2] = sq.r;
-          data[off + 3] = i;
-        }
+        const data = cached.instanceData ?? (() => {
+          const d = new Float32Array(count * 4);
+          for (let i = 0; i < count; i++) {
+            const sq = squares[i];
+            const off = i * 4;
+            d[off] = sq.x;
+            d[off + 1] = sq.y;
+            d[off + 2] = sq.r;
+            d[off + 3] = i;
+          }
+          cached.instanceData = d;
+          return d;
+        })();
         instanceDataRef.current = data;
         prevDataRef.current = { squares, layoutWidth, usedHeight };
 
