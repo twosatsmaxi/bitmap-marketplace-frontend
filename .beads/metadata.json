@@ -1,8 +1,7 @@
 {
   "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "embedded",
-  "dolt_server_port": 13382,
+  "dolt_mode": "server",
   "dolt_database": "bitmap_marketplace_frontend",
   "project_id": "c4d99dd8-489c-40e6-b230-4e7361a6ca75"
 }
