@@ -15,6 +15,24 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 8)}...${addr.slice(-8)}`;
 }
 
+/** Count badge that streams in after data loads */
+async function BitmapCountBadge({ address }: { address: string }) {
+  let initialData: PortfolioResponse | null;
+  try {
+    initialData = await getPortfolio(address, 0, 24);
+  } catch {
+    initialData = null;
+  }
+
+  if (!initialData) return null;
+
+  return (
+    <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] text-zinc-400">
+      <span className="text-primary">{initialData.total}</span> bitmaps
+    </span>
+  );
+}
+
 /** Async component that streams in after data loads */
 async function PortfolioContent({ address }: { address: string }) {
   let initialData: PortfolioResponse | null;
@@ -24,25 +42,7 @@ async function PortfolioContent({ address }: { address: string }) {
     initialData = null;
   }
 
-  return (
-    <>
-      {/* Total count badge - streams in with data */}
-      {initialData && (
-        <div className="br-card p-3 md:p-5 -mt-3 md:-mt-4">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] md:text-xs text-zinc-500 tracking-wide">
-              {truncateAddress(address)}
-            </span>
-            <CopyAddressButton address={address} />
-            <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] text-zinc-400">
-              <span className="text-primary">{initialData.total}</span> bitmaps
-            </span>
-          </div>
-        </div>
-      )}
-      <PortfolioGrid address={address} initialData={initialData} />
-    </>
-  );
+  return <PortfolioGrid address={address} initialData={initialData} />;
 }
 
 function PortfolioSkeleton() {
@@ -87,7 +87,7 @@ export default async function PortfolioPage({ params }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
-      {/* Header - renders instantly */}
+      {/* Header - renders instantly, count badge streams in */}
       <div className="br-card p-3 md:p-5">
         <div className="flex flex-col gap-1">
           <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
@@ -98,6 +98,9 @@ export default async function PortfolioPage({ params }: Props) {
               {truncateAddress(address)}
             </span>
             <CopyAddressButton address={address} />
+            <Suspense>
+              <BitmapCountBadge address={address} />
+            </Suspense>
           </div>
         </div>
       </div>
