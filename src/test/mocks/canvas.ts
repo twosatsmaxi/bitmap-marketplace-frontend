@@ -1,0 +1,56 @@
+/**
+ * Creates a mock CanvasRenderingContext2D for testing renderers in Node/happy-dom.
+ */
+export function createMockCanvasContext(): CanvasRenderingContext2D {
+  const gradient = {
+    addColorStop: vi.fn(),
+  };
+
+  return {
+    fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    clearRect: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    arc: vi.fn(),
+    arcTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    rect: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    clip: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
+    setTransform: vi.fn(),
+    resetTransform: vi.fn(),
+    drawImage: vi.fn(),
+    createLinearGradient: vi.fn().mockReturnValue(gradient),
+    createRadialGradient: vi.fn().mockReturnValue(gradient),
+    measureText: vi.fn().mockReturnValue({ width: 50 }),
+    fillText: vi.fn(),
+    strokeText: vi.fn(),
+    getImageData: vi.fn().mockReturnValue({ data: new Uint8ClampedArray(4) }),
+    putImageData: vi.fn(),
+    canvas: { width: 512, height: 512 },
+    fillStyle: "#000",
+    strokeStyle: "#000",
+    lineWidth: 1,
+    lineCap: "butt",
+    lineJoin: "miter",
+    globalAlpha: 1,
+    globalCompositeOperation: "source-over",
+    font: "10px sans-serif",
+    textAlign: "start",
+    textBaseline: "alphabetic",
+    shadowColor: "rgba(0,0,0,0)",
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
+  } as unknown as CanvasRenderingContext2D;
+}

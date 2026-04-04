@@ -1,8 +1,8 @@
 "use client";
 
 import type { Bitmap } from "@/lib/types";
-import StatusPill from "@/components/ui/StatusPill";
-import RarityBadge from "@/components/ui/RarityBadge";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 import { Wallet, Tag, ArrowRightLeft } from "lucide-react";
 
 export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
@@ -14,35 +14,39 @@ export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
       <div className="flex flex-col gap-3">
         {bitmap.listingStatus === "listed" ? (
           <>
-            <button
+            <Button
               disabled
-              className="br-btn flex w-full items-center justify-center gap-2 !bg-primary px-4 py-3 !text-black !border-transparent opacity-50 cursor-not-allowed"
+              variant="primary"
+              size="lg"
+              className="w-full"
               aria-label="Buy Now (coming soon)"
             >
               <Wallet className="w-4 h-4" />
               Buy Now
-              <span className="rounded-sm bg-black/20 px-1.5 py-0.5 text-[9px] font-bold uppercase">Soon</span>
-            </button>
-            <button
+              <Badge variant="chip">Soon</Badge>
+            </Button>
+            <Button
               disabled
-              className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3 opacity-50 cursor-not-allowed"
+              size="lg"
+              className="w-full"
               aria-label="Make Offer (coming soon)"
             >
               <Tag className="w-4 h-4" />
               Make Offer
-              <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
-            </button>
+              <Badge variant="soon">Soon</Badge>
+            </Button>
           </>
         ) : (
-          <button
+          <Button
             disabled
-            className="br-btn flex w-full items-center justify-center gap-2 px-4 py-3 opacity-50 cursor-not-allowed"
+            size="lg"
+            className="w-full"
             aria-label="Make Offer (coming soon)"
           >
             <Tag className="w-4 h-4" />
             Make Offer
-            <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
-          </button>
+            <Badge variant="soon">Soon</Badge>
+          </Button>
         )}
       </div>
 
@@ -54,14 +58,16 @@ export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
             {bitmap.owner.slice(0, 6)}...{bitmap.owner.slice(-4)}
           </span>
         </span>
-        <button
+        <Button
           disabled
-          className="flex items-center gap-1 font-mono text-xs uppercase tracking-[0.14em] text-zinc-500 opacity-50 cursor-not-allowed"
+          variant="ghost"
+          size="sm"
+          className="border-none bg-transparent px-0 py-0"
           aria-label="View History (coming soon)"
         >
           <ArrowRightLeft className="w-3 h-3" /> View History
-          <span className="rounded-sm bg-[rgba(247,147,26,0.08)] px-1.5 py-0.5 text-[9px] text-primary">Soon</span>
-        </button>
+          <Badge variant="soon">Soon</Badge>
+        </Button>
       </div>
     </div>
   );

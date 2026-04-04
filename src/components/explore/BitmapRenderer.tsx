@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { drawBitfeedVacuum } from "./renderFunctions";
+import { getLayoutCache, setLayoutCache } from "./layout-cache";
 
 const RENDER_API = "";
 
@@ -36,6 +37,8 @@ export default function BitmapRenderer({
     layoutWidth: number;
     usedHeight: number;
   } | null>(null);
+  const heightRef = useRef(height);
+  heightRef.current = height;
 
   // DPR-scaled size for crisp rendering — capped on mobile to reduce GPU load
   const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -159,6 +162,7 @@ export default function BitmapRenderer({
         }
 
         prevDataRef.current = currentData;
+        setLayoutCache(heightRef.current, scaledSize, { squares, layoutWidth, usedHeight });
         onResult?.(squares, layoutWidth, usedHeight);
         onStatus("done");
       }
@@ -216,6 +220,27 @@ export default function BitmapRenderer({
             requestAnimationFrame(animateOut);
           });
         }
+      }
+
+      // Check module-level cache before hitting network + worker
+      const cached = getLayoutCache(height, scaledSize);
+      if (cached) {
+        const { squares, layoutWidth, usedHeight } = cached;
+        prevDataRef.current = { squares, layoutWidth, usedHeight };
+
+        if (canvasRef.current) {
+          const canvas = canvasRef.current;
+          canvas.width = scaledSize;
+          canvas.height = scaledSize;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            // Render final frame instantly — no entry animation
+            drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, 1, 0, 4000, -1, null, mobileMode);
+          }
+        }
+        onResult?.(squares, layoutWidth, usedHeight);
+        onStatus("done");
+        return;
       }
 
       try {

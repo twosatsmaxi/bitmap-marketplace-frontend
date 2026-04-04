@@ -5,6 +5,7 @@ import type { ActivityEvent } from "@/lib/types";
 import { truncateAddr, timeAgo, cn } from "@/lib/utils";
 import BitmapCanvas from "@/components/bitmap-art/BitmapCanvas";
 import PriceDisplay from "@/components/ui/PriceDisplay";
+import EmptyState from "@/components/ui/EmptyState";
 import ActivityCard from "./ActivityCard";
 import { ShoppingCart, Tag, ArrowRightLeft, Handshake, ExternalLink } from "lucide-react";
 
@@ -22,9 +23,10 @@ interface ActivityTableProps {
 export default function ActivityTable({ events }: ActivityTableProps) {
   if (!events || events.length === 0) {
     return (
-      <div className="border border-dashed border-[rgba(120,72,18,0.55)] bg-black/35 py-20 text-center">
-        <p className="font-mono text-zinc-500">No activity found for this filter.</p>
-      </div>
+      <EmptyState
+        title="No activity found for this filter"
+        className="border-[rgba(120,72,18,0.55)] bg-black/35"
+      />
     );
   }
 

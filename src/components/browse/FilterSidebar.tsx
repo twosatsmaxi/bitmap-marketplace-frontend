@@ -1,5 +1,6 @@
 import type { BrowseFilters, BitmapType, RarityTier } from "@/lib/types";
 import { Search } from "lucide-react";
+import { TextInput, Checkbox } from "@/components/ui/Input";
 
 interface FilterSidebarProps {
   filters: BrowseFilters;
@@ -41,18 +42,13 @@ export default function FilterSidebar({ filters, setFilters }: FilterSidebarProp
         {/* Search */}
         <div>
           <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Search Index</h3>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-4 w-4 text-zinc-500" />
-            </div>
-            <input 
-              type="text"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              placeholder="Block number..."
-              className="w-full border border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] px-3 py-2 pl-9 font-mono text-xs uppercase tracking-[0.14em] text-zinc-300 transition-colors placeholder:text-zinc-600 focus:border-primary focus:outline-none"
-            />
-          </div>
+          <TextInput
+            icon={<Search className="h-4 w-4 text-zinc-500" />}
+            type="text"
+            value={filters.search}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            placeholder="Block number..."
+          />
         </div>
 
         {/* Status */}
@@ -64,30 +60,19 @@ export default function FilterSidebar({ filters, setFilters }: FilterSidebarProp
               { id: "has_offer", label: "Has Offers" },
               { id: "unlisted", label: "Unlisted" }
             ].map(status => (
-              <label key={status.id} className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative flex h-4 w-4 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] transition-colors group-hover:border-primary/50">
-                  <input 
-                    type="checkbox"
-                    checked={filters.status.includes(status.id as any)}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setFilters(prev => ({
-                        ...prev,
-                        status: checked 
-                          ? [...prev.status, status.id as any]
-                          : prev.status.filter(s => s !== status.id)
-                      }));
-                    }}
-                    className="absolute opacity-0 w-full h-full cursor-pointer"
-                  />
-                  {filters.status.includes(status.id as any) && (
-                    <div className="w-2 h-2 bg-primary"></div>
-                  )}
-                </div>
-                <span className="font-mono text-sm uppercase tracking-[0.08em] text-zinc-400 transition-colors group-hover:text-primary">
-                  {status.label}
-                </span>
-              </label>
+              <Checkbox
+                key={status.id}
+                checked={filters.status.includes(status.id as any)}
+                onChange={(checked) => {
+                  setFilters(prev => ({
+                    ...prev,
+                    status: checked
+                      ? [...prev.status, status.id as any]
+                      : prev.status.filter(s => s !== status.id)
+                  }));
+                }}
+                label={status.label}
+              />
             ))}
           </div>
         </div>
@@ -97,22 +82,12 @@ export default function FilterSidebar({ filters, setFilters }: FilterSidebarProp
           <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Pattern Type</h3>
           <div className="flex flex-col gap-2.5">
             {BITMAP_TYPES.map(type => (
-              <label key={type} className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative flex h-4 w-4 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] transition-colors group-hover:border-primary/50">
-                  <input 
-                    type="checkbox"
-                    checked={filters.types.includes(type)}
-                    onChange={() => toggleType(type)}
-                    className="absolute opacity-0 w-full h-full cursor-pointer"
-                  />
-                  {filters.types.includes(type) && (
-                    <div className="w-2 h-2 bg-primary"></div>
-                  )}
-                </div>
-                <span className="font-mono text-sm uppercase tracking-[0.08em] text-zinc-400 capitalize transition-colors group-hover:text-primary">
-                  {type}
-                </span>
-              </label>
+              <Checkbox
+                key={type}
+                checked={filters.types.includes(type)}
+                onChange={() => toggleType(type)}
+                label={type}
+              />
             ))}
           </div>
         </div>
@@ -122,22 +97,12 @@ export default function FilterSidebar({ filters, setFilters }: FilterSidebarProp
           <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Rarity Level</h3>
           <div className="flex flex-col gap-2.5">
             {RARITIES.map(rarity => (
-              <label key={rarity} className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative flex h-4 w-4 items-center justify-center border border-[rgba(120,72,18,0.55)] bg-[rgba(10,10,12,0.92)] transition-colors group-hover:border-primary/50">
-                  <input 
-                    type="checkbox"
-                    checked={filters.rarities.includes(rarity)}
-                    onChange={() => toggleRarity(rarity)}
-                    className="absolute opacity-0 w-full h-full cursor-pointer"
-                  />
-                  {filters.rarities.includes(rarity) && (
-                    <div className="w-2 h-2 bg-primary"></div>
-                  )}
-                </div>
-                <span className="font-mono text-sm uppercase tracking-[0.08em] text-zinc-400 capitalize transition-colors group-hover:text-primary">
-                  {rarity}
-                </span>
-              </label>
+              <Checkbox
+                key={rarity}
+                checked={filters.rarities.includes(rarity)}
+                onChange={() => toggleRarity(rarity)}
+                label={rarity}
+              />
             ))}
           </div>
         </div>

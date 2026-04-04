@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { detectWallets, type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
+import ErrorState from "@/components/ui/ErrorState";
 
 interface WalletCommandPaletteProps {
   open: boolean;
@@ -72,7 +73,7 @@ function buildSequence(
     { prefix: "  bitmaps   ", value: bitmapValue, color: "text-primary font-bold", speed: 22, pauseAfter: 120, isAsync: bitmapCount === null },
     ...(walletCount > 1 ? [{ prefix: "  wallets   ", value: `${walletCount} linked`, color: "text-amber-700", speed: 18, pauseAfter: 100 }] : []),
     { prefix: "  status    ", value: "connected",                 color: "text-primary",           speed: 22, pauseAfter: 250 },
-    { prefix: "> ",           value: "ready?",                      color: "text-amber-200",         speed: 25, pauseAfter: 0 },
+    { prefix: "> ",           value: "ready? (y/n)",                 color: "text-amber-200",         speed: 25, pauseAfter: 0 },
   ];
 }
 
@@ -127,6 +128,7 @@ export default function WalletCommandPalette({
   const [displayLines, setDisplayLines] = useState<DisplayLine[]>([]);
   const [activeLineIdx, setActiveLineIdx] = useState(-1);
   const [sequenceDone, setSequenceDone] = useState(false);
+  const [typedResponse, setTypedResponse] = useState<string | null>(null);
   const resumeRef = useRef<(() => void) | null>(null);
   const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const bitmapCountRef = useRef<number | null>(null);
@@ -135,8 +137,8 @@ export default function WalletCommandPalette({
   traitsRef.current = traits;
 
   // Refs for stable keyboard handler
-  const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile });
-  stateRef.current = { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile };
+  const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile, sequenceDone });
+  stateRef.current = { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile, sequenceDone };
 
   // Reset on open
   useEffect(() => {
@@ -148,6 +150,7 @@ export default function WalletCommandPalette({
       setDisplayLines([]);
       setActiveLineIdx(-1);
       setSequenceDone(false);
+      setTypedResponse(null);
       resumeRef.current = null;
     }
   }, [open]);
@@ -353,12 +356,15 @@ export default function WalletCommandPalette({
       const { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, connectedProfile } = stateRef.current;
 
       if (connectedProfile) {
-        if (e.key === "Enter") {
+        const { sequenceDone } = stateRef.current;
+        if (e.key === "Enter" || (sequenceDone && (e.key === "y" || e.key === "Y"))) {
           e.preventDefault();
-          onGoToPortfolio();
-        } else if (e.key === "Escape") {
+          setTypedResponse("y");
+          setTimeout(() => onGoToPortfolio(), 180);
+        } else if (e.key === "Escape" || (sequenceDone && (e.key === "n" || e.key === "N"))) {
           e.preventDefault();
-          onClose();
+          setTypedResponse("n");
+          setTimeout(() => onClose(), 180);
         }
         return;
       }
@@ -436,14 +442,18 @@ export default function WalletCommandPalette({
             {displayLines.map((line, i) => {
               const isActive = i === activeLineIdx && !line.done;
               const isLastLine = sequenceDone && i === displayLines.length - 1;
+              const showCursor = !typedResponse && (isActive && !line.showShimmer || isLastLine);
               return (
                 <div key={i} className="flex items-center h-5">
                   <span className="text-amber-900/70 whitespace-pre">{line.prefix}</span>
                   <span className={cn(line.color, "whitespace-pre")}>{line.value}</span>
+                  {isLastLine && typedResponse && (
+                    <span className="text-amber-200 whitespace-pre ml-1">{typedResponse}</span>
+                  )}
                   {line.showShimmer && (
                     <span className="inline-block h-3.5 w-14 animate-shimmer rounded-sm bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%]" />
                   )}
-                  {(isActive && !line.showShimmer || isLastLine) && (
+                  {showCursor && (
                     <span className="inline-block w-1.5 h-3.5 bg-primary ml-px animate-[blink_1s_step-end_infinite]" />
                   )}
                 </div>
@@ -456,18 +466,18 @@ export default function WalletCommandPalette({
             <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 animate-fadeUp flex gap-1">
               <button
                 type="button"
-                onClick={onGoToPortfolio}
+                onClick={() => { setTypedResponse("y"); setTimeout(onGoToPortfolio, 180); }}
                 className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
               >
-                enter portfolio
+                y portfolio
               </button>
               <span className="font-mono text-[10px] text-zinc-600">·</span>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => { setTypedResponse("n"); setTimeout(onClose, 180); }}
                 className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
               >
-                esc close
+                n close
               </button>
             </div>
           )}
@@ -481,7 +491,7 @@ export default function WalletCommandPalette({
   let promptContent: React.ReactNode;
   if (error) {
     promptContent = (
-      <span className="font-mono text-sm text-red-400">{`> ERR: ${error}`}</span>
+      <ErrorState variant="terminal" message={error} />
     );
   } else if (isConnecting) {
     promptContent = (

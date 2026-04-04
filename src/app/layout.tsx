@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import StatsBar from "@/components/layout/StatsBar";
 import ViewTransitionProvider from "@/components/layout/ViewTransitionProvider";
+import { ToastContainer } from "@/components/ui/Toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -78,6 +79,7 @@ export default function RootLayout({
         <main className="pt-[var(--header-total)]">
           <ViewTransitionProvider>{children}</ViewTransitionProvider>
         </main>
+        <ToastContainer />
       </body>
     </html>
   );

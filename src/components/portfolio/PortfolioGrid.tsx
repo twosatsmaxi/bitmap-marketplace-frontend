@@ -9,6 +9,8 @@ import type { BlockMeta } from "@/components/explore/types";
 import type { PortfolioResponse, TraitStat } from "@/lib/api";
 import { use3DPreference } from "@/hooks/use3DPreference";
 import { cn } from "@/lib/utils";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
 
 const PAGE_SIZE = 24;
 const RENDER_API = "";
@@ -284,11 +286,10 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
           ))}
 
         {heights.length === 0 && !isLoading && (
-          <div className="col-span-full py-16 md:py-20 text-center border border-dashed border-[rgba(255,255,255,0.08)] bg-black/20 rounded-lg">
-            <p className="font-mono text-sm text-zinc-500 uppercase tracking-widest">
-              No bitmaps found for this address
-            </p>
-          </div>
+          <EmptyState
+            title="No bitmaps found for this address"
+            className="col-span-full"
+          />
         )}
       </div>
 
@@ -299,14 +300,10 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
       />
 
       {error && (
-        <div className="text-center py-4">
-          <p className="font-mono text-sm text-red-400">
-            Failed to load portfolio.{" "}
-            <button onClick={() => mutate()} className="underline hover:text-red-300">
-              Retry
-            </button>
-          </p>
-        </div>
+        <ErrorState
+          message="Failed to load portfolio."
+          retry={() => mutate()}
+        />
       )}
 
       {/* Floating 3D Toggle */}
