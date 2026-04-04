@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
@@ -9,7 +9,7 @@ import WalletBar from "@/components/wallet/WalletBar";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
 
-export default function PortfolioPage() {
+export default function ProfilePage() {
   const {
     wallets,
     isConnected,
@@ -41,7 +41,6 @@ export default function PortfolioPage() {
       setConnectedProfile(result.profile);
       setConnectedAddress(result.ordinalsAddress);
     }
-    // Keep connectingProvider set so the connected screen can show the provider name
   };
 
   const handlePaletteClose = () => {
@@ -58,11 +57,11 @@ export default function PortfolioPage() {
           <div className="br-card flex flex-col items-center gap-5 p-8 md:p-12">
             <div className="text-center">
               <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-                Bitmap Portfolio
+                Profile
               </h1>
               <p className="mt-2 max-w-sm font-mono text-xs text-zinc-500">
-                Connect your wallet to view your bitmaps. You can link
-                multiple wallets to see an aggregated portfolio.
+                Connect your wallet to view your profile. Manage your connected
+                wallets and account settings.
               </p>
             </div>
             <button
@@ -85,7 +84,7 @@ export default function PortfolioPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-                  Bitmap Portfolio
+                  Profile
                 </h1>
                 <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
                   {wallets.length} wallet{wallets.length !== 1 ? "s" : ""}
@@ -103,7 +102,7 @@ export default function PortfolioPage() {
             </div>
           </div>
 
-          {/* Grid */}
+          {/* Bitmap Portfolio Grid */}
           <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} />
         </div>
       )}
@@ -116,7 +115,7 @@ export default function PortfolioPage() {
         connectingProvider={connectingProvider}
         connectedProfile={connectedProfile}
         connectedAddress={connectedAddress}
-        onGoToPortfolio={handlePaletteClose}
+        onGoToProfile={handlePaletteClose}
         error={error}
       />
     </>

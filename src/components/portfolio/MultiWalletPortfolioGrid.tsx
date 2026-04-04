@@ -155,10 +155,28 @@ export default function MultiWalletPortfolioGrid({
     return allBitmaps.filter((b) => b.owner === activeWallet);
   }, [allBitmaps, activeWallet]);
 
+  // Calculate trait counts from API data (all wallets) or filtered bitmaps (active wallet)
   const traits = useMemo(() => {
     if (!data || data.length === 0) return [];
-    return data[0].traits || [];
-  }, [data]);
+    
+    // If no active wallet, use API trait counts (for all wallets)
+    if (!activeWallet) {
+      return data[0].traits || [];
+    }
+    
+    // When filtering to a specific wallet, recalculate trait counts from filtered bitmaps
+    const traitCounts = new Map<string, number>();
+    for (const bitmap of filteredBitmaps) {
+      for (const trait of bitmap.traits || []) {
+        traitCounts.set(trait, (traitCounts.get(trait) || 0) + 1);
+      }
+    }
+    
+    // Convert to TraitStat array, sorted by count desc
+    return Array.from(traitCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [data, activeWallet, filteredBitmaps]);
 
   const total = useMemo(() => {
     if (!data || data.length === 0) return 0;

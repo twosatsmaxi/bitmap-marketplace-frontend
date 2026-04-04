@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Terminal, Menu, X, Wallet } from "lucide-react";
+import { Terminal, Menu, X, Wallet, User } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
@@ -64,12 +64,12 @@ export default function Navbar() {
     // Keep connectingProvider set so the connected screen can show the provider name
   };
 
-  const handleGoToPortfolio = () => {
+  const handleGoToProfile = () => {
     setPaletteOpen(false);
     setConnectedProfile(null);
     setConnectingProvider(null);
     setConnectedAddress(null);
-    router.push("/portfolio");
+    router.push("/profile");
   };
 
   const handlePaletteClose = () => {
@@ -101,9 +101,6 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
-            {isConnected && (
-              <NavLink href="/portfolio" active={pathname.startsWith("/portfolio")}>Portfolio</NavLink>
-            )}
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
@@ -178,15 +175,6 @@ export default function Navbar() {
           >
             Explore
           </DrawerNavLink>
-          {isConnected && (
-            <DrawerNavLink
-              href="/portfolio"
-              active={pathname.startsWith("/portfolio")}
-              onClick={() => setMenuOpen(false)}
-            >
-              Portfolio
-            </DrawerNavLink>
-          )}
           <DrawerSoonNav label="Market" />
           <DrawerSoonNav label="Activity" />
 
@@ -231,7 +219,7 @@ export default function Navbar() {
         connectingProvider={connectingProvider}
         connectedProfile={connectedProfile}
         connectedAddress={connectedAddress}
-        onGoToPortfolio={handleGoToPortfolio}
+        onGoToProfile={handleGoToProfile}
         error={error}
       />
     </>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { truncateAddr, cn } from "@/lib/utils";
+import { useWalletLabelsStore } from "@/stores/wallet-labels";
 import type { ProfileWallet } from "@/lib/auth-api";
 
 interface WalletBarProps {
@@ -21,6 +22,7 @@ export default function WalletBar({
   onToggleFilter,
 }: WalletBarProps) {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  const getLabel = useWalletLabelsStore((state) => state.getLabel);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -51,7 +53,7 @@ export default function WalletBar({
               <span className={cn(
                 "font-bold",
                 isActive ? "text-primary" : "text-zinc-400"
-              )}>{w.label}:</span>{" "}
+              )}>{getLabel(w.ordinalsAddress) || w.label}:</span>{" "}
               {truncateAddr(w.ordinalsAddress, 6, 4)}
             </button>
             {wallets.length > 1 && (

@@ -16,7 +16,7 @@ interface WalletCommandPaletteProps {
   connectingProvider: WalletProvider | null;
   connectedProfile: Profile | null;
   connectedAddress: string | null;
-  onGoToPortfolio: () => void;
+  onGoToProfile: () => void;
   error: string | null;
 }
 
@@ -115,7 +115,7 @@ export default function WalletCommandPalette({
   connectingProvider,
   connectedProfile,
   connectedAddress,
-  onGoToPortfolio,
+  onGoToProfile,
   error,
 }: WalletCommandPaletteProps) {
   const [wallets, setWallets] = useState(() => detectWallets());
@@ -137,8 +137,8 @@ export default function WalletCommandPalette({
   traitsRef.current = traits;
 
   // Refs for stable keyboard handler
-  const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile, sequenceDone });
-  stateRef.current = { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, open, connectedProfile, sequenceDone };
+  const stateRef = useRef({ wallets, selectedIndex, onClose, onSelect, onGoToProfile, open, connectedProfile, sequenceDone });
+  stateRef.current = { wallets, selectedIndex, onClose, onSelect, onGoToProfile, open, connectedProfile, sequenceDone };
 
   // Reset on open
   useEffect(() => {
@@ -353,14 +353,14 @@ export default function WalletCommandPalette({
     if (!open) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      const { wallets, selectedIndex, onClose, onSelect, onGoToPortfolio, connectedProfile } = stateRef.current;
+      const { wallets, selectedIndex, onClose, onSelect, onGoToProfile, connectedProfile } = stateRef.current;
 
       if (connectedProfile) {
         const { sequenceDone } = stateRef.current;
         if (e.key === "Enter" || (sequenceDone && (e.key === "y" || e.key === "Y"))) {
           e.preventDefault();
           setTypedResponse("y");
-          setTimeout(() => onGoToPortfolio(), 180);
+          setTimeout(() => onGoToProfile(), 180);
         } else if (e.key === "Escape" || (sequenceDone && (e.key === "n" || e.key === "N"))) {
           e.preventDefault();
           setTypedResponse("n");
@@ -435,7 +435,7 @@ export default function WalletCommandPalette({
           {/* Terminal lines */}
           <div
             className={cn("px-4 py-4 font-mono text-sm space-y-0.5 min-h-[160px]", sequenceDone && "cursor-pointer")}
-            onClick={sequenceDone ? onGoToPortfolio : undefined}
+            onClick={sequenceDone ? onGoToProfile : undefined}
             role={sequenceDone ? "button" : undefined}
             tabIndex={sequenceDone ? 0 : undefined}
           >
@@ -466,10 +466,10 @@ export default function WalletCommandPalette({
             <div className="border-t border-[rgba(120,72,18,0.25)] px-4 py-2 animate-fadeUp flex gap-1">
               <button
                 type="button"
-                onClick={() => { setTypedResponse("y"); setTimeout(onGoToPortfolio, 180); }}
+                onClick={() => { setTypedResponse("y"); setTimeout(onGoToProfile, 180); }}
                 className="font-mono text-[10px] text-zinc-600 uppercase tracking-[0.14em] hover:text-primary transition-colors"
               >
-                y portfolio
+                y profile
               </button>
               <span className="font-mono text-[10px] text-zinc-600">·</span>
               <button
