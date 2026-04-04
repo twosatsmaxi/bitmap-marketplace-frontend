@@ -25,6 +25,7 @@ interface MultiPortfolioResponse {
 interface MultiWalletPortfolioGridProps {
   addresses: string[];
   activeWallet?: string | null;
+  onTotalChange?: (total: number) => void;
 }
 
 // Module-level meta cache
@@ -83,6 +84,7 @@ function TraitPill({
 export default function MultiWalletPortfolioGrid({
   addresses,
   activeWallet,
+  onTotalChange,
 }: MultiWalletPortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
@@ -182,6 +184,12 @@ export default function MultiWalletPortfolioGrid({
     if (!data || data.length === 0) return 0;
     return data[0].total;
   }, [data]);
+
+  const displayTotal = activeWallet ? filteredBitmaps.length : total;
+
+  useEffect(() => {
+    onTotalChange?.(displayTotal);
+  }, [displayTotal, onTotalChange]);
 
   const heights = useMemo(
     () => filteredBitmaps.map((b) => b.block_height),
@@ -284,15 +292,6 @@ export default function MultiWalletPortfolioGrid({
 
   return (
     <>
-      {/* Total count */}
-      {total > 0 && (
-        <div className="br-card -mt-3 p-3 md:-mt-4 md:p-5">
-          <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
-            <span className="text-primary">{activeWallet ? filteredBitmaps.length : total}</span> bitmaps
-          </span>
-        </div>
-      )}
-
       {/* Trait Filter Pills */}
       {traits.length > 0 && (
         <div className="mb-4 md:mb-6">

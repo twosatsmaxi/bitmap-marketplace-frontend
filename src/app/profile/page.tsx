@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
@@ -26,6 +26,8 @@ export default function ProfilePage() {
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
+  const [bitmapCount, setBitmapCount] = useState(0);
+  const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
 
   const addresses = useMemo(
     () => wallets.map((w) => w.ordinalsAddress),
@@ -89,6 +91,11 @@ export default function ProfilePage() {
                 <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
                   {wallets.length} wallet{wallets.length !== 1 ? "s" : ""}
                 </span>
+                {bitmapCount > 0 && (
+                  <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
+                    <span className="text-primary">{bitmapCount}</span> bitmap{bitmapCount !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
               <WalletBar
                 wallets={wallets}
@@ -103,7 +110,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Bitmap Portfolio Grid */}
-          <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} />
+          <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} onTotalChange={handleTotalChange} />
         </div>
       )}
 
