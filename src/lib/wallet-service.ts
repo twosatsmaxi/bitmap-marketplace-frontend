@@ -1,204 +1,69 @@
-import { AddressPurpose } from "sats-connect";
+/**
+ * Thin facade that the rest of the app imports for wallet operations.
+ *
+ * Internally delegates to concrete WalletProviderStrategy implementations
+ * via the provider registry.  This keeps the public API stable while the
+ * provider-specific logic lives in `./wallet/`.
+ */
 
-export interface WalletAddresses {
-  paymentAddress: string;
-  ordinalsAddress: string;
-}
+import { getProvider, detectWallets } from "./wallet/registry";
+import type {
+  WalletAddresses,
+  WalletProviderKey,
+  DetectedWallet,
+} from "./wallet/types";
 
-export type WalletProvider = "xverse" | "unisat";
+/* ── Re-exports (keep existing import paths working) ─────── */
 
-export interface DetectedWallet {
-  provider: WalletProvider;
-  name: string;
-  installed: boolean;
-}
+export type { WalletAddresses, DetectedWallet };
 
-/** Get the raw Xverse BitcoinProvider (bypasses sats-connect modal) */
-function getXverseProvider(): any {
-  const w = window as unknown as Record<string, any>;
-  return w.XverseProviders?.BitcoinProvider ?? w.BitcoinProvider;
-}
+/**
+ * Alias kept for backwards-compat: existing code imports `WalletProvider`
+ * from this module.  Prefer `WalletProviderKey` in new code.
+ */
+export type WalletProvider = WalletProviderKey;
 
-export function detectWallets(): DetectedWallet[] {
-  if (typeof window === "undefined") {
-    return [
-      { provider: "xverse", name: "Xverse", installed: false },
-      { provider: "unisat", name: "Unisat", installed: false },
-    ];
-  }
-  const w = window as unknown as Record<string, unknown>;
-  return [
-    {
-      provider: "xverse",
-      name: "Xverse",
-      installed: !!(w.XverseProviders || w.BitcoinProvider),
-    },
-    {
-      provider: "unisat",
-      name: "Unisat",
-      installed: !!w.unisat,
-    },
-  ];
-}
+export { detectWallets };
 
 export function isWalletAvailable(): boolean {
   return detectWallets().some((w) => w.installed);
 }
 
-async function connectXverse(): Promise<WalletAddresses> {
-  const provider = getXverseProvider();
-  if (!provider) throw new Error("Xverse wallet not found");
-
-  const res = await provider.request("getAccounts", {
-    purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
-  });
-
-  if (res.error) {
-    if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error(res.error?.message || "Wallet connection failed");
-  }
-
-  // Xverse provider returns { status: "success", result } or { result, id }
-  const results = res.result ?? [];
-  const payment = results.find(
-    (a: any) => a.purpose === AddressPurpose.Payment
-  );
-  const ordinals = results.find(
-    (a: any) => a.purpose === AddressPurpose.Ordinals
-  );
-
-  if (!payment?.address || !ordinals?.address) {
-    throw new Error("Wallet did not return required addresses");
-  }
-
-  return {
-    paymentAddress: payment.address,
-    ordinalsAddress: ordinals.address,
-  };
-}
-
-async function connectUnisat(): Promise<WalletAddresses> {
-  const w = window as unknown as Record<string, any>;
-  const unisat = w.unisat;
-  if (!unisat) throw new Error("Unisat wallet not found");
-
-  const accounts: string[] = await unisat.requestAccounts();
-  if (!accounts.length) throw new Error("No accounts returned from Unisat");
-
-  // Unisat uses a single address for both payment and ordinals
-  return {
-    paymentAddress: accounts[0],
-    ordinalsAddress: accounts[0],
-  };
-}
+/* ── Facade functions ────────────────────────────────────── */
 
 export async function connectWallet(
-  provider?: WalletProvider
+  provider?: WalletProvider,
 ): Promise<WalletAddresses> {
-  if (provider === "unisat") return connectUnisat();
-  return connectXverse();
+  return getProvider(provider).connect();
 }
 
 export async function disconnectWallet(
-  walletProvider?: WalletProvider
+  walletProvider?: WalletProvider,
 ): Promise<void> {
-  try {
-    if (walletProvider === "unisat") {
-      // UniSat has no explicit disconnect API; clearing local state is sufficient
-      return;
-    }
-    const provider = getXverseProvider();
-    if (provider) {
-      await provider.request("wallet_renouncePermissions", undefined);
-    }
-  } catch {
-    // ignore errors on disconnect
-  }
+  return getProvider(walletProvider).disconnect();
 }
 
 export async function signChallengeMessage(
   address: string,
   message: string,
-  walletProvider?: WalletProvider
+  walletProvider?: WalletProvider,
 ): Promise<string> {
-  if (walletProvider === "unisat") {
-    const w = window as unknown as Record<string, any>;
-    const unisat = w.unisat;
-    if (!unisat) throw new Error("Unisat wallet not found");
-    return unisat.signMessage(message, "bip322-simple");
-  }
-
-  const provider = getXverseProvider();
-  if (!provider) throw new Error("Xverse wallet not found");
-
-  const res = await provider.request("signMessage", {
-    address,
-    message,
-    protocol: "BIP322",
-  });
-
-  if (res.error) {
-    if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error(res.error?.message || "Message signing failed");
-  }
-
-  return res.result?.signature ?? res.signature;
+  return getProvider(walletProvider).signMessage(address, message);
 }
 
 export async function signPsbtInputs(
   psbtBase64: string,
   address: string,
   inputIndices: number[],
-  walletProvider?: WalletProvider
+  walletProvider?: WalletProvider,
 ): Promise<string> {
-  if (walletProvider === "unisat") {
-    return signPsbtUnisat(psbtBase64, inputIndices);
-  }
-
-  const provider = getXverseProvider();
-  if (!provider) throw new Error("Xverse wallet not found");
-
-  const res = await provider.request("signPsbt", {
-    psbt: psbtBase64,
-    signInputs: { [address]: inputIndices },
-    broadcast: false,
-  });
-
-  if (res.error) {
-    if (res.error?.code === 4001) throw new Error("USER_REJECTED");
-    throw new Error(res.error?.message || "signPsbt failed");
-  }
-
-  return res.result?.psbt ?? res.psbt;
+  return getProvider(walletProvider).signPsbt(psbtBase64, address, inputIndices);
 }
 
 export async function signPsbt(
   psbtBase64: string,
   paymentAddress: string,
-  walletProvider?: WalletProvider
+  walletProvider?: WalletProvider,
 ): Promise<string> {
   return signPsbtInputs(psbtBase64, paymentAddress, [0], walletProvider);
-}
-
-async function signPsbtUnisat(
-  psbtBase64: string,
-  inputIndices: number[]
-): Promise<string> {
-  const w = window as unknown as Record<string, any>;
-  const unisat = w.unisat;
-  if (!unisat) throw new Error("Unisat wallet not found");
-
-  // UniSat expects hex, not base64
-  const psbtHex = Buffer.from(psbtBase64, "base64").toString("hex");
-
-  const signedHex: string = await unisat.signPsbt(psbtHex, {
-    autoFinalized: false,
-    toSignInputs: inputIndices.map((index) => ({
-      index,
-      disableTweakSigner: true,
-    })),
-  });
-
-  // Convert back to base64 for consistency
-  return Buffer.from(signedHex, "hex").toString("base64");
 }

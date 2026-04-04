@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { RenderStatus, WorkerSquare, AnimationStyle } from "./types";
 import { acquireSharedGL, releaseSharedGL, type SharedGL } from "./webgl-context";
+import { getLayoutCache, setLayoutCache } from "./layout-cache";
 
 const RENDER_API = "";
 const MAX_INSTANCES = 8192;
@@ -155,6 +156,8 @@ export default function WebGLBitmapRenderer({
   inViewRef.current = inView;
   const skipEntryAnimationRef = useRef(skipEntryAnimation);
   skipEntryAnimationRef.current = skipEntryAnimation;
+  const heightRef = useRef(height);
+  heightRef.current = height;
   
   // DPR-scaled size for crisp rendering — capped on mobile to reduce GPU load
   const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -405,6 +408,9 @@ export default function WebGLBitmapRenderer({
         instanceDataRef.current = data;
         prevDataRef.current = { squares, layoutWidth, usedHeight };
 
+        // Persist to module-level cache so remounts skip the worker
+        setLayoutCache(heightRef.current, scaledSize, { squares, layoutWidth, usedHeight });
+
         // If skipEntryAnimation, render final frame immediately (no animation)
         if (skipEntryAnimationRef.current) {
           hasAnimatedRef.current = true;
@@ -552,6 +558,51 @@ export default function WebGLBitmapRenderer({
       }
 
       if (cancelled) return;
+
+      // Check module-level cache before hitting network + worker
+      const cached = getLayoutCache(height, scaledSize);
+      if (cached) {
+        const { squares, layoutWidth, usedHeight } = cached;
+        const count = Math.min(squares.length, MAX_INSTANCES);
+        const data = new Float32Array(count * 4);
+        for (let i = 0; i < count; i++) {
+          const sq = squares[i];
+          const off = i * 4;
+          data[off] = sq.x;
+          data[off + 1] = sq.y;
+          data[off + 2] = sq.r;
+          data[off + 3] = i;
+        }
+        instanceDataRef.current = data;
+        prevDataRef.current = { squares, layoutWidth, usedHeight };
+
+        // Render final frame instantly — no entry animation
+        hasAnimatedRef.current = true;
+        if (ctx2d && shared) {
+          renderFrame(
+            shared,
+            ctx2d,
+            scaledSize,
+            data,
+            count,
+            layoutWidth,
+            usedHeight,
+            0,
+            4000, // past animation end
+            -1,
+            -1,
+            -1,
+            1.0,
+            featuresRef.current.enableRepulsion,
+            featuresRef.current.enableFlicker,
+            featuresRef.current.isometric,
+            tileHeightScaleRef.current
+          );
+        }
+        onResult?.(squares, layoutWidth, usedHeight);
+        onStatus("done");
+        return;
+      }
 
       try {
         const res = await fetch(`${RENDER_API}/api/explore/blocks/${height}`);

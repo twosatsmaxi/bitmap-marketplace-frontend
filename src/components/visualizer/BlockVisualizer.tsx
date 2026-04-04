@@ -125,6 +125,7 @@ export function BlockVisualizer({
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [matchAnimation, setMatchAnimation] = useState<{ active: boolean; bucket: number }>({ active: false, bucket: 0 });
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   // Game state refs
   const gameStateRef = useRef({
@@ -212,6 +213,7 @@ export function BlockVisualizer({
     setScore(0);
     setTimeElapsed(0);
     setMatchAnimation({ active: false, bucket: 0 });
+    setIsNewHighScore(false);
 
     // Reset all cubes to hidden state and regenerate pair assignments
     if (txGroupRef.current && gameMode === "memory") {
@@ -381,7 +383,7 @@ export function BlockVisualizer({
 
           // Show subtle HUD notification
           setMatchAnimation({ active: true, bucket: firstPair });
-          setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 800);
+          setTimeout(() => setMatchAnimation({ active: false, bucket: 0 }), 1200);
           
           // Check for game over
           const totalPairs = Math.floor(currentBlockBytes.length / 2);
@@ -396,6 +398,7 @@ export function BlockVisualizer({
             
             if (finalScore > highScoreRef.current) {
               setHighScore(finalScore);
+              setIsNewHighScore(true);
               localStorage.setItem(`memory_highScore_${blockHeightRef.current}`, finalScore.toString());
             }
             
@@ -808,7 +811,10 @@ export function BlockVisualizer({
           {/* Match Animation - subtle HUD notification */}
           {matchAnimation.active && (
             <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-              <div className="px-4 py-1.5 bg-primary/90 text-black font-mono font-bold text-sm rounded animate-bounce">
+              <div
+                className="px-6 py-2.5 bg-primary/90 text-black font-mono font-bold text-2xl rounded animate-bounce"
+                style={{ textShadow: '0 0 12px rgba(255,255,255,0.7), 0 0 24px rgba(255,200,0,0.5)', boxShadow: '0 0 16px rgba(255,200,0,0.4)' }}
+              >
                 MATCH!
               </div>
             </div>
@@ -816,7 +822,7 @@ export function BlockVisualizer({
           
           {/* Start Screen */}
           {showStartScreen && (
-            <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
+            <div className="absolute inset-0 flex items-center justify-center bg-bg z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
               <div className="text-center max-w-md px-6 pointer-events-auto">
                 <h1 className="font-mono text-4xl font-bold text-primary mb-4">BIT RECALL</h1>
                 
@@ -871,16 +877,70 @@ export function BlockVisualizer({
           )}
           
           {/* Game Over Screen */}
-          {gameOver && (
+          {gameOver && (() => {
+            const totalPairs = Math.floor(blockBytes.length / 2);
+            const baseScore = totalPairs * 100;
+            const movePenalty = Math.max(0, (moves - totalPairs) * 10);
+            const timeBonus = Math.max(0, 300 - timeElapsed) * 2;
+            const stars = moves <= totalPairs * 2 ? 3 : moves <= totalPairs * 3 ? 2 : 1;
+            return (
             <div className="absolute inset-0 flex items-center justify-center bg-bg/95 z-50 pointer-events-none" style={{ top: "var(--header-total)" }}>
-              <div className="text-center pointer-events-auto">
-                <h1 className="font-mono text-4xl font-bold text-primary mb-4">COMPLETE!</h1>
-                <p className="font-mono text-2xl text-white mb-2">Score: {score}</p>
-                <p className="font-mono text-sm text-zinc-400 mb-2">Time: {formatTime(timeElapsed)}</p>
-                <p className="font-mono text-sm text-zinc-400 mb-6">Moves: {moves}</p>
-                {score === highScore && score > 0 && (
-                  <p className="font-mono text-sm text-primary mb-6">New High Score!</p>
+              <div className="text-center pointer-events-auto max-w-sm w-full mx-4">
+                {/* New High Score celebration */}
+                {isNewHighScore && (
+                  <div className="mb-4 animate-bounce">
+                    <p className="font-mono text-lg font-bold text-primary animate-pulse" style={{ textShadow: "0 0 20px rgba(247,147,26,0.6), 0 0 40px rgba(247,147,26,0.3), 0 0 60px rgba(247,147,26,0.15)" }}>
+                      NEW HIGH SCORE!
+                    </p>
+                  </div>
                 )}
+
+                <h1 className="font-mono text-4xl font-bold text-primary mb-3">COMPLETE!</h1>
+
+                {/* Star Rating */}
+                <div className="flex justify-center gap-1 mb-4">
+                  {[1, 2, 3].map((i) => (
+                    <span
+                      key={i}
+                      className={`text-3xl transition-all duration-500 ${i <= stars ? "opacity-100 scale-100" : "opacity-20 scale-75"}`}
+                      style={i <= stars ? {
+                        filter: "drop-shadow(0 0 6px rgba(247,147,26,0.5))",
+                        animationDelay: `${i * 150}ms`,
+                      } : undefined}
+                    >
+                      {i <= stars ? "\u2605" : "\u2606"}
+                    </span>
+                  ))}
+                </div>
+                <p className="font-mono text-xs text-zinc-500 mb-5">
+                  {stars === 3 ? "Perfect memory!" : stars === 2 ? "Great recall!" : "Good effort!"}
+                </p>
+
+                {/* Final Score */}
+                <p className="font-mono text-3xl font-bold text-white mb-5" style={isNewHighScore ? { textShadow: "0 0 12px rgba(247,147,26,0.4)" } : undefined}>
+                  {score}
+                </p>
+
+                {/* Score Breakdown */}
+                <div className="br-card p-4 mb-5 text-left">
+                  <div className="flex justify-between font-mono text-sm mb-2">
+                    <span className="text-zinc-400">Base ({totalPairs} pairs)</span>
+                    <span className="text-white">+{baseScore}</span>
+                  </div>
+                  <div className="flex justify-between font-mono text-sm mb-2">
+                    <span className="text-zinc-400">Move penalty ({moves} moves)</span>
+                    <span className={movePenalty > 0 ? "text-red-400" : "text-zinc-500"}>{movePenalty > 0 ? `-${movePenalty}` : "0"}</span>
+                  </div>
+                  <div className="flex justify-between font-mono text-sm mb-2">
+                    <span className="text-zinc-400">Time bonus ({formatTime(timeElapsed)})</span>
+                    <span className={timeBonus > 0 ? "text-green-400" : "text-zinc-500"}>+{timeBonus}</span>
+                  </div>
+                  <div className="border-t border-zinc-700 pt-2 mt-2 flex justify-between font-mono text-sm font-bold">
+                    <span className="text-zinc-300">Total</span>
+                    <span className="text-primary">{score}</span>
+                  </div>
+                </div>
+
                 <div className="flex gap-4 justify-center">
                   <button
                     onClick={startGame}
@@ -897,7 +957,8 @@ export function BlockVisualizer({
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {capturedSceneRef.current && (
             <ShareScoreCard
@@ -911,7 +972,7 @@ export function BlockVisualizer({
               ]}
               blockHeight={blockHeight ?? 0}
               sceneCapture={capturedSceneRef.current}
-              isHighScore={score === highScore && score > 0}
+              isHighScore={isNewHighScore}
               tweetText={`Completed BIT RECALL on Block ${(blockHeight ?? 0).toLocaleString()} with ${score} points! Play at bitmap.trade/play?bitmap=${blockHeight ?? 0}`}
             />
           )}
@@ -920,6 +981,12 @@ export function BlockVisualizer({
           {!showStartScreen && !gameOver && (
             <>
               <div className="absolute top-16 md:top-20 right-3 md:right-6 z-10 flex gap-1.5 md:gap-2 pointer-events-none">
+                {blockHeight > 0 && (
+                  <div className="br-card px-2 md:px-3 py-1.5 md:py-2 opacity-60">
+                    <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">BLOCK</span>
+                    <span className="font-mono text-base md:text-xl font-bold text-zinc-400">{blockHeight.toLocaleString()}<span className="text-zinc-600">.bitmap</span></span>
+                  </div>
+                )}
                 <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
                   <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">TIME</span>
                   <span className="font-mono text-base md:text-xl font-bold text-white">{formatTime(timeElapsed)}</span>
@@ -928,8 +995,12 @@ export function BlockVisualizer({
                   <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">MOVES</span>
                   <span className="font-mono text-base md:text-xl font-bold text-primary">{moves}</span>
                 </div>
+                <div className="br-card px-2 md:px-3 py-1.5 md:py-2">
+                  <span className="font-mono text-[10px] md:text-xs text-zinc-500 block">PAIRS</span>
+                  <span className="font-mono text-base md:text-xl font-bold text-white">{matches}/{Math.floor(blockBytes.length / 2)}</span>
+                </div>
               </div>
-              
+
             </>
           )}
         </>
