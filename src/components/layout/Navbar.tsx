@@ -64,12 +64,12 @@ export default function Navbar() {
     // Keep connectingProvider set so the connected screen can show the provider name
   };
 
-  const handleGoToPortfolio = () => {
+  const handleGoToProfile = () => {
     setPaletteOpen(false);
     setConnectedProfile(null);
     setConnectingProvider(null);
     setConnectedAddress(null);
-    router.push("/portfolio");
+    router.push("/profile");
   };
 
   const handlePaletteClose = () => {
@@ -102,7 +102,7 @@ export default function Navbar() {
           <div className="ml-1 hidden items-center gap-2 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
             {isConnected && (
-              <NavLink href="/portfolio" active={pathname.startsWith("/portfolio")}>Portfolio</NavLink>
+              <NavLink href="/profile" active={pathname === "/profile"}>Profile</NavLink>
             )}
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
@@ -180,11 +180,11 @@ export default function Navbar() {
           </DrawerNavLink>
           {isConnected && (
             <DrawerNavLink
-              href="/portfolio"
-              active={pathname.startsWith("/portfolio")}
+              href="/profile"
+              active={pathname === "/profile"}
               onClick={() => setMenuOpen(false)}
             >
-              Portfolio
+              Profile
             </DrawerNavLink>
           )}
           <DrawerSoonNav label="Market" />
@@ -231,7 +231,7 @@ export default function Navbar() {
         connectingProvider={connectingProvider}
         connectedProfile={connectedProfile}
         connectedAddress={connectedAddress}
-        onGoToPortfolio={handleGoToPortfolio}
+        onGoToProfile={handleGoToProfile}
         error={error}
       />
     </>

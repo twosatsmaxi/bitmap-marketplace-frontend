@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Wallet, X, Plus, LogOut, Loader2 } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
+import { useWalletLabelsStore } from "@/stores/wallet-labels";
 
 interface WalletDropdownProps {
   onOpenPalette: () => void;
@@ -21,6 +22,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
     isConnecting,
     error,
   } = useWalletConnect();
+  const getLabel = useWalletLabelsStore((state) => state.getLabel);
 
   // Close on click outside
   useEffect(() => {
@@ -91,10 +93,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
                 <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-[11px] font-bold text-zinc-300">
-                    {w.label}
-                  </p>
-                  <p className="truncate font-mono text-[10px] text-zinc-500">
-                    {truncateAddr(w.ordinalsAddress, 8, 6)}
+                    {getLabel(w.ordinalsAddress) || w.label}: {truncateAddr(w.ordinalsAddress, 8, 6)}
                   </p>
                 </div>
                 {wallets.length > 1 && (

@@ -19,5 +19,14 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/portfolio",
+        destination: "/profile",
+        permanent: true,
+      },
+    ];
+  },
 };
 export default nextConfig;
