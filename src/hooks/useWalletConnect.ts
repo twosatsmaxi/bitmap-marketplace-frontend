@@ -68,6 +68,18 @@ export function useWalletConnect() {
       setIsConnecting(true);
       setError(null);
       try {
+        // Check if wallet is already connected before attempting full auth flow
+        const addresses = await connectWallet(provider);
+        const alreadyLinked = profile?.wallets.some(
+          (w) =>
+            w.ordinalsAddress === addresses.ordinalsAddress ||
+            w.paymentAddress === addresses.paymentAddress
+        );
+        if (alreadyLinked) {
+          setError("This wallet is already connected");
+          return null;
+        }
+
         const auth = await authenticateWallet(provider, token ?? undefined);
         setAuth(auth.profile, provider ?? "xverse", auth.token);
         return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
@@ -78,7 +90,7 @@ export function useWalletConnect() {
         setIsConnecting(false);
       }
     },
-    [authenticateWallet, setAuth, token]
+    [authenticateWallet, setAuth, token, profile]
   );
 
   const removeWallet = useCallback(
