@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { truncateAddr, cn } from "@/lib/utils";
-import { useWalletLabelsStore } from "@/stores/wallet-labels";
+import { cn } from "@/lib/utils";
+import { EditableWalletLabel } from "@/components/profile/EditableWalletLabel";
 import type { ProfileWallet } from "@/lib/auth-api";
 
 interface WalletBarProps {
   wallets: ProfileWallet[];
   onRemove: (ordinalsAddress: string) => void;
   onConnectAnother: () => void;
+  onLabelChange?: (ordinalsAddress: string, newLabel: string) => void;
   activeAddress?: string | null;
   onToggleFilter?: (ordinalsAddress: string) => void;
 }
@@ -18,11 +19,11 @@ export default function WalletBar({
   wallets,
   onRemove,
   onConnectAnother,
+  onLabelChange,
   activeAddress,
   onToggleFilter,
 }: WalletBarProps) {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
-  const getLabel = useWalletLabelsStore((state) => state.getLabel);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -42,20 +43,13 @@ export default function WalletBar({
               "h-1.5 w-1.5 flex-shrink-0",
               isActive ? "bg-primary" : "bg-primary/60"
             )} />
-            <button
-              type="button"
-              onClick={() => onToggleFilter?.(w.ordinalsAddress)}
-              className={cn(
-                "font-mono text-[11px] transition-colors",
-                isActive ? "text-primary" : "text-zinc-300 hover:text-primary"
-              )}
-            >
-              <span className={cn(
-                "font-bold",
-                isActive ? "text-primary" : "text-zinc-400"
-              )}>{getLabel(w.ordinalsAddress) || w.label}:</span>{" "}
-              {truncateAddr(w.ordinalsAddress, 6, 4)}
-            </button>
+            <EditableWalletLabel
+              address={w.ordinalsAddress}
+              label={w.label}
+              isActive={isActive}
+              onLabelChange={(newLabel) => onLabelChange?.(w.ordinalsAddress, newLabel)}
+              onToggleFilter={() => onToggleFilter?.(w.ordinalsAddress)}
+            />
             {wallets.length > 1 && (
               confirmingRemove === w.ordinalsAddress ? (
                 <span className="ml-0.5 flex items-center gap-1 font-mono text-[10px]">

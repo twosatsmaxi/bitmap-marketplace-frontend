@@ -95,6 +95,28 @@ export async function getProfile(): Promise<Profile> {
   return res.json() as Promise<Profile>;
 }
 
+export async function updateWalletLabel(
+  ordinalsAddress: string,
+  label: string
+): Promise<Profile> {
+  const res = await fetch(
+    `${API_BASE}/wallets/${encodeURIComponent(ordinalsAddress)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ label }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(extractErrorMessage(body, `Failed to update label: ${res.status}`));
+  }
+
+  return res.json() as Promise<Profile>;
+}
+
 export async function removeWalletFromProfile(
   ordinalsAddress: string
 ): Promise<Profile> {

@@ -5,7 +5,6 @@ import { Wallet, X, Plus, LogOut, Loader2, User, ChevronRight } from "lucide-rea
 import { useRouter } from "next/navigation";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
-import { useWalletLabelsStore } from "@/stores/wallet-labels";
 
 interface WalletDropdownProps {
   onOpenPalette: () => void;
@@ -25,8 +24,6 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
     isConnecting,
     error,
   } = useWalletConnect();
-  const getLabel = useWalletLabelsStore((state) => state.getLabel);
-
   // Close on click outside
   useEffect(() => {
     if (!open) return;
@@ -91,7 +88,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
                 <p className="font-mono text-[11px] font-bold text-primary">
-                  {getLabel(wallets[0].ordinalsAddress) || wallets[0].label}: {truncateAddr(wallets[0].ordinalsAddress, 8, 6)}
+                  {wallets[0].label}: {truncateAddr(wallets[0].ordinalsAddress, 8, 6)}
                 </p>
               </div>
             )}
@@ -126,7 +123,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
                       <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary/60" />
                       <div className="min-w-0 flex-1">
                         <p className="font-mono text-[11px] font-bold text-zinc-400">
-                          {getLabel(w.ordinalsAddress) || w.label}: {truncateAddr(w.ordinalsAddress, 8, 6)}
+                          {w.label}: {truncateAddr(w.ordinalsAddress, 8, 6)}
                         </p>
                       </div>
                       {confirmingRemove === w.ordinalsAddress ? (

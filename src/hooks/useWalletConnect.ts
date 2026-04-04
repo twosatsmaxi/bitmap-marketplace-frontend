@@ -11,6 +11,7 @@ import {
   connectToBackend,
   getChallenge,
   removeWalletFromProfile,
+  updateWalletLabel as updateWalletLabelApi,
   type Profile,
 } from "@/lib/auth-api";
 import { useWalletStore } from "@/stores/wallet-store";
@@ -108,6 +109,20 @@ export function useWalletConnect() {
     [profile, updateProfile]
   );
 
+  const updateWalletLabel = useCallback(
+    async (ordinalsAddress: string, label: string) => {
+      if (!profile) return;
+      setError(null);
+      try {
+        const updatedProfile = await updateWalletLabelApi(ordinalsAddress, label);
+        updateProfile(updatedProfile);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Label update failed");
+      }
+    },
+    [profile, updateProfile]
+  );
+
   const disconnect = useCallback(async () => {
     await disconnectWallet(activeProvider ?? undefined);
     clearAuth();
@@ -121,6 +136,7 @@ export function useWalletConnect() {
     connect,
     connectAnother,
     removeWallet,
+    updateWalletLabel,
     disconnect,
     isConnecting,
     error,

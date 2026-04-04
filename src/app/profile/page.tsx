@@ -16,6 +16,7 @@ export default function ProfilePage() {
     connect,
     connectAnother,
     removeWallet,
+    updateWalletLabel,
     isConnecting,
     error,
   } = useWalletConnect();
@@ -101,6 +102,7 @@ export default function ProfilePage() {
                 wallets={wallets}
                 onRemove={removeWallet}
                 onConnectAnother={() => setPaletteOpen(true)}
+                onLabelChange={updateWalletLabel}
                 activeAddress={activeWallet}
                 onToggleFilter={(addr) =>
                   setActiveWallet((prev) => (prev === addr ? null : addr))
