@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Wallet, X, Plus, LogOut, Loader2, User } from "lucide-react";
+import { Wallet, X, Plus, LogOut, Loader2, User, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn, truncateAddr } from "@/lib/utils";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
-import { useWalletLabelsStore } from "@/stores/wallet-labels";
 
 interface WalletDropdownProps {
   onOpenPalette: () => void;
@@ -15,6 +14,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  const [walletsExpanded, setWalletsExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
     wallets,
@@ -24,8 +24,6 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
     isConnecting,
     error,
   } = useWalletConnect();
-  const getLabel = useWalletLabelsStore((state) => state.getLabel);
-
   // Close on click outside
   useEffect(() => {
     if (!open) return;
@@ -36,6 +34,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
       ) {
         setOpen(false);
         setConfirmingRemove(null);
+        setWalletsExpanded(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -80,59 +79,89 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
       {/* Connected dropdown (when connected) */}
       {open && isConnected && (
         <div className="absolute right-0 top-full z-50 mt-2 w-72 border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] shadow-2xl backdrop-blur-md">
-          <div className="border-b border-[rgba(120,72,18,0.35)] px-4 py-2.5">
+          {/* Active wallet */}
+          <div className="border-b border-[rgba(120,72,18,0.35)] px-4 py-3">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-              Linked Wallets
+              Active Wallet
             </span>
+            {wallets[0] && (
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
+                <p className="font-mono text-[11px] font-bold text-primary">
+                  {wallets[0].label}: {truncateAddr(wallets[0].ordinalsAddress, 8, 6)}
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="max-h-48 overflow-y-auto">
-            {wallets.map((w) => (
-              <div
-                key={w.ordinalsAddress}
-                className="group flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-[rgba(247,147,26,0.04)]"
+          {/* Linked wallets — collapsible */}
+          {wallets.length > 1 && (
+            <div className="border-b border-[rgba(120,72,18,0.35)]">
+              <button
+                type="button"
+                onClick={() => setWalletsExpanded((v) => !v)}
+                className="flex w-full items-center gap-2 px-4 py-2.5 transition-colors hover:bg-[rgba(247,147,26,0.04)]"
               >
-                <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[11px] font-bold text-zinc-300">
-                    {getLabel(w.ordinalsAddress) || w.label}: {truncateAddr(w.ordinalsAddress, 8, 6)}
-                  </p>
-                </div>
-                {wallets.length > 1 && (
-                  confirmingRemove === w.ordinalsAddress ? (
-                    <span className="flex items-center gap-1 font-mono text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          removeWallet(w.ordinalsAddress);
-                          setConfirmingRemove(null);
-                        }}
-                        className="font-bold text-red-400 hover:text-red-300"
-                      >
-                        Remove?
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingRemove(null)}
-                        className="text-zinc-500 hover:text-zinc-300"
-                      >
-                        Cancel
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingRemove(w.ordinalsAddress)}
-                      className="flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
-                      aria-label={`Remove ${w.label}`}
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 text-zinc-500 transition-transform",
+                    walletsExpanded && "rotate-90"
+                  )}
+                />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                  Linked Wallets ({wallets.length - 1})
+                </span>
+              </button>
+
+              {walletsExpanded && (
+                <div className="max-h-36 overflow-y-auto pb-1">
+                  {wallets.slice(1).map((w) => (
+                    <div
+                      key={w.ordinalsAddress}
+                      className="group flex items-center gap-2 px-4 py-2 transition-colors hover:bg-[rgba(247,147,26,0.04)]"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )
-                )}
-              </div>
-            ))}
-          </div>
+                      <span className="h-1.5 w-1.5 flex-shrink-0 bg-primary/60" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-[11px] font-bold text-zinc-400">
+                          {w.label}: {truncateAddr(w.ordinalsAddress, 8, 6)}
+                        </p>
+                      </div>
+                      {confirmingRemove === w.ordinalsAddress ? (
+                        <span className="flex items-center gap-1 font-mono text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removeWallet(w.ordinalsAddress);
+                              setConfirmingRemove(null);
+                            }}
+                            className="font-bold text-red-400 hover:text-red-300"
+                          >
+                            Remove?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingRemove(null)}
+                            className="text-zinc-500 hover:text-zinc-300"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingRemove(w.ordinalsAddress)}
+                          className="flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+                          aria-label={`Remove ${w.label}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="border-t border-[rgba(120,72,18,0.35)] p-2">
             <button

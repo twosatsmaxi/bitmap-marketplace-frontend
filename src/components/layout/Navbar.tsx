@@ -82,7 +82,7 @@ export default function Navbar() {
   return (
     <>
       <nav className="fixed left-0 right-0 top-0 z-50 flex h-nav items-center border-b border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.95)] px-4 backdrop-blur-md md:px-6">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 md:gap-8">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 md:gap-4">
           {/* Logo */}
           <Link href="/" className="group flex items-center gap-3 transition-colors">
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center bg-primary shadow-[0_0_15px_rgba(247,147,26,0.3)]">
@@ -99,7 +99,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="ml-1 hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-1.5 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
