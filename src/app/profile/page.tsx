@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Loader2, User } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
 import WalletBar from "@/components/wallet/WalletBar";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
+import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
 import { truncateAddr } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -27,6 +28,12 @@ export default function ProfilePage() {
     useState<WalletProvider | null>(null);
   const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [activeWallet, setActiveWallet] = useState<string | null>(null);
+
+  const addresses = useMemo(
+    () => wallets.map((w) => w.ordinalsAddress),
+    [wallets]
+  );
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
@@ -94,6 +101,10 @@ export default function ProfilePage() {
                 wallets={wallets}
                 onRemove={removeWallet}
                 onConnectAnother={() => setPaletteOpen(true)}
+                activeAddress={activeWallet}
+                onToggleFilter={(addr) =>
+                  setActiveWallet((prev) => (prev === addr ? null : addr))
+                }
               />
             </div>
           </div>
@@ -154,52 +165,8 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Wallet Management */}
-          <div className="br-card p-3 md:p-5">
-            <div className="flex flex-col gap-4">
-              <div>
-                <h2 className="font-mono text-sm font-bold uppercase tracking-[0.1em] text-zinc-200">
-                  Connected Wallets
-                </h2>
-                <p className="font-mono text-[10px] text-zinc-500">
-                  {wallets.length} wallet{wallets.length !== 1 ? "s" : ""}{" "}
-                  linked to your profile
-                </p>
-              </div>
-
-              <div className="grid gap-2">
-                {wallets.map((wallet) => (
-                  <div
-                    key={wallet.ordinalsAddress}
-                    className="flex items-center justify-between border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="h-1.5 w-1.5 bg-primary" />
-                      <div>
-                        <p className="font-mono text-xs font-bold text-zinc-300">
-                          {wallet.label}
-                        </p>
-                        <p className="font-mono text-[10px] text-zinc-500">
-                          {truncateAddr(wallet.ordinalsAddress, 10, 6)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="font-mono text-[10px] text-zinc-600">
-                      Linked {new Date(wallet.linkedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {wallets.length === 0 && (
-                <div className="border border-dashed border-[rgba(120,72,18,0.35)] p-6 text-center">
-                  <p className="font-mono text-xs text-zinc-500">
-                    No wallets connected
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Bitmap Portfolio Grid */}
+          <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} />
         </div>
       )}
 
