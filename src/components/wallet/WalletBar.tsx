@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { truncateAddr, cn } from "@/lib/utils";
 import type { ProfileWallet } from "@/lib/auth-api";
@@ -19,6 +20,8 @@ export default function WalletBar({
   activeAddress,
   onToggleFilter,
 }: WalletBarProps) {
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {wallets.map((w) => {
@@ -52,14 +55,36 @@ export default function WalletBar({
               {truncateAddr(w.ordinalsAddress, 6, 4)}
             </button>
             {wallets.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onRemove(w.ordinalsAddress)}
-                className="ml-0.5 flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
-                aria-label={`Remove ${w.label}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
+              confirmingRemove === w.ordinalsAddress ? (
+                <span className="ml-0.5 flex items-center gap-1 font-mono text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemove(w.ordinalsAddress);
+                      setConfirmingRemove(null);
+                    }}
+                    className="font-bold text-red-400 hover:text-red-300"
+                  >
+                    Remove?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingRemove(null)}
+                    className="text-zinc-500 hover:text-zinc-300"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingRemove(w.ordinalsAddress)}
+                  className="ml-0.5 flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+                  aria-label={`Remove ${w.label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )
             )}
           </div>
         );

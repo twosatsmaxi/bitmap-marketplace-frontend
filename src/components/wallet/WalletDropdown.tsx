@@ -11,6 +11,7 @@ interface WalletDropdownProps {
 
 export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
     wallets,
@@ -30,6 +31,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
         !dropdownRef.current.contains(e.target as Node)
       ) {
         setOpen(false);
+        setConfirmingRemove(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -38,6 +40,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
 
   const handleDisconnect = async () => {
     await disconnect();
+    setConfirmingRemove(null);
     setOpen(false);
   };
 
@@ -95,14 +98,36 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
                   </p>
                 </div>
                 {wallets.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeWallet(w.ordinalsAddress)}
-                    className="flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
-                    aria-label={`Remove ${w.label}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                  confirmingRemove === w.ordinalsAddress ? (
+                    <span className="flex items-center gap-1 font-mono text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeWallet(w.ordinalsAddress);
+                          setConfirmingRemove(null);
+                        }}
+                        className="font-bold text-red-400 hover:text-red-300"
+                      >
+                        Remove?
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingRemove(null)}
+                        className="text-zinc-500 hover:text-zinc-300"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingRemove(w.ordinalsAddress)}
+                      className="flex-shrink-0 text-zinc-600 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+                      aria-label={`Remove ${w.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )
                 )}
               </div>
             ))}
