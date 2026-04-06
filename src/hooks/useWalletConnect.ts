@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   connectWallet,
   disconnectWallet,
@@ -20,6 +20,15 @@ import { useWalletStore } from "@/stores/wallet-store";
 export function useWalletConnect() {
   const { profile, provider: activeProvider, token, setAuth, updateProfile, clearAuth } = useWalletStore();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    const unsub = useWalletStore.persist.onFinishHydration(() => setHasHydrated(true));
+    if (useWalletStore.persist.getOptions().skipHydration !== true) {
+      setHasHydrated(useWalletStore.persist.hasHydrated());
+    }
+    return unsub;
+  }, []);
   const [error, setError] = useState<string | null>(null);
 
   const authenticateWallet = useCallback(
@@ -142,5 +151,6 @@ export function useWalletConnect() {
     disconnect,
     isConnecting,
     error,
+    hasHydrated,
   };
 }
