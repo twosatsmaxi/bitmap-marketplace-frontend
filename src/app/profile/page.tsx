@@ -118,7 +118,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[10px]"
                   title="Copy profile link"
                 >
-                  {copied ? <><Check className="h-3.5 w-3.5" /> Copied</> : <Link className="h-3.5 w-3.5" />}
+                  {copied ? <><Check className="h-3 w-3" /> Copied</> : <><Link className="h-3 w-3" /> Share</>}
                 </button>
               </div>
               <WalletBar
