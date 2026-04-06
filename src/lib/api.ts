@@ -217,6 +217,21 @@ export interface PortfolioResponse {
   has_more: boolean;
 }
 
+export interface WalletEntry {
+  address: string;
+  label: string | null;
+}
+
+export interface ProfilePortfolioResponse {
+  profile_id: string;
+  addresses: WalletEntry[];
+  bitmaps: (PortfolioBitmapItem & { owner?: string })[];
+  traits: TraitStat[];
+  total: number;
+  page: number;
+  has_more: boolean;
+}
+
 export async function getPortfolio(
   address: string,
   page = 0,

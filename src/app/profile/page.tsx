@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
@@ -29,11 +29,6 @@ export default function ProfilePage() {
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
   const [bitmapCount, setBitmapCount] = useState(0);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
-
-  const addresses = useMemo(
-    () => wallets.map((w) => w.ordinalsAddress),
-    [wallets]
-  );
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
@@ -112,7 +107,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Bitmap Portfolio Grid */}
-          <MultiWalletPortfolioGrid addresses={addresses} activeWallet={activeWallet} onTotalChange={handleTotalChange} />
+          <MultiWalletPortfolioGrid isOwner activeWallet={activeWallet} onTotalChange={handleTotalChange} />
         </div>
       )}
 

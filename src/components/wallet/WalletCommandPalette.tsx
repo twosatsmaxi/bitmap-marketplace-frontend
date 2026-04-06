@@ -172,11 +172,8 @@ export default function WalletCommandPalette({
       return;
     }
     let stale = false;
-    const addresses = connectedProfile.wallets.map((w) => w.ordinalsAddress);
-    fetch("/api/portfolio/multi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ addresses }),
+    fetch(`/api/portfolio/profile/${connectedProfile.id}?limit=1&page=0`, {
+      credentials: "include",
     })
       .then((r) => r.json())
       .then((data) => {

@@ -6,24 +6,18 @@ import { Box, Square, X } from "lucide-react";
 import BlockCard from "@/components/explore/BlockCard";
 import InfiniteScrollTrigger from "@/components/explore/InfiniteScrollTrigger";
 import type { BlockMeta } from "@/components/explore/types";
-import type { TraitStat, PortfolioBitmapItem } from "@/lib/api";
+import type { TraitStat, ProfilePortfolioResponse } from "@/lib/api";
 import { use3DPreference } from "@/hooks/use3DPreference";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
 const RENDER_API = "";
 
-interface MultiPortfolioResponse {
-  addresses: string[];
-  bitmaps: (PortfolioBitmapItem & { owner?: string })[];
-  traits: TraitStat[];
-  total: number;
-  page: number;
-  has_more: boolean;
-}
-
 interface MultiWalletPortfolioGridProps {
-  addresses: string[];
+  /** Pass profileId to view any user's public portfolio, or omit + set isOwner for the authenticated user's own portfolio. */
+  profileId?: string;
+  /** When true, fetches from /api/portfolio/mine (requires auth cookie) instead of a public profile endpoint. */
+  isOwner?: boolean;
   activeWallet?: string | null;
   onTotalChange?: (total: number) => void;
 }
@@ -82,7 +76,8 @@ function TraitPill({
 }
 
 export default function MultiWalletPortfolioGrid({
-  addresses,
+  profileId,
+  isOwner,
   activeWallet,
   onTotalChange,
 }: MultiWalletPortfolioGridProps) {
@@ -94,54 +89,37 @@ export default function MultiWalletPortfolioGrid({
   const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
   const prevTraitRef = useRef<string | null>(null);
 
-  // Stable key for SWR based on sorted addresses
-  const addressKey = useMemo(
-    () => [...addresses].sort().join(","),
-    [addresses]
-  );
+  const baseEndpoint = isOwner
+    ? "/api/portfolio/mine"
+    : profileId
+    ? `/api/portfolio/profile/${profileId}`
+    : null;
 
   const getKey = useCallback(
     (
       pageIndex: number,
-      previousPageData: MultiPortfolioResponse | null
+      previousPageData: ProfilePortfolioResponse | null
     ): string | null => {
+      if (!baseEndpoint) return null;
       if (previousPageData && !previousPageData.has_more) return null;
-      // Use a string key that encodes all params — SWR will use it for caching
-      const params: Record<string, string> = {
+      const params = new URLSearchParams({
         page: String(pageIndex),
         limit: String(PAGE_SIZE),
-        _addresses: addressKey,
-      };
-      if (activeTrait) params.trait_filter = activeTrait;
-      return `/api/portfolio/multi?${new URLSearchParams(params)}`;
+      });
+      if (activeTrait) params.set("trait_filter", activeTrait);
+      return `${baseEndpoint}?${params}`;
     },
-    [addressKey, activeTrait]
+    [baseEndpoint, activeTrait]
   );
 
-  const fetcher = async (key: string): Promise<MultiPortfolioResponse> => {
-    const url = new URL(key, window.location.origin);
-    const page = url.searchParams.get("page") ?? "0";
-    const limit = url.searchParams.get("limit") ?? String(PAGE_SIZE);
-    const traitFilter = url.searchParams.get("trait_filter");
-
-    const body: Record<string, unknown> = {
-      addresses,
-      page: Number(page),
-      limit: Number(limit),
-    };
-    if (traitFilter) body.trait_filter = traitFilter;
-
-    const res = await fetch("/api/portfolio/multi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  const fetcher = async (key: string): Promise<ProfilePortfolioResponse> => {
+    const res = await fetch(key, { credentials: "include" });
     if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
     return res.json();
   };
 
   const { data, error, setSize, isValidating, mutate } =
-    useSWRInfinite<MultiPortfolioResponse>(getKey, fetcher, {
+    useSWRInfinite<ProfilePortfolioResponse>(getKey, fetcher, {
       revalidateFirstPage: false,
       revalidateOnFocus: false,
       parallel: false,
@@ -157,24 +135,16 @@ export default function MultiWalletPortfolioGrid({
     return allBitmaps.filter((b) => b.owner === activeWallet);
   }, [allBitmaps, activeWallet]);
 
-  // Calculate trait counts from API data (all wallets) or filtered bitmaps (active wallet)
   const traits = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
-    // If no active wallet, use API trait counts (for all wallets)
-    if (!activeWallet) {
-      return data[0].traits || [];
-    }
-    
-    // When filtering to a specific wallet, recalculate trait counts from filtered bitmaps
+    if (!activeWallet) return data[0].traits || [];
+    // Recalculate trait counts for the filtered wallet
     const traitCounts = new Map<string, number>();
     for (const bitmap of filteredBitmaps) {
       for (const trait of bitmap.traits || []) {
         traitCounts.set(trait, (traitCounts.get(trait) || 0) + 1);
       }
     }
-    
-    // Convert to TraitStat array, sorted by count desc
     return Array.from(traitCounts.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
