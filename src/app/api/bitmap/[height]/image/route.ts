@@ -49,10 +49,13 @@ export async function GET(
   const watermark = searchParams.get("watermark") !== "false"; // default true
   const format = searchParams.get("format") || "png";
 
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+
   try {
     // Fetch block transaction data from upstream
     const blockDataUrl = `${RENDER_API}/api/block/${height}`;
     const response = await fetch(blockDataUrl, {
+      headers: clientIp ? { 'X-Forwarded-For': clientIp } : {},
       signal: AbortSignal.timeout(5000),
     });
 

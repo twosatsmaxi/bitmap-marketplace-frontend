@@ -4,14 +4,18 @@ const RENDER_API =
   process.env.RENDER_API_BASE ?? "http://r2d2.local:3020";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ height: string }> }
 ) {
   const { height } = await params;
   const url = `${RENDER_API}/api/block/${height}/meta`;
 
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip');
+
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: clientIp ? { 'X-Forwarded-For': clientIp } : {},
+    });
     if (!res.ok) {
       return NextResponse.json(
         { error: `Upstream ${res.status}` },

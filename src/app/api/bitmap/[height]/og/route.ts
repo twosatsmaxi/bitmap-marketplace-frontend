@@ -166,10 +166,13 @@ export async function GET(
   const canvasWidth = isSquare ? SQUARE_SIZE : HORIZONTAL_WIDTH;
   const canvasHeight = isSquare ? SQUARE_SIZE : HORIZONTAL_HEIGHT;
 
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+
   try {
     // Fetch block transaction data
     const blockDataUrl = `${RENDER_API}/api/block/${height}`;
     const response = await fetch(blockDataUrl, {
+      headers: clientIp ? { 'X-Forwarded-For': clientIp } : {},
       signal: AbortSignal.timeout(5000),
     });
 

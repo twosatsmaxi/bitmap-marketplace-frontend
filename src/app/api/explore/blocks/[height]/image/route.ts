@@ -36,10 +36,13 @@ export async function GET(
   const height_px = parseInt(searchParams.get("height") || "630", 10);
   const watermark = searchParams.get("watermark") === "true";
 
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
+
   try {
     // Fetch PNG from bitmap-render backend
     const pngUrl = `${RENDER_API}/api/block/${height}/png`;
     const response = await fetch(pngUrl, {
+      headers: clientIp ? { 'X-Forwarded-For': clientIp } : {},
       signal: AbortSignal.timeout(10000),
     });
 

@@ -4,7 +4,7 @@ const RENDER_API =
   process.env.RENDER_API_BASE ?? "http://r2d2.local:3020";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ height: string }> }
 ) {
   const { height } = await params;
@@ -14,8 +14,11 @@ export async function GET(
     return NextResponse.json({ error: "Invalid block height" }, { status: 400 });
   }
 
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip');
+
   try {
     const res = await fetch(`${RENDER_API}/api/block/${blockHeight}`, {
+      headers: clientIp ? { 'X-Forwarded-For': clientIp } : {},
       signal: AbortSignal.timeout(5000),
     });
 
