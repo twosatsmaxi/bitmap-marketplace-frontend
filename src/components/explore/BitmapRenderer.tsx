@@ -145,8 +145,7 @@ export default function BitmapRenderer({
                 const totalDuration = 3000;
                 const progress = Math.min(1, elapsed / totalDuration);
 
-                // Occasional flicker (approx 1% chance per frame)
-                const flickerIndex = Math.random() < 0.01 ? Math.floor(Math.random() * squares.length) : -1;
+                const flickerIndex = -1;
 
                 drawBitfeedVacuum(ctx, squares, layoutWidth, usedHeight, scaledSize, progress, start, now, flickerIndex, mousePosRef.current, mobileMode);
 

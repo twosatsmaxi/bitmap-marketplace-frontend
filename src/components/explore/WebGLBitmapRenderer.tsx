@@ -48,7 +48,7 @@ function renderFrame(
   mouseY: number,
   scale: number,
   enableRepulsion = true,
-  enableFlicker = true,
+  enableFlicker = false,
   isometric = false,
   tileHeightScale = 1.0
 ) {
@@ -127,7 +127,7 @@ export default function WebGLBitmapRenderer({
   onResult,
   animationStyle = "bitfeed",
   enableRepulsion = true,
-  enableFlicker = true,
+  enableFlicker = false,
   isometric = false,  // Default to 2D flat view (matching reference image style)
   inView = true,
   skipEntryAnimation = false,

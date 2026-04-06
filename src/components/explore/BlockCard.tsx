@@ -288,7 +288,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
                 canvasSize={300}
                 onStatus={setStatus}
                 enableRepulsion={qualityTier === "full"}
-                enableFlicker={qualityTier === "full"}
+                enableFlicker={false}
                 isometric={isometric}
                 inView={isInView}
                 skipEntryAnimation={skipEntryAnimation}
