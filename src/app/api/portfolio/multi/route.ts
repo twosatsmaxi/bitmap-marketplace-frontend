@@ -7,19 +7,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validate addresses
-    if (
-      !body.addresses ||
-      !Array.isArray(body.addresses) ||
-      body.addresses.length === 0 ||
-      body.addresses.length > 10
-    ) {
-      return NextResponse.json(
-        { error: "addresses must be an array of 1-10 items" },
-        { status: 400 }
-      );
-    }
-
     const res = await fetch(`${BITMAP_INDEX_API}/api/portfolio/multi`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
