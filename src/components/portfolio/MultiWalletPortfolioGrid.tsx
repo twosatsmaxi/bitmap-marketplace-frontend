@@ -20,6 +20,7 @@ interface MultiWalletPortfolioGridProps {
   isOwner?: boolean;
   activeWallet?: string | null;
   onTotalChange?: (total: number) => void;
+  onAddressesChange?: (addresses: { address: string; label: string | null }[]) => void;
 }
 
 // Module-level meta cache
@@ -80,6 +81,7 @@ export default function MultiWalletPortfolioGrid({
   isOwner,
   activeWallet,
   onTotalChange,
+  onAddressesChange,
 }: MultiWalletPortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
@@ -107,9 +109,10 @@ export default function MultiWalletPortfolioGrid({
         limit: String(PAGE_SIZE),
       });
       if (activeTrait) params.set("trait_filter", activeTrait);
+      if (activeWallet) params.set("wallet", activeWallet);
       return `${baseEndpoint}?${params}`;
     },
-    [baseEndpoint, activeTrait]
+    [baseEndpoint, activeTrait, activeWallet]
   );
 
   const fetcher = async (key: string): Promise<ProfilePortfolioResponse> => {
@@ -130,40 +133,31 @@ export default function MultiWalletPortfolioGrid({
     return data.flatMap((page) => page.bitmaps);
   }, [data]);
 
-  const filteredBitmaps = useMemo(() => {
-    if (!activeWallet) return allBitmaps;
-    return allBitmaps.filter((b) => b.owner === activeWallet);
-  }, [allBitmaps, activeWallet]);
-
   const traits = useMemo(() => {
     if (!data || data.length === 0) return [];
-    if (!activeWallet) return data[0].traits || [];
-    // Recalculate trait counts for the filtered wallet
-    const traitCounts = new Map<string, number>();
-    for (const bitmap of filteredBitmaps) {
-      for (const trait of bitmap.traits || []) {
-        traitCounts.set(trait, (traitCounts.get(trait) || 0) + 1);
-      }
-    }
-    return Array.from(traitCounts.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [data, activeWallet, filteredBitmaps]);
+    return data[0].traits || [];
+  }, [data]);
 
   const total = useMemo(() => {
     if (!data || data.length === 0) return 0;
     return data[0].total;
   }, [data]);
 
-  const displayTotal = activeWallet ? filteredBitmaps.length : total;
+  const displayTotal = total;
 
   useEffect(() => {
     onTotalChange?.(displayTotal);
   }, [displayTotal, onTotalChange]);
 
+  useEffect(() => {
+    if (data && data.length > 0 && onAddressesChange) {
+      onAddressesChange(data[0].addresses);
+    }
+  }, [data, onAddressesChange]);
+
   const heights = useMemo(
-    () => filteredBitmaps.map((b) => b.block_height),
-    [filteredBitmaps]
+    () => allBitmaps.map((b) => b.block_height),
+    [allBitmaps]
   );
 
   const hasMore = useMemo(() => {
