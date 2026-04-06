@@ -181,8 +181,8 @@ void main() {
   float effSize   = innerSize * shrinkFactor;
   float effHeight = isoBlockHeight * shrinkFactor;
 
-  // Drop from above: blocks start elevated and descend to resting position
-  float dropOffset = (1.0 - heightProgress) * cappedSize;
+  // Bottom-to-top: blocks grow upward from the base
+  float dropOffset = 0.0;
 
   // Shrink toward tile center
   float bx = curX + pad + (innerSize - effSize) * 0.5;

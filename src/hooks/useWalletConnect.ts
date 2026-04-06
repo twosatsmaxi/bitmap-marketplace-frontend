@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { mutate as swrMutate } from "swr";
 import {
   connectWallet,
   disconnectWallet,
@@ -16,6 +17,15 @@ import {
   type Profile,
 } from "@/lib/auth-api";
 import { useWalletStore } from "@/stores/wallet-store";
+
+/** Revalidate all SWR-cached portfolio entries so counts refresh immediately. */
+function invalidatePortfolioCache() {
+  swrMutate(
+    (key: unknown) => typeof key === "string" && key.startsWith("/api/portfolio/"),
+    undefined,
+    { revalidate: true },
+  );
+}
 
 export function useWalletConnect() {
   const { profile, provider: activeProvider, token, setAuth, updateProfile, clearAuth } = useWalletStore();
@@ -63,6 +73,7 @@ export function useWalletConnect() {
       try {
         const auth = await authenticateWallet(provider);
         setAuth(auth.profile, provider ?? "xverse", auth.token);
+        invalidatePortfolioCache();
         return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
@@ -94,6 +105,7 @@ export function useWalletConnect() {
 
         const auth = await authenticateWallet(provider, token ?? undefined);
         setAuth(auth.profile, provider ?? "xverse", auth.token);
+        invalidatePortfolioCache();
         return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
         setError(err instanceof Error ? err.message : "Connection failed");
@@ -112,6 +124,7 @@ export function useWalletConnect() {
       try {
         const updatedProfile = await removeWalletFromProfile(ordinalsAddress);
         updateProfile(updatedProfile);
+        invalidatePortfolioCache();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Remove failed");
       }
