@@ -38,7 +38,8 @@ export interface ChallengeResponse {
 
 export async function getChallenge(address: string): Promise<ChallengeResponse> {
   const res = await fetch(
-    `${API_BASE}/challenge?address=${encodeURIComponent(address)}`
+    `${API_BASE}/challenge?address=${encodeURIComponent(address)}`,
+    { cache: "no-store" }
   );
   if (!res.ok) {
     const body = await res.text();

@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
       `${BITMAP_INDEX_API}/api/auth/challenge?address=${encodeURIComponent(address)}`
     );
     const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(data, {
+      status: res.status,
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    });
   } catch {
     return NextResponse.json(
       { error: "Upstream unreachable" },
