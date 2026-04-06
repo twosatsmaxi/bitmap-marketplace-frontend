@@ -197,7 +197,7 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
               className="flex w-full items-center gap-2 px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 transition-colors hover:text-red-400"
             >
               <LogOut className="h-3 w-3" />
-              Disconnect All
+              Logout
             </button>
           </div>
 

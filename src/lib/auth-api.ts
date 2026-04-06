@@ -117,6 +117,13 @@ export async function updateWalletLabel(
   return res.json() as Promise<Profile>;
 }
 
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
 export async function removeWalletFromProfile(
   ordinalsAddress: string
 ): Promise<Profile> {

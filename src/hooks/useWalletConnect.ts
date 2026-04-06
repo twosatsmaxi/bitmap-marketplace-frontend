@@ -10,6 +10,7 @@ import {
 import {
   connectToBackend,
   getChallenge,
+  logout as logoutApi,
   removeWalletFromProfile,
   updateWalletLabel as updateWalletLabelApi,
   type Profile,
@@ -124,6 +125,7 @@ export function useWalletConnect() {
   );
 
   const disconnect = useCallback(async () => {
+    await logoutApi();
     await disconnectWallet(activeProvider ?? undefined);
     clearAuth();
   }, [activeProvider, clearAuth]);
