@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
+import { Link, Check } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
 
@@ -10,7 +11,16 @@ export default function PublicProfilePage() {
   const [bitmapCount, setBitmapCount] = useState(0);
   const [addresses, setAddresses] = useState<{ address: string; label: string | null }[]>([]);
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
+
+  const handleShare = useCallback(() => {
+    const url = `${window.location.origin}/profile/${profile_id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [profile_id]);
   const handleAddressesChange = useCallback(
     (addrs: { address: string; label: string | null }[]) => setAddresses(addrs),
     []
@@ -35,6 +45,14 @@ export default function PublicProfilePage() {
                 <span className="text-primary">{bitmapCount}</span> bitmap{bitmapCount !== 1 ? "s" : ""}
               </span>
             )}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[10px]"
+              title="Copy profile link"
+            >
+              {copied ? <><Check className="h-3.5 w-3.5" /> Copied</> : <Link className="h-3.5 w-3.5" />}
+            </button>
           </div>
           {/* Wallet pills */}
           {addresses.length > 1 && (

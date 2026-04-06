@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Link, Check } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
@@ -11,6 +11,7 @@ import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfoli
 
 export default function ProfilePage() {
   const {
+    profile,
     wallets,
     isConnected,
     connect,
@@ -29,7 +30,17 @@ export default function ProfilePage() {
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
   const [bitmapCount, setBitmapCount] = useState(0);
+  const [copied, setCopied] = useState(false);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
+
+  const handleShare = useCallback(() => {
+    if (!profile) return;
+    const url = `${window.location.origin}/profile/${profile.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [profile]);
 
   const handleWalletSelect = async (provider: WalletProvider) => {
     setConnectingProvider(provider);
@@ -101,6 +112,14 @@ export default function ProfilePage() {
                     <span className="text-primary">{bitmapCount}</span> bitmap{bitmapCount !== 1 ? "s" : ""}
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[10px]"
+                  title="Copy profile link"
+                >
+                  {copied ? <><Check className="h-3.5 w-3.5" /> Copied</> : <Link className="h-3.5 w-3.5" />}
+                </button>
               </div>
               <WalletBar
                 wallets={wallets}
