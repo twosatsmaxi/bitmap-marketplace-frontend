@@ -28,6 +28,7 @@ describe("getChallenge", () => {
     expect(result).toEqual(expected);
     expect(fetch).toHaveBeenCalledWith(
       "/api/auth/challenge?address=bc1qtest",
+      { cache: "no-store" },
     );
   });
 
@@ -39,6 +40,7 @@ describe("getChallenge", () => {
 
     expect(fetch).toHaveBeenCalledWith(
       "/api/auth/challenge?address=bc1q%20test%26special",
+      { cache: "no-store" },
     );
   });
 
