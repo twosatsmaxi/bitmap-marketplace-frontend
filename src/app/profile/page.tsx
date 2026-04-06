@@ -19,6 +19,7 @@ export default function ProfilePage() {
     updateWalletLabel,
     isConnecting,
     error,
+    hasHydrated,
   } = useWalletConnect();
 
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -47,6 +48,14 @@ export default function ProfilePage() {
     setConnectingProvider(null);
     setConnectedAddress(null);
   };
+
+  if (!hasHydrated) {
+    return (
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-3 pb-12 pt-16 md:px-4 md:pt-24">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>

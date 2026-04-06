@@ -17,6 +17,7 @@ vi.mock("@/lib/auth-api", () => ({
   getChallenge: vi.fn(),
   connectToBackend: vi.fn(),
   removeWalletFromProfile: vi.fn(),
+  logout: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Import the mocked functions after vi.mock so we can configure them per test
