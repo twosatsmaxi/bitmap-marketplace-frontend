@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
-// @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { captureThreeScene } from "@/lib/scorecard";
 import { ShareScoreCard } from "@/components/ui/ShareScoreCard";

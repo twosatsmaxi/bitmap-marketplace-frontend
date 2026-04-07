@@ -114,7 +114,7 @@ export default function HomePageClient({
                   height: `${pixel.h * 52}px`,
                   animationDuration: pixel.d,
                   animationDelay: pixel.delay,
-                  // @ts-ignore
+                  // @ts-expect-error -- CSS custom property not in CSSProperties type
                   "--pixel-opacity": pixel.o,
                 }}
               />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connectBodySchema, validationError } from "../../../../lib/validation";
 
 const BITMAP_INDEX_API =
   process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3002";
@@ -6,6 +7,12 @@ const BITMAP_INDEX_API =
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    const parsed = connectBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(validationError(parsed.error), { status: 400 });
+    }
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };

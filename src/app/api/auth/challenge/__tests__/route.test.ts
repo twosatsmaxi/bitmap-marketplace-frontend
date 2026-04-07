@@ -34,7 +34,8 @@ describe("GET /api/auth/challenge", () => {
     const res = await GET(makeRequest());
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "address required" });
+    const body = await res.json();
+    expect(body.error).toBe("Validation failed");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -42,7 +43,7 @@ describe("GET /api/auth/challenge", () => {
   // Valid address -- forwards to upstream
   // -------------------------------------------------------------------------
   it("forwards request to upstream and returns challenge data", async () => {
-    const address = "bc1q-test-address";
+    const address = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
     const res = await GET(makeRequest(`address=${address}`));
 
     expect(res.status).toBe(200);
@@ -68,7 +69,7 @@ describe("GET /api/auth/challenge", () => {
       }),
     );
 
-    const res = await GET(makeRequest("address=unknown"));
+    const res = await GET(makeRequest("address=bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"));
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not found" });
@@ -83,7 +84,7 @@ describe("GET /api/auth/challenge", () => {
       vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
     );
 
-    const res = await GET(makeRequest("address=bc1q-test"));
+    const res = await GET(makeRequest("address=bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"));
 
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Upstream unreachable" });

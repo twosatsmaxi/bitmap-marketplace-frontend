@@ -66,6 +66,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Bitmap Marketplace",
+  url: "https://bitmap.trade",
+  logo: "https://bitmap.trade/favicon.svg",
+  description:
+    "The leading marketplace for Bitcoin Bitmap Ordinals — on-chain digital real estate.",
+  sameAs: [],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -74,6 +85,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-bg text-text-primary min-h-screen safe-area-inset-left safe-area-inset-right">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <Navbar />
         <StatsBar />
         <main className="pt-[var(--header-total)]">

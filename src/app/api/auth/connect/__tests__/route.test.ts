@@ -40,7 +40,7 @@ describe("POST /api/auth/connect", () => {
   // Body forwarding
   // -------------------------------------------------------------------------
   it("forwards request body to upstream", async () => {
-    const body = { address: "bc1q-test", signature: "sig123" };
+    const body = { paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this message", nonce: "abc123" };
     const res = await POST(makeRequest(body));
 
     expect(res.status).toBe(200);
@@ -56,7 +56,7 @@ describe("POST /api/auth/connect", () => {
   // Authorization header forwarding
   // -------------------------------------------------------------------------
   it("forwards Authorization header when present", async () => {
-    const body = { address: "bc1q-test" };
+    const body = { paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" };
     await POST(makeRequest(body, { Authorization: "Bearer my-token" }));
 
     const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -64,7 +64,7 @@ describe("POST /api/auth/connect", () => {
   });
 
   it("omits Authorization header when not present on incoming request", async () => {
-    const body = { address: "bc1q-test" };
+    const body = { paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" };
     await POST(makeRequest(body));
 
     const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -75,7 +75,7 @@ describe("POST /api/auth/connect", () => {
   // Cookie header forwarding
   // -------------------------------------------------------------------------
   it("forwards Cookie header when present", async () => {
-    const body = { address: "bc1q-test" };
+    const body = { paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" };
     await POST(makeRequest(body, { Cookie: "session=abc123" }));
 
     const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -83,7 +83,7 @@ describe("POST /api/auth/connect", () => {
   });
 
   it("omits Cookie header when not present on incoming request", async () => {
-    const body = { address: "bc1q-test" };
+    const body = { paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" };
     await POST(makeRequest(body));
 
     const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -108,7 +108,7 @@ describe("POST /api/auth/connect", () => {
       }),
     );
 
-    const res = await POST(makeRequest({ address: "bc1q-test" }));
+    const res = await POST(makeRequest({ paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" }));
 
     expect(res.status).toBe(200);
 
@@ -126,7 +126,7 @@ describe("POST /api/auth/connect", () => {
       vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
     );
 
-    const res = await POST(makeRequest({ address: "bc1q-test" }));
+    const res = await POST(makeRequest({ paymentAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ordinalsAddress: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", signature: "sig123", message: "Sign this", nonce: "nonce1" }));
 
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Upstream unreachable" });
