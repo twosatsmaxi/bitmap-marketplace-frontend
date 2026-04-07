@@ -8,7 +8,7 @@ import MobileActionBar from "@/components/detail/MobileActionBar";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DetailCanvas from "@/components/detail/DetailCanvas";
-import PriceHistoryChart from "@/components/detail/PriceHistoryChart";
+import PriceHistoryChart from "@/components/detail/PriceHistoryChartDynamic";
 import BitmapPreview from "@/components/detail/BitmapPreview";
 import SwipeNavigator from "@/components/detail/SwipeNavigator";
 import type { Metadata } from "next";
@@ -114,9 +114,32 @@ export default async function BitmapDetailPage({ params }: PageProps) {
     .sort(() => Math.random() - 0.5)
     .slice(0, 4);
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bitmap.trade";
+  const bitmapJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${bitmap.blockNumber}.bitmap`,
+    description: `Bitcoin block ${bitmap.blockNumber} visualized as generative art`,
+    url: `${baseUrl}/bitmap/${bitmap.blockNumber}.bitmap`,
+    image: `${baseUrl}/api/bitmap/${bitmap.blockNumber}/og`,
+    brand: { "@type": "Brand", name: "Bitmap Marketplace" },
+    ...(bitmap.price && {
+      offers: {
+        "@type": "Offer",
+        price: (bitmap.price / 100_000_000).toFixed(8),
+        priceCurrency: "BTC",
+        availability: "https://schema.org/InStock",
+      },
+    }),
+  };
+
   return (
     <SwipeNavigator blockNumber={bitmap.blockNumber}>
     <div className="min-h-screen bg-bg pb-24 md:pb-0">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(bitmapJsonLd) }}
+      />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Header: Back Navigation + Title */}
         <div className="mb-4 md:mb-6">

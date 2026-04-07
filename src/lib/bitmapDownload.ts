@@ -25,8 +25,7 @@ export function downloadBitmapPNG(options: DownloadOptions): void {
   
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    console.error("Failed to get canvas context");
-    return;
+    throw new Error("Failed to get canvas context");
   }
 
   const bitmapType = style || getBitmapType(blockNumber);
@@ -132,8 +131,7 @@ export async function copyBitmapToClipboard(
       new ClipboardItem({ "image/png": blob })
     ]);
     return true;
-  } catch (err) {
-    console.error("Failed to copy to clipboard:", err);
+  } catch {
     return false;
   }
 }

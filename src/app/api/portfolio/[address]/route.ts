@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  bitcoinAddressSchema,
+  portfolioQuerySchema,
+  searchParamsToObject,
+  validationError,
+} from "../../../../lib/validation";
 
 const BITMAP_INDEX_API = process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3002";
 
@@ -21,7 +27,22 @@ export async function GET(
   { params }: { params: Promise<{ address: string }> }
 ) {
   const { address } = await params;
+
+  // Validate address route param
+  const addrResult = bitcoinAddressSchema.safeParse(address);
+  if (!addrResult.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: addrResult.error.issues },
+      { status: 400 }
+    );
+  }
+
+  // Validate query params
   const { searchParams } = new URL(req.url);
+  const qResult = portfolioQuerySchema.safeParse(searchParamsToObject(searchParams));
+  if (!qResult.success) {
+    return NextResponse.json(validationError(qResult.error), { status: 400 });
+  }
 
   const queryString = searchParams.toString();
   const cacheKey = `${address}:${queryString}`;

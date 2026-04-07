@@ -1,9 +1,9 @@
 import { getAnalyticsData } from "@/lib/api";
 import StatCard from "@/components/analytics/StatCard";
-import FloorChart from "@/components/analytics/FloorChart";
-import VolumeChart from "@/components/analytics/VolumeChart";
-import HolderDistribution from "@/components/analytics/HolderDistribution";
-import RarityDonut from "@/components/analytics/RarityDonut";
+import FloorChart from "@/components/analytics/FloorChartDynamic";
+import VolumeChart from "@/components/analytics/VolumeChartDynamic";
+import HolderDistribution from "@/components/analytics/HolderDistributionDynamic";
+import RarityDonut from "@/components/analytics/RarityDonutDynamic";
 import { formatBTC, formatNumber } from "@/lib/utils";
 
 export const revalidate = 300;

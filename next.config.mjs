@@ -1,15 +1,22 @@
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: __dirname,
   images: {
-    domains: ["ord.bestinslot.xyz"],
+    remotePatterns: [
+      { protocol: "https", hostname: "ord.bestinslot.xyz" },
+    ],
   },
   async headers() {
     return [
@@ -29,4 +36,4 @@ const nextConfig = {
     ];
   },
 };
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

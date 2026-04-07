@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  challengeQuerySchema,
+  searchParamsToObject,
+  validationError,
+} from "../../../../lib/validation";
 
 const BITMAP_INDEX_API =
   process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3002";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const address = searchParams.get("address");
 
-  if (!address) {
-    return NextResponse.json({ error: "address required" }, { status: 400 });
+  const parsed = challengeQuerySchema.safeParse(searchParamsToObject(searchParams));
+  if (!parsed.success) {
+    return NextResponse.json(validationError(parsed.error), { status: 400 });
   }
+  const { address } = parsed.data;
 
   try {
     const res = await fetch(

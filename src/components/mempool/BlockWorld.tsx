@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
-// @ts-ignore - OrbitControls doesn't have types in this version
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { Bitmap } from "@/lib/types";
 

@@ -2,13 +2,39 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { HelicopterVisualizer } from "@/components/visualizer/HelicopterVisualizer";
-import { SatoshiSurvivors } from "@/components/visualizer/SatoshiSurvivors";
-import { BlockVisualizer } from "@/components/visualizer/BlockVisualizer";
+import dynamic from "next/dynamic";
 import { BlockSelector } from "@/components/mempool/BlockSelector";
 import { useChainTip } from "@/hooks/useChainTip";
 import { Gamepad2, BarChart3, Sparkles, Brain, Zap, Maximize2, Palette } from "lucide-react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+
+function VisualizerSkeleton() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 border border-primary/30 bg-primary/5">
+          <Sparkles className="w-8 h-8 text-primary/60 animate-pulse" />
+        </div>
+        <p className="font-mono text-sm text-primary/60 tracking-wider">Loading visualizer...</p>
+      </div>
+    </div>
+  );
+}
+
+const HelicopterVisualizer = dynamic(
+  () => import("@/components/visualizer/HelicopterVisualizer").then(mod => mod.HelicopterVisualizer),
+  { ssr: false, loading: () => <VisualizerSkeleton /> }
+);
+
+const SatoshiSurvivors = dynamic(
+  () => import("@/components/visualizer/SatoshiSurvivors").then(mod => mod.SatoshiSurvivors),
+  { ssr: false, loading: () => <VisualizerSkeleton /> }
+);
+
+const BlockVisualizer = dynamic(
+  () => import("@/components/visualizer/BlockVisualizer").then(mod => mod.BlockVisualizer),
+  { ssr: false, loading: () => <VisualizerSkeleton /> }
+);
 
 interface BlockMeta {
   height: number;
@@ -112,10 +138,8 @@ function VisualizerContent() {
           },
           bytes,
         });
-      } catch (e) {
-        if (!cancelled) {
-          console.error("Failed to fetch block:", e);
-        }
+      } catch {
+        // Block fetch failed — loading state will be cleared in finally
       } finally {
         if (!cancelled) {
           setLoading(false);

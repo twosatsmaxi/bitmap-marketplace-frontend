@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  walletAddressParamSchema,
+  walletPatchBodySchema,
+  validationError,
+} from "../../../../../lib/validation";
 
 const BITMAP_INDEX_API =
   process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3002";
@@ -8,6 +13,13 @@ export async function PATCH(
   { params }: { params: Promise<{ address: string }> }
 ) {
   const { address } = await params;
+
+  // Validate address route param
+  const addrParsed = walletAddressParamSchema.safeParse({ address });
+  if (!addrParsed.success) {
+    return NextResponse.json(validationError(addrParsed.error), { status: 400 });
+  }
+
   const authHeader = req.headers.get("Authorization");
   const cookieHeader = req.headers.get("Cookie");
   if (!authHeader && !cookieHeader) {
@@ -16,6 +28,21 @@ export async function PATCH(
 
   try {
     const body = await req.text();
+
+    // Validate body
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      return NextResponse.json(
+        { error: "Validation failed", details: [{ message: "Invalid JSON body" }] },
+        { status: 400 }
+      );
+    }
+    const bodyResult = walletPatchBodySchema.safeParse(parsedBody);
+    if (!bodyResult.success) {
+      return NextResponse.json(validationError(bodyResult.error), { status: 400 });
+    }
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -54,6 +81,13 @@ export async function DELETE(
   { params }: { params: Promise<{ address: string }> }
 ) {
   const { address } = await params;
+
+  // Validate address route param
+  const addrParsed = walletAddressParamSchema.safeParse({ address });
+  if (!addrParsed.success) {
+    return NextResponse.json(validationError(addrParsed.error), { status: 400 });
+  }
+
   const authHeader = req.headers.get("Authorization");
   const cookieHeader = req.headers.get("Cookie");
   if (!authHeader && !cookieHeader) {

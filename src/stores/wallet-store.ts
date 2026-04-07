@@ -24,6 +24,12 @@ export const useWalletStore = create<WalletState>()(
       updateProfile: (profile) => set({ profile }),
       clearAuth: () => set({ profile: null, provider: null, token: null }),
     }),
-    { name: "bitmap-wallets" }
+    {
+      name: "bitmap-wallets",
+      partialize: (state) => ({
+        profile: state.profile,
+        provider: state.provider,
+      }),
+    }
   )
 );

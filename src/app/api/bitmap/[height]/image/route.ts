@@ -15,11 +15,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateBitmapPng, generateStyledBitmap } from "../../../../../lib/serverBitmapRender";
+import {
+  blockHeightSchema,
+  bitmapImageQuerySchema,
+  searchParamsToObject,
+  validationError,
+} from "../../../../../lib/validation";
 
 export const dynamic = "force-dynamic";
 
 const RENDER_API = process.env.RENDER_API_BASE ?? "http://r2d2.local:3020";
-const MAX_SIZE = 2048;
 const DEFAULT_SIZE = 512;
 
 export async function GET(
@@ -27,27 +32,26 @@ export async function GET(
   { params }: { params: Promise<{ height: string }> }
 ): Promise<NextResponse> {
   const { height: heightStr } = await params;
-  const height = parseInt(heightStr, 10);
+  const heightNum = parseInt(heightStr, 10);
 
-  if (isNaN(height) || height < 0) {
-    return NextResponse.json(
-      { error: "Invalid block height" },
-      { status: 400 }
-    );
+  // Validate block height
+  const heightResult = blockHeightSchema.safeParse(heightNum);
+  if (!heightResult.success) {
+    return NextResponse.json(validationError(heightResult.error), { status: 400 });
+  }
+  const height = heightResult.data;
+
+  // Parse & validate query params
+  const { searchParams } = new URL(request.url);
+  const qResult = bitmapImageQuerySchema.safeParse(searchParamsToObject(searchParams));
+  if (!qResult.success) {
+    return NextResponse.json(validationError(qResult.error), { status: 400 });
   }
 
-  // Parse query params
-  const { searchParams } = new URL(request.url);
-  
-  const sizeParam = searchParams.get("size");
-  const size = Math.min(
-    MAX_SIZE,
-    Math.max(64, parseInt(sizeParam || String(DEFAULT_SIZE), 10) || DEFAULT_SIZE)
-  );
-
-  const styleParam = searchParams.get("style") as "default" | "twitter" | "square" | null;
-  const watermark = searchParams.get("watermark") !== "false"; // default true
-  const format = searchParams.get("format") || "png";
+  const size = qResult.data.size ?? DEFAULT_SIZE;
+  const styleParam = qResult.data.style ?? null;
+  const watermark = qResult.data.watermark !== "false"; // default true
+  const format = qResult.data.format ?? "png";
 
   const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip');
 

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  exploreBlocksQuerySchema,
+  searchParamsToObject,
+  validationError,
+} from "../../../../lib/validation";
 
 const BITMAP_INDEX_API = process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3000";
 
@@ -18,6 +23,13 @@ function cacheSet(key: string, value: { data: unknown; status: number; timestamp
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+
+  // Validate query params
+  const parsed = exploreBlocksQuerySchema.safeParse(searchParamsToObject(searchParams));
+  if (!parsed.success) {
+    return NextResponse.json(validationError(parsed.error), { status: 400 });
+  }
+
   const cacheKey = searchParams.toString();
 
   // Check cache

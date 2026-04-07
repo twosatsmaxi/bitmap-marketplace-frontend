@@ -154,8 +154,8 @@ export default function ExploreClient({ latestBlock }: { latestBlock: number }) 
           const newBlocks = heights.map(h => ({ height: h, status: "idle" as const }));
           setBlocks(newBlocks);
           loadMeta(heights);
-        } catch (err) {
-          console.error("Filter fetch failed", err);
+        } catch {
+          // Filter fetch failed — blocks will remain empty
         }
       } else {
         const heights = buildHeights(anchorHeight, latestBlock);
