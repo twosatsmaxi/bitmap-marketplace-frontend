@@ -1,105 +1,72 @@
-"use client";
+import type { Metadata } from "next";
+import PublicProfileClient from "./PublicProfileClient";
 
-import { useCallback, useState } from "react";
-import { useParams } from "next/navigation";
-import { Link, Check } from "lucide-react";
-import { cn, truncateAddr } from "@/lib/utils";
-import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
+export const revalidate = 60;
 
-export default function PublicProfilePage() {
-  const { profile_id } = useParams<{ profile_id: string }>();
-  const [bitmapCount, setBitmapCount] = useState(0);
-  const [addresses, setAddresses] = useState<{ address: string; label: string | null }[]>([]);
-  const [activeWallet, setActiveWallet] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
+const BITMAP_INDEX_API =
+  process.env.BITMAP_INDEX_API_BASE ?? "http://localhost:3002";
 
-  const handleShare = useCallback(() => {
-    const url = `${window.location.origin}/profile/${profile_id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [profile_id]);
-  const handleAddressesChange = useCallback(
-    (addrs: { address: string; label: string | null }[]) => setAddresses(addrs),
-    []
-  );
+interface PageProps {
+  params: Promise<{ profile_id: string }>;
+}
 
-  return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
-      {/* Header */}
-      <div className="br-card p-3 md:p-5">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
-              Profile
-            </h1>
-            {addresses.length > 0 && (
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
-                {addresses.length} wallet{addresses.length !== 1 ? "s" : ""}
-              </span>
-            )}
-            {bitmapCount > 0 && (
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
-                <span className="text-primary">{bitmapCount}</span> bitmap{bitmapCount !== 1 ? "s" : ""}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[10px]"
-              title="Copy profile link"
-            >
-              {copied ? <><Check className="h-3 w-3" /> Copied</> : <><Link className="h-3 w-3" /> Share</>}
-            </button>
-          </div>
-          {/* Wallet pills */}
-          {addresses.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {addresses.map((w) => {
-                const isActive = activeWallet === w.address;
-                return (
-                  <button
-                    key={w.address}
-                    type="button"
-                    onClick={() => setActiveWallet((prev) => (prev === w.address ? null : w.address))}
-                    className={cn(
-                      "flex items-center gap-1.5 border px-2.5 py-1.5 transition-colors",
-                      isActive
-                        ? "border-primary bg-[rgba(247,147,26,0.12)] text-primary"
-                        : "border-[rgba(120,72,18,0.4)] bg-[rgba(247,147,26,0.04)] text-zinc-400 hover:border-[rgba(120,72,18,0.6)] hover:text-zinc-300"
-                    )}
-                  >
-                    <span className={cn("h-1.5 w-1.5 flex-shrink-0", isActive ? "bg-primary" : "bg-primary/60")} />
-                    <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                      {w.label && (
-                        <>
-                          <span className={cn("font-bold truncate max-w-[120px]", isActive ? "text-primary" : "text-zinc-400")}>
-                            {w.label}
-                          </span>
-                          <span className="text-zinc-600">&middot;</span>
-                        </>
-                      )}
-                      <span className={isActive ? "text-primary/70" : "text-zinc-500"}>
-                        {truncateAddr(w.address, 6, 4)}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { profile_id } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bitmap.trade";
 
-      {/* Bitmap Portfolio Grid */}
-      <MultiWalletPortfolioGrid
-        profileId={profile_id}
-        activeWallet={activeWallet}
-        onTotalChange={handleTotalChange}
-        onAddressesChange={handleAddressesChange}
-      />
-    </div>
-  );
+  let description = "A bitmap collector's portfolio on bitmap.trade";
+
+  try {
+    const res = await fetch(
+      `${BITMAP_INDEX_API}/api/portfolio/profile/${profile_id}?limit=1&page=0`,
+      { signal: AbortSignal.timeout(3000), next: { revalidate: 300 } }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      const total: number = data.total ?? 0;
+      const walletCount: number = data.addresses?.length ?? 0;
+
+      if (total > 0 || walletCount > 0) {
+        const parts: string[] = [];
+        if (total > 0) parts.push(`${total} bitmap${total !== 1 ? "s" : ""}`);
+        if (walletCount > 0) parts.push(`${walletCount} wallet${walletCount !== 1 ? "s" : ""}`);
+        description = `${parts.join(" across ")} on bitmap.trade`;
+      }
+    }
+  } catch {
+    // Fall back to generic description
+  }
+
+  const profileUrl = `${baseUrl}/profile/${profile_id}`;
+
+  return {
+    title: "Profile — bitmap.trade",
+    description,
+    openGraph: {
+      title: "Profile — bitmap.trade",
+      description,
+      type: "profile",
+      url: profileUrl,
+      images: [
+        {
+          url: "/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "bitmap.trade Profile",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Profile — bitmap.trade",
+      description,
+      images: ["/og-image.png"],
+    },
+  };
+}
+
+export default async function PublicProfilePage({ params }: PageProps) {
+  const { profile_id } = await params;
+  return <PublicProfileClient profileId={profile_id} />;
 }

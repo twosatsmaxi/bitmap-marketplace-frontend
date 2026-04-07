@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const ogImageUrl = `${baseUrl}/api/bitmap/${blockNum}/og`;
 
   return {
-    title: `${blockNum}.bitmap - Bitmap Market`,
+    title: `${blockNum}.bitmap - bitmap.trade`,
     description: `Bitmap #${blockNum} - Bitcoin block-based generative art NFT`,
     openGraph: {
       title: `${blockNum}.bitmap`,
