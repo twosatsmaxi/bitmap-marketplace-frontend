@@ -193,11 +193,17 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setPaletteOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-primary"
+              >
                 <Wallet className="h-3.5 w-3.5" />
                 Connect Wallet
-                <Badge variant="soon">Soon</Badge>
-              </div>
+              </button>
             )}
           </div>
         </div>
