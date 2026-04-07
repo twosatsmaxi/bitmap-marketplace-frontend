@@ -126,6 +126,7 @@ export default function MultiWalletPortfolioGrid({
       revalidateFirstPage: false,
       revalidateOnFocus: false,
       parallel: false,
+      keepPreviousData: true,
     });
 
   const allBitmaps = useMemo(() => {

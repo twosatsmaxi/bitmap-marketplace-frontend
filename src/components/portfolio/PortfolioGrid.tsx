@@ -104,6 +104,7 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
       revalidateFirstPage: false,
       revalidateOnFocus: false,
       parallel: false,
+      keepPreviousData: true,
     }
   );
 
