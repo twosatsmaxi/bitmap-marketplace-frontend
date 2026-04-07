@@ -121,4 +121,64 @@ describe("useWalletStore", () => {
       expect(state.token).toBeNull();
     });
   });
+
+  describe("persist partialize", () => {
+    it("only serializes profile and provider, not token", () => {
+      const profile = makeProfile();
+      const fullState = useWalletStore.getState();
+
+      // Populate state with a token so we can confirm it is excluded
+      useWalletStore.getState().setAuth(profile, "xverse", "super-secret-jwt");
+
+      const partialize = useWalletStore.persist.getOptions().partialize!;
+      const persisted = partialize(useWalletStore.getState());
+
+      expect(persisted).toHaveProperty("profile");
+      expect(persisted).toHaveProperty("provider");
+    });
+
+    it("does not include token in the persisted slice", () => {
+      useWalletStore
+        .getState()
+        .setAuth(makeProfile(), "xverse", "super-secret-jwt");
+
+      const partialize = useWalletStore.persist.getOptions().partialize!;
+      const persisted = partialize(useWalletStore.getState());
+
+      expect("token" in persisted).toBe(false);
+    });
+
+    it("does not include action methods in the persisted slice", () => {
+      const partialize = useWalletStore.persist.getOptions().partialize!;
+      const persisted = partialize(useWalletStore.getState());
+
+      expect("setAuth" in persisted).toBe(false);
+      expect("updateProfile" in persisted).toBe(false);
+      expect("clearAuth" in persisted).toBe(false);
+    });
+
+    it("persists the correct profile and provider values", () => {
+      const profile = makeProfile({ id: "user-42" });
+      useWalletStore.getState().setAuth(profile, "unisat", "jwt-token");
+
+      const partialize = useWalletStore.persist.getOptions().partialize!;
+      const persisted = partialize(useWalletStore.getState());
+
+      expect(persisted.profile).toEqual(profile);
+      expect(persisted.provider).toBe("unisat");
+    });
+
+    it("persists null profile and provider when store is cleared", () => {
+      useWalletStore
+        .getState()
+        .setAuth(makeProfile(), "xverse", "jwt-token");
+      useWalletStore.getState().clearAuth();
+
+      const partialize = useWalletStore.persist.getOptions().partialize!;
+      const persisted = partialize(useWalletStore.getState());
+
+      expect(persisted.profile).toBeNull();
+      expect(persisted.provider).toBeNull();
+    });
+  });
 });
