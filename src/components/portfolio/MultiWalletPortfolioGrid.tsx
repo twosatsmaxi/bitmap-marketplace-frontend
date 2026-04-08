@@ -120,6 +120,10 @@ export default function MultiWalletPortfolioGrid({
 
   const fetcher = async (key: string): Promise<ProfilePortfolioResponse> => {
     const res = await fetch(key, { credentials: "include" });
+    if (res.status === 401) {
+      useWalletStore.getState().clearAuth();
+      throw new Error("Unauthorized");
+    }
     if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
     return res.json();
   };
