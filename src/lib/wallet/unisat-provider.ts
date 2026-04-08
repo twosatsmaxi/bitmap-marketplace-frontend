@@ -22,9 +22,11 @@ export class UnisatProvider implements WalletProviderStrategy {
     if (!accounts.length) throw new Error("No accounts returned from Unisat");
 
     // UniSat uses a single address for both payment and ordinals
+    const pubkey = await unisat.getPublicKey();
     return {
       paymentAddress: accounts[0],
       ordinalsAddress: accounts[0],
+      paymentPubkey: pubkey,
     };
   }
 

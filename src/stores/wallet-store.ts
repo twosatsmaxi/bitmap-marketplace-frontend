@@ -8,8 +8,10 @@ interface WalletState {
   provider: WalletProvider | null;
   token: string | null;
   sessionKey: string | null;
+  /** Compressed secp256k1 pubkey (hex) for the active payment address. */
+  paymentPubkey: string | null;
 
-  setAuth: (profile: Profile, provider: WalletProvider, token: string) => void;
+  setAuth: (profile: Profile, provider: WalletProvider, token: string, paymentPubkey?: string) => void;
   updateProfile: (profile: Profile) => void;
   clearAuth: () => void;
 }
@@ -21,11 +23,12 @@ export const useWalletStore = create<WalletState>()(
       provider: null,
       token: null,
       sessionKey: null,
+      paymentPubkey: null,
 
-      setAuth: (profile, provider, token) =>
-        set({ profile, provider, token, sessionKey: Date.now().toString(36) }),
+      setAuth: (profile, provider, token, paymentPubkey) =>
+        set({ profile, provider, token, paymentPubkey: paymentPubkey ?? null, sessionKey: Date.now().toString(36) }),
       updateProfile: (profile) => set({ profile }),
-      clearAuth: () => set({ profile: null, provider: null, token: null, sessionKey: null }),
+      clearAuth: () => set({ profile: null, provider: null, token: null, sessionKey: null, paymentPubkey: null }),
     }),
     {
       name: "bitmap-wallets",

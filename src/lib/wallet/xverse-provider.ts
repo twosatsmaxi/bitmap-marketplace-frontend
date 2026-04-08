@@ -45,6 +45,7 @@ export class XverseProvider implements WalletProviderStrategy {
     return {
       paymentAddress: payment.address,
       ordinalsAddress: ordinals.address,
+      paymentPubkey: payment.publicKey,
     };
   }
 

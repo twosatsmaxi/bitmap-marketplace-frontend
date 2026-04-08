@@ -2,6 +2,8 @@
 export interface WalletAddresses {
   paymentAddress: string;
   ordinalsAddress: string;
+  /** Compressed secp256k1 pubkey (hex) for the payment address. Used for PSBT signing. */
+  paymentPubkey?: string;
 }
 
 /** Identifier for each supported wallet extension. */

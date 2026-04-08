@@ -15,7 +15,7 @@ export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
   const [buyModalOpen, setBuyModalOpen] = useState(false);
 
   const profile = useWalletStore((s) => s.profile);
-  const provider = useWalletStore((s) => s.provider);
+  const paymentPubkey = useWalletStore((s) => s.paymentPubkey);
   const { cancel: cancelListing, isLoading: isCancelling } = useCancelListing();
 
   // Check if the current user owns this bitmap
@@ -24,9 +24,7 @@ export default function ActionPanel({ bitmap }: { bitmap: Bitmap }) {
       w.ordinalsAddress === bitmap.owner || w.paymentAddress === bitmap.owner,
   );
 
-  // TODO: get seller pubkey from wallet — for now use empty string as placeholder
-  // The actual pubkey comes from the wallet provider during connect
-  const sellerPubkey = ""; // Will be populated from wallet in the modal
+  const sellerPubkey = paymentPubkey ?? "";
 
   return (
     <div className="br-card px-5 py-5">

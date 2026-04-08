@@ -61,7 +61,7 @@ export function useWalletConnect() {
         provider,
         authToken,
       );
-      return { ...auth, ordinalsAddress: addresses.ordinalsAddress };
+      return { ...auth, ordinalsAddress: addresses.ordinalsAddress, paymentPubkey: addresses.paymentPubkey };
     },
     []
   );
@@ -72,7 +72,7 @@ export function useWalletConnect() {
       setError(null);
       try {
         const auth = await authenticateWallet(provider);
-        setAuth(auth.profile, provider ?? "xverse", auth.token);
+        setAuth(auth.profile, provider ?? "xverse", auth.token, auth.paymentPubkey);
         invalidatePortfolioCache();
         return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
@@ -104,7 +104,7 @@ export function useWalletConnect() {
         }
 
         const auth = await authenticateWallet(provider, token ?? undefined);
-        setAuth(auth.profile, provider ?? "xverse", auth.token);
+        setAuth(auth.profile, provider ?? "xverse", auth.token, auth.paymentPubkey);
         invalidatePortfolioCache();
         return { profile: auth.profile, ordinalsAddress: auth.ordinalsAddress };
       } catch (err) {
