@@ -7,6 +7,7 @@ interface WalletState {
   profile: Profile | null;
   provider: WalletProvider | null;
   token: string | null;
+  sessionKey: string | null;
 
   setAuth: (profile: Profile, provider: WalletProvider, token: string) => void;
   updateProfile: (profile: Profile) => void;
@@ -19,16 +20,19 @@ export const useWalletStore = create<WalletState>()(
       profile: null,
       provider: null,
       token: null,
+      sessionKey: null,
 
-      setAuth: (profile, provider, token) => set({ profile, provider, token }),
+      setAuth: (profile, provider, token) =>
+        set({ profile, provider, token, sessionKey: Date.now().toString(36) }),
       updateProfile: (profile) => set({ profile }),
-      clearAuth: () => set({ profile: null, provider: null, token: null }),
+      clearAuth: () => set({ profile: null, provider: null, token: null, sessionKey: null }),
     }),
     {
       name: "bitmap-wallets",
       partialize: (state) => ({
         profile: state.profile,
         provider: state.provider,
+        sessionKey: state.sessionKey,
       }),
     }
   )

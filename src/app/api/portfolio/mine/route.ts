@@ -6,6 +6,7 @@ const BITMAP_INDEX_API =
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    searchParams.delete("_sk");
     const upstream = new URL(`${BITMAP_INDEX_API}/api/portfolio/mine`);
     searchParams.forEach((v, k) => upstream.searchParams.set(k, v));
 

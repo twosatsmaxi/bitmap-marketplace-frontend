@@ -8,6 +8,7 @@ import InfiniteScrollTrigger from "@/components/explore/InfiniteScrollTrigger";
 import type { BlockMeta } from "@/components/explore/types";
 import type { TraitStat, ProfilePortfolioResponse } from "@/lib/api";
 import { use3DPreference } from "@/hooks/use3DPreference";
+import { useWalletStore } from "@/stores/wallet-store";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
@@ -86,6 +87,7 @@ export default function MultiWalletPortfolioGrid({
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
   );
+  const sessionKey = useWalletStore((s) => s.sessionKey);
   const [isometric, toggle3D] = use3DPreference();
   const [activeTrait, setActiveTrait] = useState<string | null>(null);
   const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
@@ -110,9 +112,10 @@ export default function MultiWalletPortfolioGrid({
       });
       if (activeTrait) params.set("trait_filter", activeTrait);
       if (activeWallet) params.set("wallet", activeWallet);
+      if (isOwner && sessionKey) params.set("_sk", sessionKey);
       return `${baseEndpoint}?${params}`;
     },
-    [baseEndpoint, activeTrait, activeWallet]
+    [baseEndpoint, activeTrait, activeWallet, isOwner, sessionKey]
   );
 
   const fetcher = async (key: string): Promise<ProfilePortfolioResponse> => {
