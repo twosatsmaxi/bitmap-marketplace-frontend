@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getMempoolApiBase } from "@/lib/network-config";
 
 // Module-level cache for client-side
 let cachedChainTip: number | null = null;
@@ -20,7 +21,7 @@ async function fetchChainTip(): Promise<number> {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const res = await fetch("https://mempool.space/api/blocks/tip/height", {
+      const res = await fetch(`${getMempoolApiBase()}/blocks/tip/height`, {
         signal: controller.signal,
       });
       

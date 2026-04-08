@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import ExploreClientInfinite from "@/components/explore/ExploreClientInfinite";
 import { ExploreGridSkeleton } from "@/components/ui/ExploreGridSkeleton";
+import { getMempoolApiBase } from "@/lib/network-config";
 
 export const revalidate = 60;
 
@@ -16,7 +17,7 @@ async function getChainTip(): Promise<number> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const res = await fetch("https://mempool.space/api/blocks/tip/height", {
+    const res = await fetch(`${getMempoolApiBase()}/blocks/tip/height`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     });

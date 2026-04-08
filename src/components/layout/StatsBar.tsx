@@ -8,8 +8,9 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useSWR from "swr";
+import { getBisApiBase, isMainnet, getNetworkLabel } from "@/lib/network-config";
 
-const BIS_BASE = "https://api.bestinslot.xyz/v3";
+const BIS_BASE = getBisApiBase();
 const API_KEY = process.env.NEXT_PUBLIC_BESTINSLOT_API_KEY;
 
 interface StatItemData {
@@ -122,11 +123,17 @@ export default function StatsBar() {
 
   return (
     <div className="fixed left-0 right-0 top-nav z-40 flex h-stats-bar items-center border-b border-[rgba(120,72,18,0.55)] bg-[rgba(9,9,11,0.95)] backdrop-blur-md">
-      {/* Preview Label - Desktop */}
+      {/* Network / Preview Label - Desktop */}
       <div className="hidden h-full items-center border-r border-[rgba(120,72,18,0.45)] bg-[rgba(247,147,26,0.06)] px-4 md:flex md:px-6">
-        <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          <span className="h-1.5 w-1.5 bg-primary opacity-60"></span>
-          Preview
+        <span className={cn(
+          "flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em]",
+          isMainnet() ? "text-zinc-500" : "text-blue-400"
+        )}>
+          <span className={cn(
+            "h-1.5 w-1.5 opacity-60",
+            isMainnet() ? "bg-primary" : "bg-blue-400"
+          )}></span>
+          {isMainnet() ? "Preview" : getNetworkLabel()}
         </span>
       </div>
 

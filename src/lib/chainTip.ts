@@ -1,3 +1,5 @@
+import { getMempoolApiBase } from "./network-config";
+
 // Server-only chain tip fetcher with module-level caching
 let cachedChainTip: number | null = null;
 let lastFetchTime = 0;
@@ -15,7 +17,7 @@ export async function getChainTipServer(): Promise<number> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch("https://mempool.space/api/blocks/tip/height", {
+    const res = await fetch(`${getMempoolApiBase()}/blocks/tip/height`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     });

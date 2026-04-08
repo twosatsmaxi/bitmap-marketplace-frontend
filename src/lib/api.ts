@@ -17,8 +17,9 @@ import {
   makeMockBitmap,
 } from "./mock-data";
 import { headers } from "next/headers";
+import { getBisApiBase } from "./network-config";
 
-const BIS_BASE = "https://api.bestinslot.xyz/v3";
+const BIS_BASE = getBisApiBase();
 const API_KEY = process.env.BESTINSLOT_API_KEY;
 
 // Bitmap-index backend API (our own backend)

@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getCspConnectDomains, getCspImgDomains } from "@/lib/network-config";
+
+const connectDomains = getCspConnectDomains().join(" ");
+const imgDomains = getCspImgDomains().join(" ");
 
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
   "font-src 'self' fonts.gstatic.com",
-  "img-src 'self' data: blob: ord.bestinslot.xyz",
-  "connect-src 'self' api.bestinslot.xyz mempool.space",
+  `img-src 'self' data: blob: ${imgDomains}`,
+  `connect-src 'self' ${connectDomains}`,
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
 ].join("; ");
