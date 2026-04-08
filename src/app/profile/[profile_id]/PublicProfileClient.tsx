@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Link, Check } from "lucide-react";
 import { cn, truncateAddr } from "@/lib/utils";
+import CollapsibleWalletPills from "@/components/wallet/CollapsibleWalletPills";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
 
 interface PublicProfileClientProps {
@@ -58,12 +59,14 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
           </div>
           {/* Wallet pills */}
           {addresses.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {addresses.map((w) => {
+            <CollapsibleWalletPills
+              items={addresses}
+              getKey={(w) => w.address}
+              getSearchText={(w) => `${w.label ?? ""} ${w.address}`}
+              renderItem={(w) => {
                 const isActive = activeWallet === w.address;
                 return (
                   <button
-                    key={w.address}
                     type="button"
                     onClick={() => setActiveWallet((prev) => (prev === w.address ? null : w.address))}
                     className={cn(
@@ -89,8 +92,8 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
                     </span>
                   </button>
                 );
-              })}
-            </div>
+              }}
+            />
           )}
         </div>
       </div>
