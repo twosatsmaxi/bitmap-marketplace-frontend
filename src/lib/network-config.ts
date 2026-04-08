@@ -6,11 +6,11 @@
  * entire frontend between mainnet and signet (or testnet4).
  */
 
-export type BitcoinNetwork = "mainnet" | "signet" | "testnet4";
+export type BitcoinNetwork = "mainnet" | "signet" | "testnet4" | "regtest";
 
 export const BITCOIN_NETWORK: BitcoinNetwork = (() => {
   const raw = process.env.NEXT_PUBLIC_BITCOIN_NETWORK ?? "mainnet";
-  if (raw === "mainnet" || raw === "signet" || raw === "testnet4") return raw;
+  if (raw === "mainnet" || raw === "signet" || raw === "testnet4" || raw === "regtest") return raw;
   return "mainnet";
 })();
 
@@ -24,6 +24,8 @@ export function getNetworkLabel(): string {
       return "Signet";
     case "testnet4":
       return "Testnet4";
+    case "regtest":
+      return "Regtest";
     default:
       return "Mainnet";
   }
@@ -39,6 +41,9 @@ export function getBisApiBase(): string {
       return "https://signet_api.bestinslot.xyz/v3";
     case "testnet4":
       return "https://testnet.api.bestinslot.xyz/v3";
+    case "regtest":
+      // No BestInSlot on regtest — falls back to mainnet (will use mock data)
+      return "https://api.bestinslot.xyz/v3";
     default:
       return "https://api.bestinslot.xyz/v3";
   }
@@ -54,6 +59,9 @@ function getMempoolBase(): string {
       return "https://mempool.space/signet";
     case "testnet4":
       return "https://mempool.space/testnet4";
+    case "regtest":
+      // No public mempool on regtest — UTXO/fee fetching uses local Bitcoin RPC instead
+      return "https://mempool.space";
     default:
       return "https://mempool.space";
   }

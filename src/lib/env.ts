@@ -20,7 +20,7 @@ const publicSchema = z.object({
   NEXT_PUBLIC_BITMAP_INDEX_API_BASE: z.string().optional().default(""),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("https://bitmap.trade"),
   NEXT_PUBLIC_BITCOIN_NETWORK: z
-    .enum(["mainnet", "signet", "testnet4"])
+    .enum(["mainnet", "signet", "testnet4", "regtest"])
     .optional()
     .default("mainnet"),
   NEXT_PUBLIC_MARKETPLACE_API_BASE: z
