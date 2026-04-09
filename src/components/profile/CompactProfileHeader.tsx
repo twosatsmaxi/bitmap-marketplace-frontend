@@ -78,7 +78,7 @@ function WalletPill({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1 border px-1.5 py-0.5 font-mono text-[10px] whitespace-nowrap",
+        "flex items-center gap-1 border px-1.5 py-0.5 font-mono text-[10px] md:text-xs whitespace-nowrap",
         isActive
           ? "border-primary bg-[rgba(247,147,26,0.12)] text-primary"
           : "border-[rgba(120,72,18,0.4)] bg-[rgba(247,147,26,0.04)] text-zinc-500 hover:text-zinc-300"
@@ -234,7 +234,7 @@ export default function CompactProfileHeader({
           {bitmapCount > 0 && (
             <span
               style={staggerStyle(idx++, totalItems, progress)}
-              className="flex-shrink-0 border border-[rgba(120,72,18,0.4)] bg-[rgba(120,72,18,0.12)] rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400 md:text-[10px]"
+              className="flex-shrink-0 border border-[rgba(120,72,18,0.4)] bg-[rgba(120,72,18,0.12)] rounded px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 md:text-xs"
             >
               <span className="text-primary">{bitmapCount}</span> bitmap
               {bitmapCount !== 1 ? "s" : ""}
@@ -270,7 +270,7 @@ export default function CompactProfileHeader({
                     <button
                       type="button"
                       onClick={() => setOverflowOpen((p) => !p)}
-                      className="border border-[rgba(120,72,18,0.4)] bg-[rgba(120,72,18,0.12)] px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
+                      className="border border-[rgba(120,72,18,0.4)] bg-[rgba(120,72,18,0.12)] px-1.5 py-0.5 font-mono text-[10px] md:text-xs text-zinc-500 transition-colors hover:text-zinc-300"
                     >
                       +{overflowWallets.length}
                     </button>
@@ -283,7 +283,7 @@ export default function CompactProfileHeader({
                             value={walletSearch}
                             onChange={(e) => setWalletSearch(e.target.value)}
                             placeholder="Search wallets…"
-                            className="w-full bg-transparent font-mono text-[10px] text-zinc-300 placeholder:text-zinc-600 outline-none"
+                            className="w-full bg-transparent font-mono text-[10px] md:text-xs text-zinc-300 placeholder:text-zinc-600 outline-none"
                           />
                         </div>
                         <div className="hide-scrollbar flex max-h-48 flex-col gap-0.5 overflow-y-auto p-1">
@@ -334,7 +334,7 @@ export default function CompactProfileHeader({
                     style={staggerStyle(i, totalItems, progress)}
                     onClick={() => onTraitClick(trait.name)}
                     className={cn(
-                      "inline-flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-1 font-mono text-[10px]",
+                      "inline-flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-1 font-mono text-[10px] md:text-xs",
                       "border hover:scale-105 active:scale-95",
                       isActive
                         ? "bg-primary text-black border-primary font-bold"
@@ -346,7 +346,7 @@ export default function CompactProfileHeader({
                     </span>
                     <span
                       className={cn(
-                        "px-1 rounded text-[9px]",
+                        "px-1 rounded text-[9px] md:text-[10px]",
                         isActive ? "bg-black/20" : "bg-black/30"
                       )}
                     >
@@ -371,7 +371,7 @@ export default function CompactProfileHeader({
                   key={trait.name}
                   onClick={() => onTraitClick(trait.name)}
                   className={cn(
-                    "inline-flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-1 font-mono text-[10px]",
+                    "inline-flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-1 font-mono text-[10px] md:text-xs",
                     "border active:scale-95",
                     isActive
                       ? "bg-primary text-black border-primary font-bold"
@@ -383,7 +383,7 @@ export default function CompactProfileHeader({
                   </span>
                   <span
                     className={cn(
-                      "px-1 rounded text-[9px]",
+                      "px-1 rounded text-[9px] md:text-[10px]",
                       isActive ? "bg-black/20" : "bg-black/30"
                     )}
                   >
