@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { truncateInscription } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
@@ -14,9 +14,10 @@ export default function ChildrenGallery({ childIds, count }: ChildrenGalleryProp
   const childCount = count ?? childIds.length;
   const childLabel = `${childCount} ${childCount === 1 ? "child" : "children"}`;
   const [selectedChild, setSelectedChild] = useState<{ id: string; index: number } | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={galleryRef} className="flex flex-col gap-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs md:text-sm tracking-wide text-zinc-500">
@@ -47,6 +48,7 @@ export default function ChildrenGallery({ childIds, count }: ChildrenGalleryProp
           childId={selectedChild.id}
           index={selectedChild.index}
           onClose={() => setSelectedChild(null)}
+          galleryRef={galleryRef}
         />
       )}
     </div>
@@ -98,18 +100,27 @@ interface ChildLightboxProps {
   childId: string;
   index: number;
   onClose: () => void;
+  galleryRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function ChildLightbox({ childId, index, onClose }: ChildLightboxProps) {
+function ChildLightbox({ childId, index, onClose, galleryRef }: ChildLightboxProps) {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [topOffset, setTopOffset] = useState<number | null>(null);
 
   useEffect(() => {
+    if (galleryRef.current) {
+      const rect = galleryRef.current.getBoundingClientRect();
+      // Position modal so it starts near the gallery, clamped to stay on screen
+      const modalHeight = 460; // approximate modal height
+      const desiredTop = rect.top - modalHeight - 8;
+      setTopOffset(Math.max(16, desiredTop));
+    }
     requestAnimationFrame(() => setIsAnimating(true));
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
-  }, []);
+  }, [galleryRef]);
 
   const handleClose = useCallback(() => {
     setIsAnimating(false);
@@ -125,7 +136,7 @@ function ChildLightbox({ childId, index, onClose }: ChildLightboxProps) {
   }, [handleClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex justify-center p-4" style={topOffset !== null ? { alignItems: "flex-start", paddingTop: topOffset } : { alignItems: "center" }}>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200 ${isAnimating ? "opacity-100" : "opacity-0"}`}
