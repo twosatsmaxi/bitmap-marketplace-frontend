@@ -311,16 +311,16 @@ export default function MultiWalletPortfolioGrid({
 
       {/* Skeleton loaders during filter transition (outside fading div so they stay visible) */}
       {isFilterTransitioning && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={`transition-skeleton-${i}`} className="br-card flex flex-col overflow-hidden p-0">
-              <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
+              <div className="flex items-center px-2 py-1 md:px-3 md:py-2">
                 <div className="h-3 w-24 rounded animate-shimmer" />
               </div>
-              <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+              <div className="relative mx-1.5 aspect-square rounded-lg bg-[#090c11] overflow-hidden md:mx-2">
                 <div className="absolute inset-0 animate-shimmer" />
               </div>
-              <div className="flex flex-col gap-0.5 md:gap-1 px-2.5 py-2 md:px-3 md:py-3">
+              <div className="flex flex-col gap-0.5 md:gap-1 px-2 py-1.5 md:px-3 md:py-3">
                 <div className="h-2.5 w-16 rounded animate-shimmer" />
               </div>
             </div>
@@ -331,7 +331,7 @@ export default function MultiWalletPortfolioGrid({
       {/* Grid */}
       <div
         className={cn(
-          "grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4",
+          "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-4",
           isFilterTransitioning && "hidden"
         )}
       >
@@ -348,13 +348,13 @@ export default function MultiWalletPortfolioGrid({
         {isLoading &&
           Array.from({ length: 8 }).map((_, i) => (
             <div key={`skeleton-${i}`} className="br-card flex flex-col overflow-hidden p-0">
-              <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
+              <div className="flex items-center px-2 py-1 md:px-3 md:py-2">
                 <div className="h-3 w-24 rounded animate-shimmer" />
               </div>
-              <div className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden">
+              <div className="relative mx-1.5 aspect-square rounded-lg bg-[#090c11] overflow-hidden md:mx-2">
                 <div className="absolute inset-0 animate-shimmer" />
               </div>
-              <div className="flex flex-col gap-0.5 md:gap-1 px-2.5 py-2 md:px-3 md:py-3">
+              <div className="flex flex-col gap-0.5 md:gap-1 px-2 py-1.5 md:px-3 md:py-3">
                 <div className="h-2.5 w-16 rounded animate-shimmer" />
               </div>
             </div>

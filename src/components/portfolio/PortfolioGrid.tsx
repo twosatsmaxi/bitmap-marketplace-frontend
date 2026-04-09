@@ -256,7 +256,7 @@ export default function PortfolioGrid({ address, initialData }: PortfolioGridPro
       {/* Grid with fade transition on filter change */}
       <div 
         className={cn(
-          "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4",
+          "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-4",
           "transition-all duration-200 ease-out",
           isFilterTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100"
         )}

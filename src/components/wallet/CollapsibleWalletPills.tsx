@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 
-const COLLAPSE_THRESHOLD = 8;
+const COLLAPSE_THRESHOLD = 6;
 
 interface CollapsibleWalletPillsProps<T> {
   items: T[];

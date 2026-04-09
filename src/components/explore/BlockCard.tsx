@@ -232,7 +232,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       {...(index !== undefined ? { "data-block-index": index } : {})}
     >
       {/* Card head */}
-      <div className="flex items-center px-2.5 py-1.5 md:px-3 md:py-2">
+      <div className="flex items-center px-2 py-1 md:px-3 md:py-2">
         <span className="font-mono text-[10px] md:text-xs font-bold text-[#f7a23b]">
           {height}.bitmap
         </span>
@@ -240,7 +240,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
 
       {/* Canvas area */}
       <div
-        className="relative mx-2 aspect-square rounded-lg bg-[#090c11] overflow-hidden"
+        className="relative mx-1.5 aspect-square rounded-lg bg-[#090c11] overflow-hidden md:mx-2"
         style={{ viewTransitionName: `bitmap-${height}` } as React.CSSProperties}
       >
         {/* Snapshot layer — visible when offloaded or as backdrop during renderer re-mount */}
@@ -329,7 +329,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
       </div>
 
       {/* Metadata row */}
-      <div className="flex flex-col gap-0.5 md:gap-1 px-2.5 py-2 md:px-3 md:py-3">
+      <div className="flex flex-col gap-0.5 md:gap-1 px-2 py-1.5 md:px-3 md:py-3">
         {meta && (
           <div className="flex items-center justify-between">
             {meta.timestamp > 0 && (

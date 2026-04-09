@@ -85,7 +85,8 @@ export function EditableWalletLabel({
         />
         <span className="text-zinc-600">·</span>
         <span className={isActive ? "text-primary/70" : "text-zinc-500"}>
-          {truncateAddr(address, 6, 4)}
+          <span className="md:hidden">{address.slice(-2)}</span>
+          <span className="hidden md:inline">{truncateAddr(address, 6, 4)}</span>
         </span>
       </div>
     );
@@ -114,7 +115,8 @@ export function EditableWalletLabel({
           isActive ? "text-primary/70" : "text-zinc-500 hover:text-zinc-300"
         )}
       >
-        {truncateAddr(address, 6, 4)}
+        <span className="md:hidden">{address.slice(-2)}</span>
+        <span className="hidden md:inline">{truncateAddr(address, 6, 4)}</span>
       </button>
     </div>
   );
