@@ -39,12 +39,16 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
       <CompactProfileHeader
         headerRef={headerRef}
-        walletCount={addresses.length}
+        wallets={addresses.map((a) => ({ address: a.address, label: a.label }))}
         bitmapCount={bitmapCount}
         traits={traits}
         activeTrait={activeTrait}
         onTraitClick={(name) =>
           setActiveTrait((prev) => (prev === name ? null : name))
+        }
+        activeWallet={activeWallet}
+        onWalletClick={(addr) =>
+          setActiveWallet((prev) => (prev === addr ? null : addr))
         }
       />
 

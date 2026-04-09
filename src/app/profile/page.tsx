@@ -105,12 +105,16 @@ export default function ProfilePage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 pb-12 pt-3 md:gap-4 md:px-4 md:pt-4">
           <CompactProfileHeader
             headerRef={headerRef}
-            walletCount={wallets.length}
+            wallets={wallets.map((w) => ({ address: w.ordinalsAddress, label: w.label || null }))}
             bitmapCount={bitmapCount}
             traits={traits}
             activeTrait={activeTrait}
             onTraitClick={(name) =>
               setActiveTrait((prev) => (prev === name ? null : name))
+            }
+            activeWallet={activeWallet}
+            onWalletClick={(addr) =>
+              setActiveWallet((prev) => (prev === addr ? null : addr))
             }
           />
 
