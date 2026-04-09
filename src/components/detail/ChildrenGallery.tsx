@@ -1,20 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, Loader2, X } from "lucide-react";
 import { truncateInscription } from "@/lib/utils";
 import CopyButton from "@/components/ui/CopyButton";
 
 interface ChildrenGalleryProps {
   childIds: string[];
   count?: number;
+  blockHeight?: number;
 }
 
-export default function ChildrenGallery({ childIds, count }: ChildrenGalleryProps) {
+const CHILDREN_PAGE_SIZE = 25;
+
+export default function ChildrenGallery({ childIds, count, blockHeight }: ChildrenGalleryProps) {
   const childCount = count ?? childIds.length;
   const childLabel = `${childCount} ${childCount === 1 ? "child" : "children"}`;
   const [selectedChild, setSelectedChild] = useState<{ id: string; index: number } | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
   const galleryRef = useRef<HTMLDivElement>(null);
+
+  const remaining = childCount - childIds.length;
 
   return (
     <div ref={galleryRef} className="flex flex-col gap-2">
@@ -34,15 +40,32 @@ export default function ChildrenGallery({ childIds, count }: ChildrenGalleryProp
       >
         {childIds.map((childId, idx) => (
           <ChildCard
-            key={idx}
+            key={childId}
             childId={childId}
             index={idx}
             onClick={() => setSelectedChild({ id: childId, index: idx })}
           />
         ))}
+
+        {/* Show more button — opens grid modal */}
+        {remaining > 0 && blockHeight && (
+          <button
+            onClick={() => setShowGrid(true)}
+            className="flex-shrink-0 snap-start w-20 md:w-24"
+          >
+            <div className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-dashed border-[rgba(120,72,18,0.4)] bg-black/20 h-full min-h-[88px] md:min-h-[104px] transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]">
+              <span className="font-mono text-sm text-primary font-bold">
+                +{remaining}
+              </span>
+              <span className="font-mono text-[9px] md:text-[10px] text-zinc-500 text-center leading-tight">
+                Show more
+              </span>
+            </div>
+          </button>
+        )}
       </div>
 
-      {/* Lightbox Modal */}
+      {/* Single child lightbox */}
       {selectedChild && (
         <ChildLightbox
           childId={selectedChild.id}
@@ -51,9 +74,26 @@ export default function ChildrenGallery({ childIds, count }: ChildrenGalleryProp
           galleryRef={galleryRef}
         />
       )}
+
+      {/* Grid modal — all children */}
+      {showGrid && blockHeight && (
+        <ChildrenGridModal
+          initialChildIds={childIds}
+          childCount={childCount}
+          blockHeight={blockHeight}
+          onClose={() => setShowGrid(false)}
+          onChildClick={(id, index) => {
+            setSelectedChild({ id, index });
+          }}
+        />
+      )}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// ChildCard (inline gallery)
+// ---------------------------------------------------------------------------
 
 interface ChildCardProps {
   childId: string;
@@ -69,7 +109,6 @@ function ChildCard({ childId, index, onClick }: ChildCardProps) {
       role="listitem"
     >
       <div className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-[rgba(120,72,18,0.3)] bg-black/20 transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]">
-        {/* Preview Container - iframe with number fallback */}
         <div className="relative w-12 h-12 md:w-14 md:h-14 rounded-md bg-black overflow-hidden flex items-center justify-center">
           <span className="absolute font-mono text-sm text-primary/70 font-bold">
             {index + 1}
@@ -83,18 +122,203 @@ function ChildCard({ childId, index, onClick }: ChildCardProps) {
             title={`Child inscription ${index + 1}`}
           />
         </div>
-
-        {/* Truncated ID */}
         <span className="font-mono text-[9px] md:text-[10px] text-zinc-400 truncate max-w-full text-center leading-tight">
           {truncateInscription(childId)}
         </span>
-
-        {/* External link icon */}
         <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 transition-colors" />
       </div>
     </button>
   );
 }
+
+// ---------------------------------------------------------------------------
+// GridCard (inside grid modal — slightly larger)
+// ---------------------------------------------------------------------------
+
+function GridCard({
+  childId,
+  index,
+  onClick,
+}: {
+  childId: string;
+  index: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-center gap-1.5 p-2 rounded-lg border border-[rgba(120,72,18,0.3)] bg-black/20 transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-[0.97]"
+    >
+      <div className="relative w-full aspect-square rounded-md bg-black overflow-hidden flex items-center justify-center">
+        <span className="absolute font-mono text-xs text-primary/70 font-bold">
+          {index + 1}
+        </span>
+        <iframe
+          src={`https://ordinals.com/preview/${childId}`}
+          sandbox="allow-scripts"
+          loading="lazy"
+          scrolling="no"
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          title={`Child inscription ${index + 1}`}
+        />
+      </div>
+      <span className="font-mono text-[9px] md:text-[10px] text-zinc-500 truncate max-w-full text-center leading-tight">
+        {truncateInscription(childId)}
+      </span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ChildrenGridModal — 5-column grid with pagination
+// ---------------------------------------------------------------------------
+
+interface ChildrenGridModalProps {
+  initialChildIds: string[];
+  childCount: number;
+  blockHeight: number;
+  onClose: () => void;
+  onChildClick: (id: string, index: number) => void;
+}
+
+function ChildrenGridModal({
+  initialChildIds,
+  childCount,
+  blockHeight,
+  onClose,
+  onChildClick,
+}: ChildrenGridModalProps) {
+  const [allChildIds, setAllChildIds] = useState<string[]>(initialChildIds);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(childCount > initialChildIds.length);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setIsAnimating(true));
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setIsAnimating(false);
+    setTimeout(onClose, 150);
+  }, [onClose]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [handleClose]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const nextPage = page + 1;
+      const res = await fetch(
+        `/api/bitmap/${blockHeight}/children?page=${nextPage}&limit=${CHILDREN_PAGE_SIZE}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const newIds: string[] = data.children.map((c: { id: string }) => c.id);
+      setAllChildIds((prev) => {
+        const existing = new Set(prev);
+        const unique = newIds.filter((id: string) => !existing.has(id));
+        return [...prev, ...unique];
+      });
+      setPage(nextPage);
+      setHasMore(data.has_more);
+    } catch {
+      // User can retry
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore, blockHeight, page]);
+
+  const remaining = childCount - allChildIds.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-black/85 backdrop-blur-sm transition-opacity ${isAnimating ? "duration-200 opacity-100" : "duration-150 opacity-0"}`}
+        onClick={handleClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal: bottom-sheet on mobile, centered on desktop */}
+      <div
+        className={`relative flex flex-col w-full max-h-[85dvh] md:max-h-[80vh] border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] shadow-2xl transition-all rounded-t-2xl md:rounded-xl md:max-w-lg ${isAnimating ? "duration-200 translate-y-0 md:translate-y-0 md:scale-100 opacity-100" : "duration-150 translate-y-full md:translate-y-0 md:scale-95 opacity-0 md:opacity-0"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="All children inscriptions"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(120,72,18,0.3)]">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm font-bold text-primary uppercase tracking-wide">
+              Children
+            </span>
+            <span className="font-mono text-xs text-zinc-500">
+              {allChildIds.length} / {childCount}
+            </span>
+          </div>
+          <button
+            onClick={handleClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-[rgba(247,147,26,0.1)] hover:text-primary"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Scrollable grid */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] hide-scrollbar">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+            {allChildIds.map((childId, idx) => (
+              <GridCard
+                key={childId}
+                childId={childId}
+                index={idx}
+                onClick={() => onChildClick(childId, idx)}
+              />
+            ))}
+          </div>
+
+          {/* Load more */}
+          {hasMore && (
+            <div className="flex justify-center pt-4 pb-2">
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-[rgba(120,72,18,0.4)] bg-black/20 px-5 py-3 min-h-[44px] font-mono text-xs text-zinc-400 transition-all hover:border-primary/50 hover:text-primary active:scale-[0.97] disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <span className="text-primary font-bold">+{remaining}</span>
+                    <span>Load more</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ChildLightbox (single child detail)
+// ---------------------------------------------------------------------------
 
 interface ChildLightboxProps {
   childId: string;
@@ -108,10 +332,11 @@ function ChildLightbox({ childId, index, onClose, galleryRef }: ChildLightboxPro
   const [topOffset, setTopOffset] = useState<number | null>(null);
 
   useEffect(() => {
-    if (galleryRef.current) {
+    // Only use topOffset positioning on desktop (md+)
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+    if (isDesktop && galleryRef.current) {
       const rect = galleryRef.current.getBoundingClientRect();
-      // Position modal so it starts near the gallery, clamped to stay on screen
-      const modalHeight = 460; // approximate modal height
+      const modalHeight = 460;
       const desiredTop = rect.top - modalHeight - 8;
       setTopOffset(Math.max(16, desiredTop));
     }
@@ -124,7 +349,7 @@ function ChildLightbox({ childId, index, onClose, galleryRef }: ChildLightboxPro
 
   const handleClose = useCallback(() => {
     setIsAnimating(false);
-    setTimeout(onClose, 200);
+    setTimeout(onClose, 150);
   }, [onClose]);
 
   useEffect(() => {
@@ -136,32 +361,30 @@ function ChildLightbox({ childId, index, onClose, galleryRef }: ChildLightboxPro
   }, [handleClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4" style={topOffset !== null ? { alignItems: "flex-start", paddingTop: topOffset } : { alignItems: "center" }}>
+    <div className="fixed inset-0 z-[60] flex justify-center p-3 md:p-4" style={topOffset !== null ? { alignItems: "flex-start", paddingTop: topOffset } : { alignItems: "center" }}>
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200 ${isAnimating ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity ${isAnimating ? "duration-200 opacity-100" : "duration-150 opacity-0"}`}
         onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Modal */}
       <div
-        className={`relative flex flex-col items-center gap-4 rounded-xl border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] p-4 shadow-2xl transition-all duration-200 ${isAnimating ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+        className={`relative flex flex-col items-center gap-4 rounded-xl border border-[rgba(120,72,18,0.55)] bg-[rgba(7,7,9,0.98)] p-4 shadow-2xl transition-all ${isAnimating ? "duration-200 scale-100 opacity-100" : "duration-150 scale-95 opacity-0"}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Child inscription ${index + 1}`}
       >
-        {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-[rgba(247,147,26,0.1)] hover:text-primary"
+          className="absolute top-2 right-2 z-10 flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-[rgba(247,147,26,0.1)] hover:text-primary"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
         </button>
 
-        {/* Large iframe preview */}
-        <div className="relative w-[320px] h-[320px] md:w-[400px] md:h-[400px] rounded-lg bg-black overflow-hidden">
+        <div className="relative w-[min(320px,calc(100vw-64px))] aspect-square md:w-[400px] rounded-lg bg-black overflow-hidden">
           <span className="absolute inset-0 flex items-center justify-center font-mono text-2xl text-primary/30 font-bold">
             {index + 1}
           </span>
@@ -173,8 +396,7 @@ function ChildLightbox({ childId, index, onClose, galleryRef }: ChildLightboxPro
           />
         </div>
 
-        {/* Inscription ID + actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="font-mono text-xs text-zinc-400">
             {truncateInscription(childId)}
           </span>
