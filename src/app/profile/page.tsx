@@ -36,6 +36,7 @@ export default function ProfilePage() {
   const [traits, setTraits] = useState<TraitStat[]>([]);
   const [activeTrait, setActiveTrait] = useState<string | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const traitsSectionRef = useRef<HTMLDivElement>(null);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
   const handleTraitsChange = useCallback((t: TraitStat[]) => setTraits(t), []);
 
@@ -105,6 +106,7 @@ export default function ProfilePage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 pb-12 pt-3 md:gap-4 md:px-4 md:pt-4">
           <CompactProfileHeader
             headerRef={headerRef}
+            traitsSectionRef={traitsSectionRef}
             wallets={wallets.map((w) => ({ address: w.ordinalsAddress, label: w.label || null }))}
             bitmapCount={bitmapCount}
             traits={traits}
@@ -163,6 +165,7 @@ export default function ProfilePage() {
             activeTrait={activeTrait}
             onActiveTraitChange={setActiveTrait}
             onTraitsChange={handleTraitsChange}
+            traitsSectionRef={traitsSectionRef}
           />
         </div>
       )}

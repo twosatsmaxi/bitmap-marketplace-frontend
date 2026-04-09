@@ -26,6 +26,8 @@ interface MultiWalletPortfolioGridProps {
   activeTrait?: string | null;
   onActiveTraitChange?: (trait: string | null) => void;
   onTraitsChange?: (traits: TraitStat[]) => void;
+  /** Ref attached to the traits section wrapper — used by sticky header to know when traits scroll out */
+  traitsSectionRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 // Module-level meta cache
@@ -90,6 +92,7 @@ export default function MultiWalletPortfolioGrid({
   activeTrait: controlledTrait,
   onActiveTraitChange,
   onTraitsChange,
+  traitsSectionRef,
 }: MultiWalletPortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
@@ -278,7 +281,7 @@ export default function MultiWalletPortfolioGrid({
     <>
       {/* Trait Filter Pills */}
       {traits.length > 0 && (
-        <div className="mb-4 md:mb-6">
+        <div ref={traitsSectionRef} className="mb-4 md:mb-6">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="font-mono text-xs uppercase tracking-wider text-zinc-500">
               Traits

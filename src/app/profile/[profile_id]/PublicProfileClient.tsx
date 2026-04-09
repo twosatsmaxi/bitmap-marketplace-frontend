@@ -20,6 +20,7 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
   const [traits, setTraits] = useState<TraitStat[]>([]);
   const [activeTrait, setActiveTrait] = useState<string | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const traitsSectionRef = useRef<HTMLDivElement>(null);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
   const handleTraitsChange = useCallback((t: TraitStat[]) => setTraits(t), []);
 
@@ -39,6 +40,7 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 md:gap-4 px-3 md:px-4 pb-12 pt-3 md:pt-4">
       <CompactProfileHeader
         headerRef={headerRef}
+        traitsSectionRef={traitsSectionRef}
         wallets={addresses.map((a) => ({ address: a.address, label: a.label }))}
         bitmapCount={bitmapCount}
         traits={traits}
@@ -128,6 +130,7 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
         activeTrait={activeTrait}
         onActiveTraitChange={setActiveTrait}
         onTraitsChange={handleTraitsChange}
+        traitsSectionRef={traitsSectionRef}
       />
     </div>
   );
