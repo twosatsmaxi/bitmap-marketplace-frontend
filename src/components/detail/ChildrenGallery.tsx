@@ -46,7 +46,7 @@ interface ChildCardProps {
 }
 
 function ChildCard({ childId, index }: ChildCardProps) {
-  const contentUrl = `https://ordinals.com/content/${childId}`;
+  const contentUrl = `https://ordinals.com/preview/${childId}`;
 
   return (
     <a
