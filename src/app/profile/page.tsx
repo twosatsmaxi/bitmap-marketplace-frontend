@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Loader2, Link, Check } from "lucide-react";
 import { useWalletConnect } from "@/hooks/useWalletConnect";
 import { type WalletProvider } from "@/lib/wallet-service";
 import { type Profile } from "@/lib/auth-api";
+import type { TraitStat } from "@/lib/api";
 import WalletBar from "@/components/wallet/WalletBar";
 import WalletCommandPalette from "@/components/wallet/WalletCommandPalette";
 import MultiWalletPortfolioGrid from "@/components/portfolio/MultiWalletPortfolioGrid";
+import CompactProfileHeader from "@/components/profile/CompactProfileHeader";
 
 export default function ProfilePage() {
   const {
@@ -31,7 +33,11 @@ export default function ProfilePage() {
   const [activeWallet, setActiveWallet] = useState<string | null>(null);
   const [bitmapCount, setBitmapCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [traits, setTraits] = useState<TraitStat[]>([]);
+  const [activeTrait, setActiveTrait] = useState<string | null>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const handleTotalChange = useCallback((t: number) => setBitmapCount(t), []);
+  const handleTraitsChange = useCallback((t: TraitStat[]) => setTraits(t), []);
 
   const handleShare = useCallback(() => {
     if (!profile) return;
@@ -97,8 +103,19 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 pb-12 pt-3 md:gap-4 md:px-4 md:pt-4">
+          <CompactProfileHeader
+            headerRef={headerRef}
+            walletCount={wallets.length}
+            bitmapCount={bitmapCount}
+            traits={traits}
+            activeTrait={activeTrait}
+            onTraitClick={(name) =>
+              setActiveTrait((prev) => (prev === name ? null : name))
+            }
+          />
+
           {/* Header */}
-          <div className="br-card p-3 md:p-5">
+          <div ref={headerRef} className="br-card p-3 md:p-5">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <h1 className="font-mono text-lg font-black uppercase tracking-[0.1em] text-primary md:text-2xl">
@@ -135,7 +152,14 @@ export default function ProfilePage() {
           </div>
 
           {/* Bitmap Portfolio Grid */}
-          <MultiWalletPortfolioGrid isOwner activeWallet={activeWallet} onTotalChange={handleTotalChange} />
+          <MultiWalletPortfolioGrid
+            isOwner
+            activeWallet={activeWallet}
+            onTotalChange={handleTotalChange}
+            activeTrait={activeTrait}
+            onActiveTraitChange={setActiveTrait}
+            onTraitsChange={handleTraitsChange}
+          />
         </div>
       )}
 

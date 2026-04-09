@@ -22,6 +22,10 @@ interface MultiWalletPortfolioGridProps {
   activeWallet?: string | null;
   onTotalChange?: (total: number) => void;
   onAddressesChange?: (addresses: { address: string; label: string | null }[]) => void;
+  /** Controlled trait filter — when provided, component uses this instead of internal state */
+  activeTrait?: string | null;
+  onActiveTraitChange?: (trait: string | null) => void;
+  onTraitsChange?: (traits: TraitStat[]) => void;
 }
 
 // Module-level meta cache
@@ -83,13 +87,21 @@ export default function MultiWalletPortfolioGrid({
   activeWallet,
   onTotalChange,
   onAddressesChange,
+  activeTrait: controlledTrait,
+  onActiveTraitChange,
+  onTraitsChange,
 }: MultiWalletPortfolioGridProps) {
   const [blockMeta, setBlockMeta] = useState<Map<number, BlockMeta>>(
     new Map()
   );
   const sessionKey = useWalletStore((s) => s.sessionKey);
   const [isometric, toggle3D] = use3DPreference();
-  const [activeTrait, setActiveTrait] = useState<string | null>(null);
+  const isControlled = controlledTrait !== undefined;
+  const [internalTrait, setInternalTrait] = useState<string | null>(null);
+  const activeTrait = isControlled ? controlledTrait : internalTrait;
+  const setActiveTrait = isControlled
+    ? (val: string | null) => onActiveTraitChange?.(val)
+    : setInternalTrait;
   const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
   const prevTraitRef = useRef<string | null>(null);
 
@@ -152,6 +164,10 @@ export default function MultiWalletPortfolioGrid({
   useEffect(() => {
     onTotalChange?.(displayTotal);
   }, [displayTotal, onTotalChange]);
+
+  useEffect(() => {
+    onTraitsChange?.(traits);
+  }, [traits, onTraitsChange]);
 
   useEffect(() => {
     if (data && data.length > 0 && onAddressesChange) {
