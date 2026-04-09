@@ -338,7 +338,7 @@ export default memo(function BlockCard({ height, meta, listingStatus, price, iso
               </span>
             )}
             {meta.tx_count > 0 && (
-              <span className="font-mono text-[9px] md:text-[10px] text-[rgba(255,255,255,0.4)]">
+              <span className="font-mono text-[10px] md:text-[11px] text-[rgba(255,255,255,0.4)]">
                 {meta.tx_count.toLocaleString("en-US")} txs
               </span>
             )}

@@ -27,7 +27,7 @@ interface MultiWalletPortfolioGridProps {
   onActiveTraitChange?: (trait: string | null) => void;
   onTraitsChange?: (traits: TraitStat[]) => void;
   /** Ref attached to the traits section wrapper — used by sticky header to know when traits scroll out */
-  traitsSectionRef?: React.RefObject<HTMLDivElement | null>;
+  traitsSectionRef?: React.RefObject<HTMLDivElement>;
 }
 
 // Module-level meta cache

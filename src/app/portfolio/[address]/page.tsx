@@ -27,7 +27,7 @@ async function BitmapCountBadge({ address }: { address: string }) {
   if (!initialData) return null;
 
   return (
-    <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.16em] text-zinc-400">
+    <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[10px] md:text-[11px] uppercase tracking-[0.16em] text-zinc-400">
       <span className="text-primary">{initialData.total}</span> bitmaps
     </span>
   );

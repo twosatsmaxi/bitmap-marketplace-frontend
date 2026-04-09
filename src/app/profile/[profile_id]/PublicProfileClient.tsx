@@ -62,19 +62,19 @@ export default function PublicProfileClient({ profileId }: PublicProfileClientPr
               Profile
             </h1>
             {addresses.length > 0 && (
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
+              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-400 md:text-[11px]">
                 {addresses.length} wallet{addresses.length !== 1 ? "s" : ""}
               </span>
             )}
             {bitmapCount > 0 && (
-              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 md:text-[10px]">
+              <span className="border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-400 md:text-[11px]">
                 <span className="text-primary">{bitmapCount}</span> bitmap{bitmapCount !== 1 ? "s" : ""}
               </span>
             )}
             <button
               type="button"
               onClick={handleShare}
-              className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[10px]"
+              className="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 transition-colors hover:text-primary md:text-[11px]"
               title="Copy profile link"
             >
               {copied ? <><Check className="h-3 w-3" /> Copied</> : <><Link className="h-3 w-3" /> Share</>}
