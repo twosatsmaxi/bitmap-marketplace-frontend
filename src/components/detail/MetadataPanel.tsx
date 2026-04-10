@@ -125,7 +125,7 @@ export default function MetadataPanel({ bitmap }: MetadataPanelProps) {
         {bitmap.traits && bitmap.traits.length > 0 && <TraitsSection />}
         {bitmap.children && bitmap.children.length > 0 && (
           <div className="pt-1">
-            <ChildrenGallery childIds={bitmap.children} count={bitmap.childrenCount} />
+            <ChildrenGallery childIds={bitmap.children} count={bitmap.childrenCount} blockHeight={bitmap.blockNumber} />
           </div>
         )}
       </div>
