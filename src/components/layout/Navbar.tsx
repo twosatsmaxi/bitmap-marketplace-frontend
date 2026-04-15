@@ -101,6 +101,7 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="hidden items-center gap-1.5 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
+            <NavLink href="/giveaways" active={pathname.startsWith("/giveaways")}>Giveaways</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
             <SoonNav label="Activity" />
@@ -174,6 +175,13 @@ export default function Navbar() {
             onClick={() => setMenuOpen(false)}
           >
             Explore
+          </DrawerNavLink>
+          <DrawerNavLink
+            href="/giveaways"
+            active={pathname.startsWith("/giveaways")}
+            onClick={() => setMenuOpen(false)}
+          >
+            Giveaways
           </DrawerNavLink>
           <DrawerSoonNav label="Market" />
           <DrawerSoonNav label="Activity" />

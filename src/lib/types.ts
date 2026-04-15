@@ -107,3 +107,38 @@ export interface HomeRecentSale {
   price: number;
   soldAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Giveaways
+// ---------------------------------------------------------------------------
+
+export type GiveawayStatus = "active" | "winner_selected" | "claimed" | "cancelled";
+
+export interface Giveaway {
+  id: string;
+  inscription_id: string;
+  owner_profile_id: string;
+  owner_address: string;
+  price_sats: number;
+  title: string;
+  description?: string;
+  criteria?: string;
+  status: GiveawayStatus;
+  deadline?: string; // ISO datetime
+  winner_address?: string;
+  listing_id?: string;
+  created_at: string; // ISO datetime
+  updated_at: string; // ISO datetime
+}
+
+export interface GiveawayEntry {
+  id: string;
+  giveaway_id: string;
+  wallet_address: string;
+  created_at: string; // ISO datetime
+}
+
+export interface GiveawayWithCount {
+  giveaway: Giveaway;
+  entry_count: number;
+}

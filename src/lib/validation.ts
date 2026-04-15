@@ -92,6 +92,46 @@ export const portfolioQuerySchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Giveaway routes
+// ---------------------------------------------------------------------------
+
+/** GET /api/giveaways query params */
+export const giveawayListQuerySchema = z.object({
+  limit: limitSchema.optional(),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/** Route param for /api/giveaways/[id] */
+export const giveawayIdParamSchema = z.object({
+  id: z.string().uuid("Invalid giveaway ID"),
+});
+
+/** POST /api/giveaways body */
+export const createGiveawayBodySchema = z.object({
+  inscription_id: nonEmptyString,
+  price_sats: z.number().int().positive("Price must be positive"),
+  title: sanitizedString(200),
+  description: z.string().trim().max(2000).optional(),
+  criteria: z.string().trim().max(1000).optional(),
+  deadline: z.string().datetime().optional(),
+});
+
+/** POST /api/giveaways/[id]/enter body */
+export const enterGiveawayBodySchema = z.object({
+  wallet_address: bitcoinAddressSchema,
+});
+
+/** POST /api/giveaways/[id]/select-winner body */
+export const selectWinnerBodySchema = z.object({
+  winner_address: bitcoinAddressSchema,
+});
+
+/** GET /api/giveaways/claims query params */
+export const giveawayClaimsQuerySchema = z.object({
+  address: bitcoinAddressSchema,
+});
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
