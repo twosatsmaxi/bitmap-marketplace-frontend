@@ -60,10 +60,10 @@ export default function WalletDropdown({ onOpenPalette }: WalletDropdownProps) {
           }
         }}
         className={cn(
-          "hidden items-center gap-2 border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors md:inline-flex",
+          "relative hidden items-center gap-2 border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors md:inline-flex",
           isConnected
             ? "border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.08)] text-primary hover:bg-[rgba(247,147,26,0.14)]"
-            : "border-[rgba(120,72,18,0.4)] text-zinc-400 hover:border-[rgba(120,72,18,0.55)] hover:text-primary"
+            : "animate-pulseGlow border-primary bg-primary text-bg shadow-glow hover:bg-[rgba(247,147,26,0.88)]"
         )}
       >
         <Wallet className="h-3.5 w-3.5" />
