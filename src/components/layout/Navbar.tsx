@@ -101,9 +101,9 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="hidden items-center gap-1.5 md:flex">
             <NavLink href="/" active={pathname === "/" || pathname.startsWith("/explore")}>Explore</NavLink>
+            <NavLink href="/profile" active={pathname.startsWith("/profile")} badge="New">Portfolio</NavLink>
             <SoonNav label="Market" />
             <SoonNav label="Trade" />
-            <SoonNav label="Activity" />
           </div>
 
           {/* Right side */}
@@ -175,8 +175,15 @@ export default function Navbar() {
           >
             Explore
           </DrawerNavLink>
+          <DrawerNavLink
+            href="/profile"
+            active={pathname.startsWith("/profile")}
+            onClick={() => setMenuOpen(false)}
+            badge="New"
+          >
+            Portfolio
+          </DrawerNavLink>
           <DrawerSoonNav label="Market" />
-          <DrawerSoonNav label="Activity" />
 
           <div className="my-4 border-t border-[rgba(120,72,18,0.45)]" />
 
@@ -236,22 +243,29 @@ function NavLink({
   href,
   active,
   children,
+  badge,
 }: {
   href: string;
   active: boolean;
   children: React.ReactNode;
+  badge?: string;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors",
+        "inline-flex items-center gap-2 border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors",
         active
           ? "border-[rgba(120,72,18,0.55)] bg-[rgba(247,147,26,0.08)] text-primary"
           : "border-transparent text-zinc-500 hover:border-[rgba(120,72,18,0.55)] hover:bg-[rgba(247,147,26,0.06)] hover:text-primary"
       )}
     >
       {children}
+      {badge && (
+        <span className="bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-bg shadow-glow">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
@@ -270,24 +284,31 @@ function DrawerNavLink({
   active,
   onClick,
   children,
+  badge,
 }: {
   href: string;
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  badge?: string;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center rounded-md border-l-2 px-4 py-3.5 font-mono text-sm font-bold uppercase tracking-[0.18em] transition-all active:scale-[0.98]",
+        "flex items-center justify-between rounded-md border-l-2 px-4 py-3.5 font-mono text-sm font-bold uppercase tracking-[0.18em] transition-all active:scale-[0.98]",
         active
           ? "border-primary bg-[rgba(247,147,26,0.08)] text-primary"
           : "border-transparent text-zinc-500 hover:border-primary/40 hover:bg-[rgba(247,147,26,0.04)] hover:text-zinc-300"
       )}
     >
-      {children}
+      <span>{children}</span>
+      {badge && (
+        <span className="bg-primary px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-bg shadow-glow">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
